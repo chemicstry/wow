@@ -1,0 +1,6 @@
+if( WITH_SQL )
+  add_subdirectory(updates)
+  add_subdirectory(scripts)
+  add_subdirectory(base)
+  add_subdirectory(create)
+endif()
