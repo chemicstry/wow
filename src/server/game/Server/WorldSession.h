@@ -715,6 +715,17 @@ class WorldSession
         void HandleWhoisOpcode(WorldPacket& recv_data);
         void HandleResetInstancesOpcode(WorldPacket& recv_data);
         void HandleHearthAndResurrect(WorldPacket& recv_data);
+				
+		// Battlefield
+        void SendBfInvitePlayerToWar(uint32 BattleId,uint32 ZoneId,uint32 time);
+        void SendBfInvitePlayerToQueue(uint32 BattleId);
+        void SendBfQueueInviteResponce(uint32 BattleId,uint32 ZoneId);
+        void SendBfEntered(uint32 BattleId);
+        void SendBfLeaveMessage(uint32 BattleId);
+        void HandleBfQueueInviteResponse(WorldPacket &recv_data);
+        void HandleBfEntryInviteResponse(WorldPacket &recv_data);
+        void HandleBfExitRequest(WorldPacket &recv_data);
+        void SendBfLeaveQueue(uint32 BattleId);
 
         // Looking for Dungeon/Raid
         void HandleSetLfgCommentOpcode(WorldPacket & recv_data);

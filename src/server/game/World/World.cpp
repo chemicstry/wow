@@ -70,6 +70,7 @@
 #include "ScriptMgr.h"
 #include "WeatherMgr.h"
 #include "CreatureTextMgr.h"
+#include "BattlefieldMgr.h"
 
 volatile bool World::m_stopEvent = false;
 uint8 World::m_ExitCode = SHUTDOWN_EXIT_CODE;
@@ -1710,6 +1711,10 @@ void World::SetInitialWorldSettings()
     ///- Initialize outdoor pvp
     sLog.outString("Starting Outdoor PvP System");
     sOutdoorPvPMgr.InitOutdoorPvP();
+	
+    ///- Initialize Battlefield
+    sLog.outString("Starting Battlefield System");
+    sBattlefieldMgr.InitBattlefield();
 
     sLog.outString("Loading Transport NPCs...");
     sMapMgr.LoadTransportNPCs();
@@ -1964,6 +1969,9 @@ void World::Update(uint32 diff)
 
     sOutdoorPvPMgr.Update(diff);
     RecordTimeDiff("UpdateOutdoorPvPMgr");
+	
+    sBattlefieldMgr.Update(diff);
+    RecordTimeDiff("BattlefieldMgr");
 
     ///- Delete all characters which have been deleted X days before
     if (m_timers[WUPDATE_DELETECHARS].Passed())

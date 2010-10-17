@@ -450,6 +450,7 @@ void AddSC_boss_rotface();
 void AddSC_boss_professor_putricide();
 void AddSC_icecrown_citadel_teleport();
 void AddSC_instance_icecrown_citadel();
+void AddSC_wintergrasp();
 
 void AddSC_dalaran();
 void AddSC_borean_tundra();
@@ -1121,6 +1122,7 @@ void AddNorthrendScripts()
     AddSC_storm_peaks();
     AddSC_zuldrak();
     AddSC_crystalsong_forest();
+    AddSC_wintergrasp();
 #endif
 }
 
