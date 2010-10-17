@@ -1888,7 +1888,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
     if (duel && GetMapId() != mapid && GetMap()->GetGameObject(GetUInt64Value(PLAYER_DUEL_ARBITER)))
         DuelComplete(DUEL_FLED);
 
-    if (GetMapId() == mapid && !m_transport)
+    if (GetMapId() == mapid && !m_transport    || (GetTransport() && GetMapId()==628))
     {
         //lets reset far teleport flag if it wasn't reset during chained teleports
         SetSemaphoreTeleportFar(false);
@@ -8726,6 +8726,9 @@ void Player::SendInitWorldStates(uint32 zoneid, uint32 areaid)
         case 4384:
             NumberOfFields = 30;
             break;
+        case 4710:
+            NumberOfFields    = 28;
+            break;
          default:
             NumberOfFields = 12;
             break;
@@ -9216,6 +9219,32 @@ void Player::SendInitWorldStates(uint32 zoneid, uint32 areaid)
                 data << uint32(0xe10) << uint32(0x0);           // 7 gold
                 data << uint32(0xe11) << uint32(0x0);           // 8 green
                 data << uint32(0xe1a) << uint32(0x0);           // 9 show
+            }
+            break;
+        case 4710:                                          // Isle of conquest
+            if (bg && bg->GetTypeID() == BATTLEGROUND_IC)
+                bg->FillInitialWorldStates(data);
+            else
+            {
+                data << uint32(4221) << uint32(1);
+                data << uint32(4222) << uint32(1);
+                data << uint32(4226) << uint32(300);
+                data << uint32(4227) << uint32(300);
+                data << uint32(4322) << uint32(1);
+                data << uint32(4321) << uint32(1);
+                data << uint32(4320) << uint32(1);
+                data << uint32(4323) << uint32(1);
+                data << uint32(4324) << uint32(1);
+                data << uint32(4325) << uint32(1);
+                data << uint32(4317) << uint32(1);
+
+                data << uint32(4301) << uint32(1);
+                data << uint32(4296) << uint32(1);
+                data << uint32(4306) << uint32(1);
+                data << uint32(4311) << uint32(1);
+                data << uint32(4294) << uint32(1);
+                data << uint32(4243) << uint32(1);
+                data << uint32(4345) << uint32(1);
             }
             break;
         default:

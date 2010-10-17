@@ -450,7 +450,6 @@ void AddSC_boss_rotface();
 void AddSC_boss_professor_putricide();
 void AddSC_icecrown_citadel_teleport();
 void AddSC_instance_icecrown_citadel();
-void AddSC_wintergrasp();
 
 void AddSC_dalaran();
 void AddSC_borean_tundra();
@@ -462,6 +461,8 @@ void AddSC_sholazar_basin();
 void AddSC_storm_peaks();
 void AddSC_zuldrak();
 void AddSC_crystalsong_forest();
+void AddSC_isle_of_conquest();
+void AddSC_wintergrasp();
 
 //outland
 void AddSC_boss_exarch_maladaar();           //Auchindoun Auchenai Crypts
@@ -1122,6 +1123,7 @@ void AddNorthrendScripts()
     AddSC_storm_peaks();
     AddSC_zuldrak();
     AddSC_crystalsong_forest();
+    AddSC_isle_of_conquest();
     AddSC_wintergrasp();
 #endif
 }

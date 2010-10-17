@@ -1555,6 +1555,34 @@ void Spell::EffectTriggerRitualOfSummoning(SpellEffIndex effIndex)
 
 void Spell::EffectForceCast(SpellEffIndex effIndex)
 {
+      switch(m_spellInfo->Id)
+      {
+               case 66548://Teleport (IC battleground)
+               {
+                       if(Creature* TargetTeleport=m_caster->FindNearestCreature(23472,60.0f,true))
+                       {
+                               float x,y,z,o;
+                               TargetTeleport->GetPosition(x,y,z,o);
+                               if(m_caster->GetTypeId()!=TYPEID_PLAYER)
+                                       return;
+                               m_caster->ToPlayer()->TeleportTo(628,x,y,z,o);
+                       }
+                       return;        
+               }
+               case 66549:
+               {
+                       if(Creature* TargetTeleport=m_caster->FindNearestCreature(22515,60.0f,true))
+                       {
+                               float x,y,z,o;
+                               TargetTeleport->GetPosition(x,y,z,o);
+                               if(m_caster->GetTypeId()!=TYPEID_PLAYER)
+                                       return;
+                               m_caster->ToPlayer()->TeleportTo(628,x,y,z,o);
+                       }
+                       return;
+               }
+       }
+
     if (!unitTarget)
         return;
 
@@ -1573,6 +1601,32 @@ void Spell::EffectForceCast(SpellEffIndex effIndex)
     {
         switch(m_spellInfo->Id)
         {
+                case 66218: //Catapulte
+                if (Vehicle *vehicle = m_caster->GetVehicleKit())
+                    if (Unit *passenger = vehicle->GetPassenger(0))
+                    {
+                        passenger->ExitVehicle();
+                    passenger->AddAura(66251,passenger);
+                        float x, y, z;
+                        m_targets.m_dstPos.GetPosition(x, y, z);
+                        passenger->GetMotionMaster()->MoveJump(x, y, z, m_targets.GetSpeedXY(), m_targets.GetSpeedZ());
+                    }                    
+                return;    
+            case 66629:
+            case 66638:
+            {
+                if(!(m_caster->GetTypeId()==TYPEID_PLAYER))
+                    return;
+                Player *plr = m_caster->ToPlayer();
+                if (Battleground *bg = plr->GetBattleground())
+                    {
+                        if (bg->GetTypeID(true) == BATTLEGROUND_IC)
+                            bg->EventPlayerCapturedFlag(plr);
+                        return;
+                    }
+                
+                return;
+            }
             case 52588: // Skeletal Gryphon Escape
             case 48598: // Ride Flamebringer Cue
                 unitTarget->RemoveAura(damage);
@@ -1901,6 +1955,8 @@ void Spell::EffectTeleportUnits(SpellEffIndex /*effIndex*/)
     uint8 uiMaxSafeLevel = 0;
     switch (m_spellInfo->Id)
     {
+        case 66550:
+            return;
         case 48129:  // Scroll of Recall
             uiMaxSafeLevel = 40;
         case 60320:  // Scroll of Recall II

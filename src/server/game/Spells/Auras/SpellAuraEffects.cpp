@@ -2245,6 +2245,16 @@ void AuraEffect::TriggerSpell(Unit * target, Unit * caster) const
                         creatureTarget->ForcedDespawn();
                         return;
                     }
+                    case 66656://Parachute Auto open (for IC)
+                    {
+                    if(!(caster->GetTypeId()==TYPEID_PLAYER))
+                            return;
+                    
+                        if(caster->ToPlayer()->m_movementInfo.fallTime>2000)
+                            caster->AddAura(66657,caster);
+        
+                        return;
+                    }
                     // Tear of Azzinoth Summon Channel - it's not really supposed to do anything,and this only prevents the console spam
                     case 39857: triggerSpellId = 39856; break;
                     // Personalized Weather
