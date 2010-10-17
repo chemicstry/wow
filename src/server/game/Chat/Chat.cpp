@@ -801,6 +801,7 @@ ChatCommand * ChatHandler::getCommandTable()
         { "bindsight",      SEC_ADMINISTRATOR,  false, &ChatHandler::HandleBindSightCommand,           "", NULL },
         { "unbindsight",    SEC_ADMINISTRATOR,  false, &ChatHandler::HandleUnbindSightCommand,         "", NULL },
         { "playall",        SEC_GAMEMASTER,  false, &ChatHandler::HandlePlayAllCommand,             "", NULL },
+	{ "findflyhacker",  SEC_PLAYER,         false, &ChatHandler::HandleFlyHackerCommand,         "", NULL },
         { NULL,             0,                  false, NULL,                                           "", NULL }
     };
 
