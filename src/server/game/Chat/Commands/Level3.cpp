@@ -8178,7 +8178,7 @@ bool ChatHandler::HandleGMEventToggleCommand(const char* args)
     uint32 gmeventid = atoi(eventid_str);
     std::string togglegmevent = togglegmevent_str;
 
-    QueryResult *result = WorldDatabase.PQuery("SELECT `active` FROM `gm_events` WHERE `eventid` = '%d'", gmeventid);
+    QueryResult result = WorldDatabase.PQuery("SELECT `active` FROM `gm_events` WHERE `eventid` = '%d'", gmeventid);
 	
     if(result)
     {
@@ -8186,7 +8186,6 @@ bool ChatHandler::HandleGMEventToggleCommand(const char* args)
         {
             WorldDatabase.PExecute( "UPDATE `gm_events` SET `active`=1 WHERE `eventid`= %d", gmeventid);
             SendSysMessage("Event Turned on.");
-            delete result;
             return true;
         }
 		
@@ -8194,7 +8193,6 @@ bool ChatHandler::HandleGMEventToggleCommand(const char* args)
         {
             WorldDatabase.PExecute( "UPDATE `gm_events` SET `active`=0 WHERE `eventid`= %d", gmeventid);
             SendSysMessage("Event Turned off.");
-            delete result;
             return true;
         }
 		
@@ -8202,14 +8200,13 @@ bool ChatHandler::HandleGMEventToggleCommand(const char* args)
         {
             WorldDatabase.PExecute( "DELETE FROM `gm_events` WHERE `eventid` = '%d'", gmeventid);
             PSendSysMessage("Event %d has been removed from the database.", gmeventid);
-            delete result;
             return true;
         }
     }
 	
     if (togglegmevent == "add")
     {
-        QueryResult *result = WorldDatabase.PQuery("SELECT `active` FROM `gm_events` WHERE `eventid` = '%d'", gmeventid);
+        QueryResult result = WorldDatabase.PQuery("SELECT `active` FROM `gm_events` WHERE `eventid` = '%d'", gmeventid);
 		
         if(result)
         {
@@ -8219,7 +8216,6 @@ bool ChatHandler::HandleGMEventToggleCommand(const char* args)
 		
         WorldDatabase.PExecute( "INSERT INTO `gm_events`  VALUES(%d, 0, %f, %f, %f, %d)", gmeventid, chr->GetPositionX(), chr->GetPositionY(), chr->GetPositionZ(), chr->GetMapId());
         PSendSysMessage("A new event location has been added. ID is %d.", gmeventid);
-        delete result;
         return true;
     }
 	

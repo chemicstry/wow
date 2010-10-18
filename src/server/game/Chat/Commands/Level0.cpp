@@ -344,7 +344,7 @@ bool ChatHandler::HandlePEventCommand(const char *args)
     // to be replaced later with better if/DB system this is just etst code..
     if (argstr)
     {
-        QueryResult *result = WorldDatabase.PQuery("SELECT `active` , `eventx` , `eventy` , `eventz` , `eventmap` FROM `gm_events` WHERE `eventid` = '%d'", argstr);
+        QueryResult result = WorldDatabase.PQuery("SELECT `active` , `eventx` , `eventy` , `eventz` , `eventmap` FROM `gm_events` WHERE `eventid` = '%d'", argstr);
 		
         if(result)
         {
@@ -358,20 +358,17 @@ bool ChatHandler::HandlePEventCommand(const char *args)
             if (EventActive > 0)
             {
                 chr->TeleportTo(EventMap, EventX, EventY, EventZ, 0);
-                delete result;
                 return true;
             }
             else
             {
                 SendSysMessage("This event is not running right now..");
-                delete result;
                 return true;
             }
         }
         else
         {
             SendSysMessage("Event ID wasnt found in system");
-            delete result;
             return true;
         }
     }
