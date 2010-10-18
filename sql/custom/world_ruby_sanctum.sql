@@ -58,7 +58,7 @@ INSERT INTO `spell_linked_spell` VALUES (-74562, 74610, 0, 'Fiery Combustion rem
 INSERT INTO `spell_linked_spell` VALUES (-74792, 74800, 0, 'Soul Consumption removed -> Consumption');
 
 DELETE FROM `creature` WHERE `id`=39863 AND `map`=724;
-INSERT INTO `creature` VALUES (null,39863,724,15,1,0,0,3144.93,527.233,72.8887,0.110395,300,0,0,11156000,0,0,0);
+INSERT INTO `creature` VALUES (null,39863,724,15,1,0,0,3144.93,527.233,72.8887,0.110395,300,0,0,11156000,0,0,0,0,0,0);
 
 REPLACE `spell_script_names` SET `ScriptName` = 'spell_halion_portal', `spell_id`=74812;
 

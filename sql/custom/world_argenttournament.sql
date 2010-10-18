@@ -355,7 +355,7 @@ UPDATE creature_template SET speed_walk = 1.6 WHERE entry = 33211;
 
 -- Quest : Le fil de l'hiver
 DELETE FROM creature WHERE guid = '336364';
-INSERT INTO creature VALUES  (336364,33289,571,1,1,0,0,5136.74,-83.3769,347.326,1.44434,300,0,0,12600,3994,0,0);
+INSERT INTO creature VALUES (336364,33289,571,1,1,0,0,5136.74,-83.3769,347.326,1.44434,300,0,0,12600,3994,0,0,0,0,0);
 DELETE FROM `creature_loot_template` WHERE `entry`=33289 AND `item`=45005;
 INSERT INTO `creature_loot_template` (`entry`, `item`, `ChanceOrQuestChance`) VALUES (33289, 45005, -100);
 
