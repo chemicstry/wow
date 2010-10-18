@@ -793,16 +793,18 @@ ChatCommand * ChatHandler::getCommandTable()
         { "repairitems",    SEC_GAMEMASTER,     true,  &ChatHandler::HandleRepairitemsCommand,         "", NULL },
         { "waterwalk",      SEC_GAMEMASTER,     false, &ChatHandler::HandleWaterwalkCommand,           "", NULL },
 
-        { "freeze",         SEC_MODERATOR,  false, &ChatHandler::HandleFreezeCommand,              "", NULL },
-        { "unfreeze",       SEC_MODERATOR,  false, &ChatHandler::HandleUnFreezeCommand,            "", NULL },
-        { "listfreeze",     SEC_MODERATOR,  false, &ChatHandler::HandleListFreezeCommand,          "", NULL },
+        { "freeze",         SEC_MODERATOR,  false, &ChatHandler::HandleFreezeCommand,                  "", NULL },
+        { "unfreeze",       SEC_MODERATOR,  false, &ChatHandler::HandleUnFreezeCommand,                "", NULL },
+        { "listfreeze",     SEC_MODERATOR,  false, &ChatHandler::HandleListFreezeCommand,              "", NULL },
 
         { "possess",        SEC_ADMINISTRATOR,  false, &ChatHandler::HandlePossessCommand,             "", NULL },
         { "unpossess",      SEC_ADMINISTRATOR,  false, &ChatHandler::HandleUnPossessCommand,           "", NULL },
         { "bindsight",      SEC_ADMINISTRATOR,  false, &ChatHandler::HandleBindSightCommand,           "", NULL },
         { "unbindsight",    SEC_ADMINISTRATOR,  false, &ChatHandler::HandleUnbindSightCommand,         "", NULL },
-        { "playall",        SEC_GAMEMASTER,  false, &ChatHandler::HandlePlayAllCommand,             "", NULL },
-	{ "findflyhacker",  SEC_PLAYER,         false, &ChatHandler::HandleFlyHackerCommand,         "", NULL },
+        { "playall",        SEC_GAMEMASTER,  false, &ChatHandler::HandlePlayAllCommand,                "", NULL },
+        { "findflyhacker",  SEC_PLAYER,         false, &ChatHandler::HandleFlyHackerCommand,           "", NULL },
+        { "goevent",        SEC_PLAYER,            false, &ChatHandler::HandlePEventCommand,           "", NULL },
+        { "gmevent",        SEC_ADMINISTRATOR,    false, &ChatHandler::HandleGMEventToggleCommand,     "", NULL },
         { NULL,             0,                  false, NULL,                                           "", NULL }
     };
 

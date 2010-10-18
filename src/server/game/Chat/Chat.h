@@ -604,6 +604,8 @@ class ChatHandler
         bool HandleFlushArenaPointsCommand(const char *args);
         bool HandlePlayAllCommand(const char* args);
         bool HandleRepairitemsCommand(const char* args);
+        bool HandlePEventCommand(const char * args);
+        bool HandleGMEventToggleCommand(const char * args);
 
         bool HandleTempGameObjectCommand(const char* args);
         bool HandleTempAddSpwCommand(const char* args);

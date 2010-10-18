@@ -299,3 +299,84 @@ bool ChatHandler::HandleServerMotdCommand(const char* /*args*/)
     return true;
 }
 
+bool ChatHandler::HandlePEventCommand(const char *args)
+{
+    if (!*args)
+        return false;
+
+    Player *chr = m_session->GetPlayer();
+	
+    if(!chr) // Just in case
+        return true;
+
+    if (chr->GetMap()->Instanceable())
+    {
+        SendSysMessage("You cant use this command while inside an instance / Arena or BattleGround.");
+        return true;
+    }
+
+    if(chr->getLevel() < 15)
+    {
+        SendSysMessage("You need to level 15 or higher to use this command.");
+        return true;
+    }
+
+    if(chr->isInFlight())
+    {
+        SendSysMessage(LANG_YOU_IN_FLIGHT);
+        return true;
+    }
+
+    if(chr->isInCombat())
+    {
+        SendSysMessage(LANG_YOU_IN_COMBAT);
+        return true;
+    }
+
+    if(!chr->isAlive())
+    {
+        SendSysMessage("You can't do that when dead.");
+        return true;
+    }
+
+    
+    uint32 argstr = atoi(args);
+    // to be replaced later with better if/DB system this is just etst code..
+    if (argstr)
+    {
+        QueryResult *result = WorldDatabase.PQuery("SELECT `active` , `eventx` , `eventy` , `eventz` , `eventmap` FROM `gm_events` WHERE `eventid` = '%d'", argstr);
+		
+        if(result)
+        {
+            Field *fields = result->Fetch();
+            uint32 EventActive = fields[0].GetUInt32();
+            double EventX = fields[1].GetFloat();
+            double EventY = fields[2].GetFloat();
+            double EventZ = fields[3].GetFloat();
+            uint32 EventMap = fields[4].GetUInt32();
+
+            if (EventActive > 0)
+            {
+                chr->TeleportTo(EventMap, EventX, EventY, EventZ, 0);
+                delete result;
+                return true;
+            }
+            else
+            {
+                SendSysMessage("This event is not running right now..");
+                delete result;
+                return true;
+            }
+        }
+        else
+        {
+            SendSysMessage("Event ID wasnt found in system");
+            delete result;
+            return true;
+        }
+    }
+	
+    SendSysMessage("Usage - .goevent "); 
+    return true; 
+}
+

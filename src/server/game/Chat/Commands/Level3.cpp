@@ -8152,3 +8152,77 @@ bool ChatHandler::HandleUnbindSightCommand(const char * /*args*/)
     m_session->GetPlayer()->StopCastingBindSight();
     return true;
 }
+
+bool ChatHandler::HandleGMEventToggleCommand(const char* args)
+{
+    if(!*args)
+        return false;
+
+    char* eventid_str = strtok((char*)args, " ");
+    char* togglegmevent_str = strtok(NULL, " ");
+
+    Player *chr = m_session->GetPlayer();
+
+    if (!eventid_str)
+    {
+        SendSysMessage("Usage .gmevent  on/off/add/del.");
+        return true;
+    }
+	
+    if (!togglegmevent_str)
+    {
+        SendSysMessage("Usage .gmevent  on/off/add/del.");
+        return true;
+    }
+
+    uint32 gmeventid = atoi(eventid_str);
+    std::string togglegmevent = togglegmevent_str;
+
+    QueryResult *result = WorldDatabase.PQuery("SELECT `active` FROM `gm_events` WHERE `eventid` = '%d'", gmeventid);
+	
+    if(result)
+    {
+        if (togglegmevent == "on")
+        {
+            WorldDatabase.PExecute( "UPDATE `gm_events` SET `active`=1 WHERE `eventid`= %d", gmeventid);
+            SendSysMessage("Event Turned on.");
+            delete result;
+            return true;
+        }
+		
+        if (togglegmevent == "off")
+        {
+            WorldDatabase.PExecute( "UPDATE `gm_events` SET `active`=0 WHERE `eventid`= %d", gmeventid);
+            SendSysMessage("Event Turned off.");
+            delete result;
+            return true;
+        }
+		
+        if (togglegmevent == "del")
+        {
+            WorldDatabase.PExecute( "DELETE FROM `gm_events` WHERE `eventid` = '%d'", gmeventid);
+            PSendSysMessage("Event %d has been removed from the database.", gmeventid);
+            delete result;
+            return true;
+        }
+    }
+	
+    if (togglegmevent == "add")
+    {
+        QueryResult *result = WorldDatabase.PQuery("SELECT `active` FROM `gm_events` WHERE `eventid` = '%d'", gmeventid);
+		
+        if(result)
+        {
+            SendSysMessage("This event ID is alrdy in use, please delete if no longer used.");
+            return true;
+        }
+		
+        WorldDatabase.PExecute( "INSERT INTO `gm_events`  VALUES(%d, 0, %f, %f, %f, %d)", gmeventid, chr->GetPositionX(), chr->GetPositionY(), chr->GetPositionZ(), chr->GetMapId());
+        PSendSysMessage("A new event location has been added. ID is %d.", gmeventid);
+        delete result;
+        return true;
+    }
+	
+    SendSysMessage("Usage .gmevent  on/off/add/del.");
+    return true;
+}
