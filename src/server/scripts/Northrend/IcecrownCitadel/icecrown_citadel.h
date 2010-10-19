@@ -110,6 +110,8 @@ enum eCreatures
     NPC_VOLATILE_OOZE                           = 37697,
     NPC_CHOKING_GAS_BOMB                        = 38159,
     NPC_TEAR_GAS_TARGET_STALKER                 = 38317,
+    NPC_MENETHIL                = 38579,
+    NPC_TRIGGER                                 = 30494
 };
 
 enum eGameobjects

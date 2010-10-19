@@ -451,6 +451,7 @@ void AddSC_boss_deathbringer_saurfang();
 void AddSC_boss_festergut();
 void AddSC_boss_rotface();
 void AddSC_boss_professor_putricide();
+void AddSC_boss_lichking();
 void AddSC_icecrown_citadel_teleport();
 void AddSC_instance_icecrown_citadel();
 
@@ -1119,6 +1120,7 @@ void AddNorthrendScripts()
     AddSC_boss_festergut();
     AddSC_boss_rotface();
     AddSC_boss_professor_putricide();
+    AddSC_boss_lichking();
     AddSC_icecrown_citadel_teleport();
     AddSC_instance_icecrown_citadel();
 
