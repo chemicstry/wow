@@ -152,7 +152,6 @@ set(scripts_STAT_SRCS
   Northrend/IcecrownCitadel/boss_festergut.cpp
   Northrend/IcecrownCitadel/boss_rotface.cpp
   Northrend/IcecrownCitadel/boss_professor_putricide.cpp
-  Northrend/IcecrownCitadel/boss_the_lich_king.cpp
   Northrend/zuldrak.cpp
   Northrend/wintergrasp.cpp
   Northrend/icecrown.cpp

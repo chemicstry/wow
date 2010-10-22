@@ -8165,13 +8165,13 @@ bool ChatHandler::HandleGMEventToggleCommand(const char* args)
 
     if (!eventid_str)
     {
-        SendSysMessage("Usage .gmevent <id> on/off/add/del.");
+        SendSysMessage("Usage .gmevent  on/off/add/del.");
         return true;
     }
 	
     if (!togglegmevent_str)
     {
-        SendSysMessage("Usage .gmevent <id> on/off/add/del.");
+        SendSysMessage("Usage .gmevent  on/off/add/del.");
         return true;
     }
 
@@ -8219,6 +8219,6 @@ bool ChatHandler::HandleGMEventToggleCommand(const char* args)
         return true;
     }
 	
-    SendSysMessage("Usage .gmevent <id> on/off/add/del.");
+    SendSysMessage("Usage .gmevent  on/off/add/del.");
     return true;
 }

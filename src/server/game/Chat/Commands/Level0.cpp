@@ -373,7 +373,7 @@ bool ChatHandler::HandlePEventCommand(const char *args)
         }
     }
 	
-    SendSysMessage("Usage .goevent <id>"); 
+    SendSysMessage("Usage - .goevent "); 
     return true; 
 }
 
