@@ -80,6 +80,12 @@ enum Says
     SAY_PHASE502                               = -1595118,  //Arthas
     SAY_PHASE503                               = -1595119,  //Arthas
     SAY_PHASE504                               = -1595120,  //Arthas
+	
+	SAY_DBG1                                   = -1999951,
+	SAY_DBG2                                   = -1999952,
+	SAY_DBG3                                   = -1999953,
+	SAY_DBG4                                   = -1999954,
+	SAY_DBG5                                   = -1999955,
 };
 
 enum NPCs
@@ -1017,6 +1023,7 @@ public:
                                 //Make them unattackable
                                 pDisguised0->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_OOC_NOT_ATTACKABLE | UNIT_FLAG_UNK_9);
                                 pDisguised0->SetReactState(REACT_PASSIVE);
+								DoScriptText(SAY_DBG1, me);
                             }
                             JumpToNextStep(2000);
                             break;
@@ -1026,17 +1033,20 @@ public:
                         case 75:
                         case 77:
                             //Make cratures attackable
+							DoScriptText(SAY_DBG2, me);
                             for (uint32 i = 0; i< ENCOUNTER_DRACONIAN_NUMBER; ++i)
                                 if (Creature* pTemp = Unit::GetCreature(*me, uiInfiniteDraconianGUID[i]))
                                 {
                                     pTemp->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_OOC_NOT_ATTACKABLE | UNIT_FLAG_UNK_9);
                                     pTemp->SetReactState(REACT_AGGRESSIVE);
+									DoScriptText(SAY_DBG3, me);
                                 }
                             JumpToNextStep(5000);
                             break;
                         case 72:
                         case 74:
                         case 76:
+							DoScriptText(SAY_DBG4, me);
                             if (me->isInCombat())
                                 uiPhaseTimer = 1000;
                             else
