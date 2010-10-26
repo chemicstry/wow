@@ -7892,12 +7892,6 @@ bool ChatHandler::HandlePlayAllCommand(const char *args)
 bool ChatHandler::HandleFlyHackerCommand(const char* args)
 {
        bool foundAtLeastOneFlyHacker = false;
-       Player *player = m_session->GetPlayer();
-       if(!player->isGameMaster())
-       {
-               SendSysMessage("Cette commande n'existe pas.");
-               return true;
-       }
        sObjectAccessor.GetPlayers();
        ACE_GUARD_RETURN(ACE_Thread_Mutex, guard, *HashMapHolder<Player>::GetLock(), true);
        HashMapHolder<Player>::MapType const& plist = sObjectAccessor.GetPlayers();
