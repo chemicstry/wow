@@ -70,6 +70,7 @@
 #include "ScriptMgr.h"
 #include "WeatherMgr.h"
 #include "CreatureTextMgr.h"
+#include "SmartAI.h"
 #include "BattlefieldMgr.h"
 #include "AuctionHouseBot.h"
 
@@ -1573,6 +1574,9 @@ void World::SetInitialWorldSettings()
     sLog.outString("Loading Waypoints...");
     sWaypointMgr->Load();
 
+    sLog.outString("Loading SmartAI Waypoints...");
+    sSmartWaypointMgr.LoadFromDB();
+
     sLog.outString("Loading Creature Formations...");
     formation_mgr.LoadCreatureFormations();
 
@@ -1642,6 +1646,9 @@ void World::SetInitialWorldSettings()
 
     sLog.outString("Validating spell scripts...");
     sObjectMgr.ValidateSpellScripts();
+
+    sLog.outString("Loading SmartAI scripts...");
+    sSmartScriptMgr.LoadSmartAIFromDB();
 
     ///- Initialize game time and timers
     sLog.outDebug("DEBUG:: Initialize game time and timers");

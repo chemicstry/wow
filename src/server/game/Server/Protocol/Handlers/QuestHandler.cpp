@@ -32,6 +32,9 @@
 #include "BattlegroundAV.h"
 #include "ScriptMgr.h"
 #include "ConditionMgr.h"
+#include "Creature.h"
+#include "CreatureAI.h"
+#include "GameObjectAI.h"
 
 void WorldSession::HandleQuestgiverStatusQueryOpcode(WorldPacket & recv_data)
 {
@@ -105,6 +108,8 @@ void WorldSession::HandleQuestgiverHelloOpcode(WorldPacket & recv_data)
 
     _player->PrepareGossipMenu(pCreature, pCreature->GetCreatureInfo()->GossipMenuId, true);
     _player->SendPreparedGossip(pCreature);
+
+    pCreature->AI()->sGossipHello(_player);
 }
 
 void WorldSession::HandleQuestgiverAcceptQuestOpcode(WorldPacket & recv_data)
@@ -188,6 +193,7 @@ void WorldSession::HandleQuestgiverAcceptQuestOpcode(WorldPacket & recv_data)
             {
                 case TYPEID_UNIT:
                     sScriptMgr.OnQuestAccept(_player, (pObject->ToCreature()), qInfo);
+                    (pObject->ToCreature())->AI()->sQuestAccept(_player, qInfo);
                     break;
                 case TYPEID_ITEM:
                 case TYPEID_CONTAINER:
@@ -212,6 +218,7 @@ void WorldSession::HandleQuestgiverAcceptQuestOpcode(WorldPacket & recv_data)
                 }
                 case TYPEID_GAMEOBJECT:
                     sScriptMgr.OnQuestAccept(_player, ((GameObject*)pObject), qInfo);
+                    (pObject->ToGameObject())->AI()->QuestAccept(_player, qInfo);
                     break;
                 default:
                     break;
@@ -316,6 +323,8 @@ void WorldSession::HandleQuestgiverChooseRewardOpcode(WorldPacket & recv_data)
                         // Send next quest
                         if (Quest const* nextquest = _player->GetNextQuest(guid ,pQuest))
                             _player->PlayerTalkClass->SendQuestGiverQuestDetails(nextquest,guid,true);
+
+                        (pObject->ToCreature())->AI()->sQuestReward(_player, pQuest, reward);
                     }
                     break;
                 case TYPEID_GAMEOBJECT:
@@ -324,6 +333,7 @@ void WorldSession::HandleQuestgiverChooseRewardOpcode(WorldPacket & recv_data)
                         // Send next quest
                         if (Quest const* nextquest = _player->GetNextQuest(guid ,pQuest))
                             _player->PlayerTalkClass->SendQuestGiverQuestDetails(nextquest,guid,true);
+                        pObject->ToGameObject()->AI()->QuestReward(_player, pQuest, reward);
                     }
                     break;
                 default:

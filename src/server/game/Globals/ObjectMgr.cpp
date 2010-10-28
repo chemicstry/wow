@@ -359,8 +359,10 @@ void ObjectMgr::AddGuild(Guild* pGuild)
     uint32 guildId = pGuild->GetId();
     // Allocate space if necessary
     if (guildId >= uint32(mGuildMap.size()))
-        // Reserve a bit more space than necessary
-        mGuildMap.resize(guildId+1);
+        // Reserve a bit more space than necessary.
+        // 16 is intentional and it will allow creation of next 16 guilds happen 
+        // without reallocation.
+        mGuildMap.resize(guildId + 16);
     mGuildMap[guildId] = pGuild;
 }
 
@@ -3513,9 +3515,9 @@ void ObjectMgr::LoadGuilds()
         sLog.outString();
         return;
     }
+    mGuildMap.resize(m_guildId, NULL);         // Reserve space and initialize storage for loading guilds
     // 1. Load all guilds
     uint64 rowCount = result->GetRowCount();
-    mGuildMap.resize(uint32(rowCount), NULL);         // Reserve space and initialize storage for loading guilds
     barGoLink bar(rowCount);
     do
     {
@@ -5960,6 +5962,14 @@ WorldSafeLocsEntry const *ObjectMgr::GetClosestGraveYard(float x, float y, float
     // search for zone associated closest graveyard
     uint32 zoneId = sMapMgr.GetZoneId(MapId,x,y,z);
 
+    if (!zoneId)
+    {
+        if (z > -500)
+            sLog.outError("ZoneId not found for map %u coords (%f, %f, %f)", MapId, x, y, z);
+        return NULL;
+    }
+
+
     // Simulate std. algorithm:
     //   found some graveyard associated to (ghost_zone,ghost_map)
     //
@@ -5974,7 +5984,7 @@ WorldSafeLocsEntry const *ObjectMgr::GetClosestGraveYard(float x, float y, float
 
     if (graveLow == graveUp && !map->IsBattleArena())
     {
-        //sLog.outErrorDb("Table `game_graveyard_zone` incomplete: Zone %u Team %u does not have a linked graveyard.",zoneId,team);
+        sLog.outErrorDb("Table `game_graveyard_zone` incomplete: Zone %u Team %u does not have a linked graveyard.",zoneId,team);
         return NULL;
     }
 

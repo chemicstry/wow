@@ -59,6 +59,7 @@
 #include "ScriptMgr.h"
 #include "LFGMgr.h"
 #include "CreatureTextMgr.h"
+#include "SmartAI.h"
 
 #include "AuctionHouseBot.h"
 
@@ -1664,6 +1665,14 @@ bool ChatHandler::HandleReloadCreatureText(const char* /*args*/)
     sLog.outString("Re-Loading Creature Texts...");
     sCreatureTextMgr.LoadCreatureTexts();
     SendGlobalGMSysMessage("Creature Texts reloaded.");
+    return true;
+}
+
+bool ChatHandler::HandleReloadSmartAI(const char* /*args*/)
+{
+    sLog.outString("Re-Loading SmartAI Scripts...");
+    sSmartScriptMgr.LoadSmartAIFromDB();
+    SendGlobalGMSysMessage("SmartAI Scripts reloaded.");
     return true;
 }
 

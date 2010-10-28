@@ -685,6 +685,9 @@ void LFGMgr::Leave(Player* plr, Group* grp /* = NULL*/)
 
     uint64 guid = grp ? grp->GetGUID() : plr ? plr->GetGUID() : 0;
     sLog.outDebug("LFGMgr::Leave: [" UI64FMTD "]", guid);
+    
+    if (!guid)
+        return;
 
     // Remove from Role Checks
     if (grp)
@@ -1505,10 +1508,10 @@ void LFGMgr::UpdateProposal(uint32 proposalId, uint32 lowGuid, bool accept)
             plr = (*it);
             if (sendUpdate)
                 plr->GetSession()->SendUpdateProposal(proposalId, pProposal);
-            plr->SetLfgUpdate(false);
             if (plr->GetGroup())
             {
                 plr->GetSession()->SendLfgUpdateParty(LFG_UPDATETYPE_GROUP_FOUND);
+                plr->SetLfgUpdate(false);
                 if (plr->GetGroup() != grp)
                 {
                     plr->GetGroup()->SetLfgQueued(false);
@@ -1516,7 +1519,10 @@ void LFGMgr::UpdateProposal(uint32 proposalId, uint32 lowGuid, bool accept)
                 }
             }
             else
+            {
                 plr->GetSession()->SendLfgUpdatePlayer(LFG_UPDATETYPE_GROUP_FOUND);
+                plr->SetLfgUpdate(false);
+            }
 
             if (!grp)
             {
