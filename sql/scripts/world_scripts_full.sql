@@ -9,9 +9,10 @@ UPDATE `gameobject_template` SET `ScriptName`='';
 UPDATE `outdoorpvp_template` SET `ScriptName`='';
 
 /* AREA TRIGGERS */
-DELETE FROM `areatrigger_scripts` WHERE `entry` IN (5284,5285,5286,5287,4871,4872,4873,5108,5332,5338,5334,5340,5369,5423);
+DELETE FROM `areatrigger_scripts` WHERE `entry` IN (822,5284,5285,5286,5287,4871,4872,4873,5108,5332,5338,5334,5340,5369,5423);
 DELETE FROM `areatrigger_scripts` WHERE `entry` BETWEEN 1726 AND 1740;
 INSERT INTO `areatrigger_scripts` (`entry`,`ScriptName`) VALUES 
+(822, 'at_map_chamber'),
 (5284, 'at_aldurthar_gate'),
 (5285, 'at_aldurthar_gate'),
 (5286, 'at_aldurthar_gate'),
@@ -849,6 +850,14 @@ UPDATE `creature_template` SET `ScriptName`='npc_big_ooze' WHERE `entry`=36899;
 UPDATE `creature_template` SET `ScriptName`='npc_precious_icc' WHERE `entry`=37217;
 UPDATE `creature_template` SET `ScriptName`='boss_professor_putricide' WHERE `entry`=36678;
 UPDATE `creature_template` SET `ScriptName`='npc_volatile_ooze' WHERE `entry`=37697;
+UPDATE `creature_template` SET `ScriptName`='boss_blood_council_controller' WHERE `entry`=38008;
+UPDATE `creature_template` SET `ScriptName`='boss_prince_keleseth_icc' WHERE `entry`=37972;
+UPDATE `creature_template` SET `ScriptName`='boss_prince_taldaram_icc' WHERE `entry`=37973;
+UPDATE `creature_template` SET `ScriptName`='boss_prince_valanar_icc' WHERE `entry`=37970;
+UPDATE `creature_template` SET `ScriptName`='npc_blood_queen_lana_thel' WHERE `entry`=38004;
+UPDATE `creature_template` SET `ScriptName`='npc_kinetic_bomb' WHERE `entry`=38454;
+UPDATE `creature_template` SET `ScriptName`='npc_dark_nucleus' WHERE `entry`=38369;
+UPDATE `creature_template` SET `ScriptName`='npc_ball_of_flame' WHERE `entry` IN (38332,38451);
 
 /* IRONFORGE */
 UPDATE `creature_template` SET `ScriptName`='npc_royal_historian_archesonus' WHERE `entry`=8879;
@@ -1479,6 +1488,7 @@ UPDATE `creature_template` SET `ScriptName`='mob_archaedas_minions' WHERE `entry
 UPDATE `creature_template` SET `ScriptName`='mob_stonekeepers' WHERE `entry`=4857;
 UPDATE `gameobject_template` SET `ScriptName`='go_altar_of_the_keepers' WHERE `entry`=130511;
 UPDATE `gameobject_template` SET `ScriptName`='go_altar_of_archaedas' WHERE `entry`=133234;
+UPDATE `gameobject_template` SET `ScriptName`='go_keystone_chamber' WHERE `entry`=124371;
 
 /* ULDUAR */
 UPDATE `instance_template` SET `script`='instance_ulduar' WHERE `map`=603;

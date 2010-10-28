@@ -15,6 +15,7 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "ObjectMgr.h"
 #include "ScriptMgr.h"
 #include "ScriptedCreature.h"
 #include "SpellScript.h"
@@ -86,9 +87,16 @@ class boss_rotface : public CreatureScript
         {
             boss_rotfaceAI(Creature* pCreature) : BossAI(pCreature, DATA_ROTFACE)
             {
-                ASSERT(instance);
                 infectionStage = 0;
                 infectionCooldown = 14000;
+            }
+
+            void InitializeAI()
+            {
+                if (!instance || static_cast<InstanceMap*>(me->GetMap())->GetScriptId() != GetScriptId(ICCScriptName))
+                    me->IsAIEnabled = false;
+                else if (!me->isDead())
+                    Reset();
             }
 
             void Reset()
@@ -107,7 +115,6 @@ class boss_rotface : public CreatureScript
             void EnterCombat(Unit* /*who*/)
             {
                 DoScriptText(SAY_AGGRO, me);
-                instance->SetBossState(DATA_ROTFACE, IN_PROGRESS);
                 if (Creature* professor = Unit::GetCreature(*me, instance->GetData64(DATA_PROFESSOR_PUTRICIDE)))
                     professor->AI()->DoAction(ACTION_ROTFACE_COMBAT);
 
@@ -209,7 +216,7 @@ class boss_rotface : public CreatureScript
                             if (!target)
                                 target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true, -MUTATED_INFECTION);
                             if (target)
-                                DoCast(target, SPELL_MUTATED_INFECTION);
+                                me->CastCustomSpell(SPELL_MUTATED_INFECTION, SPELLVALUE_MAX_TARGETS, 1, target, false);
                             events.ScheduleEvent(EVENT_MUTATED_INFECTION, infectionCooldown);
                             break;
                         }

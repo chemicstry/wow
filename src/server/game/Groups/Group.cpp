@@ -32,7 +32,6 @@
 #include "InstanceSaveMgr.h"
 #include "MapInstanced.h"
 #include "Util.h"
-#include "LFGMgr.h"
 
 Group::Group()
 {
@@ -307,9 +306,6 @@ Player* Group::GetInvited(const std::string& name) const
 
 bool Group::AddMember(const uint64 &guid, const char* name)
 {
-    if (isLfgQueued())
-        sLFGMgr.Leave(NULL, this);
-
     if (!_addMember(guid, name))
         return false;
 
@@ -319,8 +315,6 @@ bool Group::AddMember(const uint64 &guid, const char* name)
     Player *player = sObjectMgr.GetPlayer(guid);
     if (player)
     {
-        if (player->isUsingLfg())
-            sLFGMgr.Leave(player);
         if (!IsLeader(player->GetGUID()) && !isBGGroup())
         {
             // reset the new member's instances, unless he is currently in one of them
@@ -369,7 +363,7 @@ uint32 Group::RemoveMember(const uint64 &guid, const RemoveMethod &method)
 
     // remove member and change leader (if need) only if strong more 2 members _before_ member remove
     // BG or LFG groups allow 1 member group
-    if (GetMembersCount() > ((isBGGroup() || isLFGGroup()) ? 1u : 2u)|| (method == 2 && GetMembersCount()>1))
+    if (GetMembersCount() > (isBGGroup() ? 1u : 2u) || (method == 2 && GetMembersCount()>1))
     {
         bool leaderChanged = _removeMember(guid);
 
@@ -387,15 +381,9 @@ uint32 Group::RemoveMember(const uint64 &guid, const RemoveMethod &method)
                 player->GetSession()->SendPacket(&data);
             }
 
-            player->GetSession()->SendLfgUpdateParty(LFG_UPDATETYPE_LEADER);
-            if (isLFGGroup() && player->GetMap()->IsDungeon())
-                player->TeleportToBGEntryPoint();
-
             //we already removed player from group and in player->GetGroup() is his original group!
             if (Group* group = player->GetGroup())
-            {
                 group->SendUpdate();
-            }
             else
             {
                 data.Initialize(SMSG_GROUP_LIST, 1+1+1+1+8+4+4+8);
@@ -431,7 +419,6 @@ void Group::ChangeLeader(const uint64 &guid)
     if (slot == m_memberSlots.end())
         return;
 
-    sScriptMgr.OnGroupChangeLeader(this, m_leaderGuid, guid);
     _setLeader(guid);
 
     WorldPacket data(SMSG_GROUP_SET_LEADER, slot->name.size()+1);
@@ -462,11 +449,6 @@ void Group::Disband(bool hideDestroy /* = false */)
                 player->SetOriginalGroup(NULL);
             else
                 player->SetGroup(NULL);
-
-            if (isLFGGroup() && player->GetMap()->IsDungeon())
-                player->TeleportToBGEntryPoint();
-            player->GetSession()->SendLfgUpdateParty(LFG_UPDATETYPE_GROUP_DISBAND);
-            player->GetSession()->SendLfgUpdateParty(LFG_UPDATETYPE_LEADER);
         }
 
         // quest related GO state dependent from raid membership
@@ -1299,8 +1281,6 @@ bool Group::_removeMember(const uint64 &guid)
                 player->SetOriginalGroup(NULL);
             else
                 player->SetGroup(NULL);
-
-            player->GetSession()->SendLfgUpdateParty(LFG_UPDATETYPE_LEADER);
         }
     }
 
@@ -1331,6 +1311,8 @@ void Group::_setLeader(const uint64 &guid)
     member_witerator slot = _getMemberWSlot(guid);
     if (slot == m_memberSlots.end())
         return;
+
+    sScriptMgr.OnGroupChangeLeader(this, m_leaderGuid, guid);
 
     if (!isBGGroup())
     {

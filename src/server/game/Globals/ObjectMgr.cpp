@@ -290,7 +290,8 @@ ObjectMgr::~ObjectMgr()
         delete *itr;
 
     for (GuildMap::iterator itr = mGuildMap.begin(); itr != mGuildMap.end(); ++itr)
-        delete itr->second;
+        if (*itr)
+            delete *itr;
 
     for (ArenaTeamMap::iterator itr = mArenaTeamMap.begin(); itr != mArenaTeamMap.end(); ++itr)
         delete itr->second;
@@ -311,12 +312,12 @@ Group * ObjectMgr::GetGroupByGUID(uint32 guid) const
     return NULL;
 }
 
-Guild* ObjectMgr::GetGuildById(uint32 GuildId) const
+// Guild collection
+Guild* ObjectMgr::GetGuildById(uint32 guildId) const
 {
-    GuildMap::const_iterator itr = mGuildMap.find(GuildId);
-    if (itr != mGuildMap.end())
-        return itr->second;
-
+    // Make sure given index exists in collection
+    if (guildId < uint32(mGuildMap.size()))
+        return mGuildMap[guildId];
     return NULL;
 }
 
@@ -326,42 +327,51 @@ Guild* ObjectMgr::GetGuildByName(const std::string& guildname) const
     std::transform(search.begin(), search.end(), search.begin(), ::toupper);
     for (GuildMap::const_iterator itr = mGuildMap.begin(); itr != mGuildMap.end(); ++itr)
     {
-        std::string gname = itr->second->GetName();
-        std::transform(gname.begin(), gname.end(), gname.begin(), ::toupper);
-        if (search == gname)
-            return itr->second;
+        if (*itr)
+        {
+            std::string gname = (*itr)->GetName();
+            std::transform(gname.begin(), gname.end(), gname.begin(), ::toupper);
+            if (search == gname)
+                return *itr;
+        }
     }
     return NULL;
 }
 
-std::string ObjectMgr::GetGuildNameById(uint32 GuildId) const
+std::string ObjectMgr::GetGuildNameById(uint32 guildId) const
 {
-    GuildMap::const_iterator itr = mGuildMap.find(GuildId);
-    if (itr != mGuildMap.end())
-        return itr->second->GetName();
-
+    if (Guild* pGuild = GetGuildById(guildId))
+        return pGuild->GetName();
     return "";
 }
 
 Guild* ObjectMgr::GetGuildByLeader(const uint64 &guid) const
 {
     for (GuildMap::const_iterator itr = mGuildMap.begin(); itr != mGuildMap.end(); ++itr)
-        if (itr->second->GetLeaderGUID() == guid)
-            return itr->second;
+        if ((*itr) && (*itr)->GetLeaderGUID() == guid)
+            return *itr;
 
     return NULL;
 }
 
-void ObjectMgr::AddGuild(Guild* guild)
+void ObjectMgr::AddGuild(Guild* pGuild)
 {
-    mGuildMap[guild->GetId()] = guild;
+    uint32 guildId = pGuild->GetId();
+    // Allocate space if necessary
+    if (guildId >= uint32(mGuildMap.size()))
+        // Reserve a bit more space than necessary
+        mGuildMap.resize(guildId+1);
+    mGuildMap[guildId] = pGuild;
 }
 
-void ObjectMgr::RemoveGuild(uint32 Id)
+void ObjectMgr::RemoveGuild(uint32 guildId)
 {
-    mGuildMap.erase(Id);
+    // Make sure given index exists
+    if (guildId < uint32(mGuildMap.size()))
+        mGuildMap[guildId] = NULL;
 }
 
+// Arena teams collection
 ArenaTeam* ObjectMgr::GetArenaTeamById(uint32 arenateamid) const
 {
     ArenaTeamMap::const_iterator itr = mArenaTeamMap.find(arenateamid);
@@ -3504,7 +3514,9 @@ void ObjectMgr::LoadGuilds()
         return;
     }
     // 1. Load all guilds
-    barGoLink bar(result->GetRowCount());
+    uint64 rowCount = result->GetRowCount();
+    mGuildMap.resize(uint32(rowCount), NULL);         // Reserve space and initialize storage for loading guilds
+    barGoLink bar(rowCount);
     do
     {
         bar.step();
@@ -3520,10 +3532,9 @@ void ObjectMgr::LoadGuilds()
     }
     while (result->NextRow());
     sLog.outString();
-    sLog.outString(">> Loaded " UI64FMTD " guilds definitions", result->GetRowCount());
+    sLog.outString(">> Loaded " UI64FMTD " guilds definitions", rowCount);
     sLog.outString();
 
-    uint64 rowCount = 0;
     // 2. Load all guild ranks
     sLog.outString("Loading guild ranks...");
     stmt = CharacterDatabase.GetPreparedStatement(CHAR_LOAD_GUILD_RANKS);
@@ -3545,6 +3556,7 @@ void ObjectMgr::LoadGuilds()
     }
     else
     {
+        rowCount = 0;
         barGoLink bar(1);
         bar.step();
     }
@@ -3720,20 +3732,23 @@ void ObjectMgr::LoadGuilds()
     sLog.outString();
 
     // 9. Validate loaded guild data
+    uint32 totalGuilds = 0;
     sLog.outString("Validating data of loaded guilds...");
     barGoLink barGuilds(mGuildMap.size());
-    for (GuildMap::iterator itr = mGuildMap.begin(); itr != mGuildMap.end(); )
+    for (GuildMap::iterator itr = mGuildMap.begin(); itr != mGuildMap.end(); ++itr)
     {
         barGuilds.step();
-        Guild* pGuild = itr->second;
-        if (!pGuild->Validate())
+        Guild* pGuild = *itr;
+        if (pGuild)
         {
-            ++itr;
-            mGuildMap.erase(pGuild->GetId());
-            delete pGuild;
+            if (!pGuild->Validate())
+            {
+                RemoveGuild(pGuild->GetId());
+                delete pGuild;
+            }
+            else
+                ++totalGuilds;
         }
-        else
-             ++itr;
     }
     // Cleanup
     // Delete orphan guild ranks
@@ -3763,7 +3778,7 @@ void ObjectMgr::LoadGuilds()
     CharacterDatabase.Execute(stmt);
 
     sLog.outString();
-    sLog.outString(">> Successfully loaded %u guilds", uint32(mGuildMap.size()));
+    sLog.outString(">> Successfully loaded %u guilds", totalGuilds);
 }
 
 void ObjectMgr::LoadArenaTeams()
@@ -5153,12 +5168,26 @@ void ObjectMgr::LoadWaypointScripts()
 {
     LoadScripts(SCRIPTS_WAYPOINT);
 
+    std::set<uint32> actionSet;
+
     for (ScriptMapMap::const_iterator itr = sWaypointScripts.begin(); itr != sWaypointScripts.end(); ++itr)
+        actionSet.insert(itr->first);
+
+    QueryResult result = WorldDatabase.PQuery("SELECT DISTINCT(`action`) FROM waypoint_data");
+    if (result)
     {
-        QueryResult query = WorldDatabase.PQuery("SELECT * FROM waypoint_data WHERE action = %u", itr->first);
-        if (!query || !query->GetRowCount())
-            sLog.outErrorDb("There is no waypoint which links to the waypoint script %u", itr->first);
+        do 
+        {
+            Field *fields = result->Fetch();
+            uint32 action = fields[0].GetUInt32();
+
+            actionSet.erase(action);
+
+        } while (result->NextRow());
     }
+
+    for (std::set<uint32>::iterator itr = actionSet.begin(); itr != actionSet.end(); ++itr)
+        sLog.outErrorDb("There is no waypoint which links to the waypoint script %u", *itr);
 }
 
 void ObjectMgr::LoadSpellScriptNames()
@@ -5244,7 +5273,6 @@ void ObjectMgr::ValidateSpellScripts()
         SpellEntry const * spellEntry = sSpellStore.LookupEntry(itr->first);
         std::vector<std::pair<SpellScriptLoader *, SpellScriptsMap::iterator> > SpellScriptLoaders;
         sScriptMgr.CreateSpellScriptLoaders(itr->first, SpellScriptLoaders);
-        SpellScriptsMap::iterator bitr;
         itr = mSpellScripts.upper_bound(itr->first);
 
         for (std::vector<std::pair<SpellScriptLoader *, SpellScriptsMap::iterator> >::iterator sitr = SpellScriptLoaders.begin(); sitr != SpellScriptLoaders.end(); ++sitr)

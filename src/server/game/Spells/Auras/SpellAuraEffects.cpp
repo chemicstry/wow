@@ -2256,9 +2256,16 @@ void AuraEffect::TriggerSpell(Unit * target, Unit * caster) const
                         return;
                     }
                     // Tear of Azzinoth Summon Channel - it's not really supposed to do anything,and this only prevents the console spam
-                    case 39857: triggerSpellId = 39856; break;
+                    case 39857:
+                        triggerSpellId = 39856;
+                        break;
                     // Personalized Weather
-                    case 46736: triggerSpellId = 46737; break;
+                    case 46736:
+                        triggerSpellId = 46737;
+                        break;
+                    // Ball of Flames Visual
+                    case 71706:
+                        return;
                 }
                 break;
             }
@@ -5807,9 +5814,6 @@ void AuraEffect::HandleAuraDummy(AuraApplication const * aurApp, uint8 mode, boo
                         case 58600: // Restricted Flight Area
                             if (aurApp->GetRemoveMode() == AURA_REMOVE_BY_EXPIRE)
                                 target->CastSpell(target, 58601, true);
-                            break;
-                        case 68839: // Corrupt Soul
-                            target->CastSpell(target, 68846, true, NULL, this, GetCasterGUID());
                             break;
                     }
                     break;

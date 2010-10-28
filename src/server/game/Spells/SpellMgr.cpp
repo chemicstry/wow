@@ -3899,6 +3899,12 @@ void SpellMgr::LoadSpellCustomAttr()
             spellInfo->targetAuraSpell = 0;
             count++;
             break;
+        case 70728: // Exploit Weakness
+        case 70840: // Devious Minds
+            spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_CASTER;
+            spellInfo->EffectImplicitTargetB[0] = TARGET_UNIT_PET;
+            count++;
+            break;
         case 71413: // Green Ooze Summon
         case 71414: // Orange Ooze Summon
             spellInfo->EffectImplicitTargetA[0] = TARGET_DEST_DEST;
@@ -3930,6 +3936,13 @@ void SpellMgr::LoadSpellCustomAttr()
         case 72855: // Unbound Plague
         case 72856: // Unbound Plague
             spellInfo->EffectImplicitTargetB[0] = TARGET_UNIT_TARGET_ENEMY;
+            count++;
+            break;
+        case 71708: // Empowered Flare
+        case 72785: // Empowered Flare
+        case 72786: // Empowered Flare
+        case 72787: // Empowered Flare
+            spellInfo->AttributesEx3 |= SPELL_ATTR_EX3_NO_DONE_BONUS;
             count++;
             break;
         default:

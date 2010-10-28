@@ -2736,6 +2736,7 @@ CREATE TABLE `gameobject_template` (
   `data21` int(10) unsigned NOT NULL DEFAULT '0',
   `data22` int(10) unsigned NOT NULL DEFAULT '0',
   `data23` int(10) unsigned NOT NULL DEFAULT '0',
+  `AIName` char(64) NOT NULL DEFAULT '',
   `ScriptName` varchar(64) NOT NULL DEFAULT '',
   `WDBVerified` smallint(5) signed DEFAULT '1',
   PRIMARY KEY (`entry`),
@@ -18156,6 +18157,8 @@ INSERT INTO `spell_linked_spell` (`spell_trigger`,`spell_effect`,`type`,`comment
 ( 67623,-67620, 1, 'Remove Paralytic Toxin when hit by Burning Bite'),
 (-66683, 68667, 0, 'Icehowl - Surge of Adrenaline'),
 (-67661, 68667, 0, 'Icehowl - Surge of Adrenaline'),
+-- Forge of Souls
+(-68839, 68846, 0, 'Bronjahm: Corrupt Soul Summon'),
 -- Icecrown Citadel
 (-69674, 69706, 0, 'Rotface: Mutated Infection Summon'),
 (-71224, 69706, 0, 'Rotface: Mutated Infection Summon'),
@@ -26784,6 +26787,15 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 ( 72752, 'spell_pvp_trinket_wotf_shared_cd'),
 ( 72757, 'spell_pvp_trinket_wotf_shared_cd'),
 -- instances
+-- Forge of Souls
+( 68793, 'spell_bronjahm_magic_bane'),
+( 69050, 'spell_bronjahm_magic_bane'),
+( 68861, 'spell_bronjahm_consume_soul'),
+( 69008, 'spell_bronjahm_soulstorm_channel'),
+( 68870, 'spell_bronjahm_soulstorm_visual'),
+-- Pit of Saron
+( 69172, 'spell_tyrannus_overlord_brand'),
+-- Icecrown Citadel
 ( 69057, 'spell_marrowgar_bone_spike_graveyard'),
 ( 69140, 'spell_marrowgar_coldflame'),
 ( 72705, 'spell_marrowgar_coldflame'),
@@ -26861,6 +26873,21 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 ( 72457, 'spell_putricide_regurgitated_ooze'),
 ( 72875, 'spell_putricide_regurgitated_ooze'),
 ( 72876, 'spell_putricide_regurgitated_ooze'),
+( 71598, 'spell_creature_permanent_feign_death'),
+( 71806, 'spell_taldaram_glittering_sparks'),
+( 71718, 'spell_taldaram_summon_flame_ball'),
+( 72040, 'spell_taldaram_summon_flame_ball'),
+( 55891, 'spell_taldaram_flame_ball_visual'),
+( 55947, 'spell_taldaram_flame_ball_visual'),
+( 71756, 'spell_taldaram_ball_of_inferno_flame'),
+( 72782, 'spell_taldaram_ball_of_inferno_flame'),
+( 72783, 'spell_taldaram_ball_of_inferno_flame'),
+( 72784, 'spell_taldaram_ball_of_inferno_flame'),
+( 72080, 'spell_valanar_kinetic_bomb'),
+( 72087, 'spell_valanar_kinetic_bomb_knockback'),
+( 73001, 'spell_blood_council_shadow_prison'),
+( 72999, 'spell_blood_council_shadow_prison_damage'),
+-- Ulduar
 ( 62717, 'spell_ignis_slag_pot'),
 ( 63477, 'spell_ignis_slag_pot'),
 -- quest

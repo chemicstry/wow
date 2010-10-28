@@ -55,7 +55,8 @@ enum ConditionType
     CONDITION_SPELL                 = 25,                   // spell_id         0           +referenceID       true if knows spell
     CONDITION_NOITEM                = 26,                   // item_id          bank        +referenceID       true if player does not have any of the item (if 'bank' is set it searches in bank slots too)
     CONDITION_LEVEL                 = 27,                   // level            opt         +referenceID       true if player's level is equal to param1 (param2 can modify the statement)
-    CONDITION_MAX                   = 28                    // MAX
+    CONDITION_QUEST_COMPLETE        = 28,                   // quest_id         0           +referenceID       true if player has quest_id with all objectives complete, but not yet rewarded
+    CONDITION_MAX                   = 29                    // MAX
 };
 
 enum LevelConditionType
@@ -91,7 +92,8 @@ enum ConditionSourceType
     CONDITION_SOURCE_TYPE_ITEM_REQUIRED_TARGET           = 18,//DONE
     CONDITION_SOURCE_TYPE_QUEST_ACCEPT                   = 19,//DONE
     CONDITION_SOURCE_TYPE_QUEST_SHOW_MARK                = 20,//DONE
-    CONDITION_SOURCE_TYPE_MAX                            = 21//MAX
+    CONDITION_SOURCE_TYPE_VEHICLE_SPELL                  = 21,//DONE
+    CONDITION_SOURCE_TYPE_MAX                            = 22//MAX
 };
 
 struct Condition
@@ -129,7 +131,8 @@ struct Condition
 
 typedef std::list<Condition*> ConditionList;
 typedef std::map<uint32, ConditionList > ConditionTypeMap;
-typedef std::map<ConditionSourceType, ConditionTypeMap > ConditionMap;//used for all conditions, except references
+typedef std::map<ConditionSourceType, ConditionTypeMap > ConditionMap;
+typedef std::map<uint32, ConditionTypeMap > VehicleSpellConditionMap;
 
 typedef std::map<uint32, ConditionList > ConditionReferenceMap;//only used for references
 
@@ -147,11 +150,13 @@ class ConditionMgr
 
         bool IsPlayerMeetToConditions(Player* player, ConditionList conditions, Unit* invoker = NULL);
         ConditionList GetConditionsForNotGroupedEntry(ConditionSourceType sType, uint32 uEntry);
+        ConditionList GetConditionsForVehicleSpell(uint32 creatureID, uint32 spellID);
 
     protected:
 
-        ConditionMap            m_ConditionMap;
-        ConditionReferenceMap   m_ConditionReferenceMap;
+        ConditionMap                m_ConditionMap;
+        ConditionReferenceMap       m_ConditionReferenceMap;
+        VehicleSpellConditionMap    m_VehicleSpellConditions;
 
     private:
 
@@ -176,7 +181,8 @@ class ConditionMgr
                     sourceType == CONDITION_SOURCE_TYPE_SKINNING_LOOT_TEMPLATE ||
                     sourceType == CONDITION_SOURCE_TYPE_SPELL_LOOT_TEMPLATE ||
                     sourceType == CONDITION_SOURCE_TYPE_GOSSIP_MENU ||
-                    sourceType == CONDITION_SOURCE_TYPE_GOSSIP_MENU_OPTION);
+                    sourceType == CONDITION_SOURCE_TYPE_GOSSIP_MENU_OPTION ||
+                    sourceType == CONDITION_SOURCE_TYPE_VEHICLE_SPELL);
         }
 
         void Clean(); // free up resources

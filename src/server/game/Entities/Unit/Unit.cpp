@@ -315,6 +315,32 @@ void Unit::SendMonsterMoveWithSpeed(float x, float y, float z, uint32 transitTim
     SendMonsterMove(x, y, z, transitTime, player);
 }
 
+void Unit::SetFacing(float ori, WorldObject* obj)
+{
+    SetOrientation(obj ? GetAngle(obj) : ori);
+
+    WorldPacket data(SMSG_MONSTER_MOVE, (1+12+4+1+(obj ? 8 : 4)+4+4+4+12+GetPackGUID().size()));
+    data.append(GetPackGUID());
+    data << uint8(0);//unk
+    data << GetPositionX() << GetPositionY() << GetPositionZ();
+    data << getMSTime();
+    if (obj)
+    {
+        data << uint8(SPLINETYPE_FACING_TARGET);
+        data << uint64(obj->GetGUID());
+    }
+    else
+    {
+        data << uint8(SPLINETYPE_FACING_ANGLE);
+        data << ori;
+    }
+    data << uint32(SPLINEFLAG_NONE);
+    data << uint32(0);//move time 0
+    data << uint32(1);//one point
+    data << GetPositionX() << GetPositionY() << GetPositionZ();
+    SendMessageToSet(&data, true);
+}
+
 void Unit::SendMonsterStop(bool on_death)
 {
     WorldPacket data(SMSG_MONSTER_MOVE, (17 + GetPackGUID().size()));
@@ -519,11 +545,11 @@ void Unit::DealDamageMods(Unit *pVictim, uint32 &damage, uint32* absorb)
 
 uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDamage, DamageEffectType damagetype, SpellSchoolMask damageSchoolMask, SpellEntry const *spellProto, bool durabilityLoss)
 {
-    if (pVictim->GetTypeId() == TYPEID_UNIT && pVictim->ToCreature()->IsAIEnabled)
-        pVictim->ToCreature()->AI()->DamageTaken(this, damage);
+    if (pVictim->IsAIEnabled)
+        pVictim->GetAI()->DamageTaken(this, damage);
 
-    if (GetTypeId() == TYPEID_UNIT && this->ToCreature()->IsAIEnabled)
-        this->ToCreature()->AI()->DamageDealt(pVictim, damage);
+    if (IsAIEnabled)
+        GetAI()->DamageDealt(pVictim, damage, damagetype);
 
     if (damagetype != NODAMAGE)
     {
@@ -4377,6 +4403,19 @@ bool Unit::HasAuraEffect(uint32 spellId, uint8 effIndex, uint64 caster) const
     return false;
 }
 
+uint32 Unit::GetAuraCount(uint32 spellId) const
+{
+    uint32 count = 0;
+    for (AuraApplicationMap::const_iterator itr = m_appliedAuras.lower_bound(spellId); itr != m_appliedAuras.upper_bound(spellId); ++itr)
+    {
+        if (!itr->second->GetBase()->GetStackAmount())
+            count++;
+        else
+            count += (uint32)itr->second->GetBase()->GetStackAmount();
+    }
+    return count;
+}
+
 bool Unit::HasAura(uint32 spellId, uint64 caster, uint8 reqEffMask) const
 {
     if (GetAuraApplication(spellId, caster, reqEffMask))
@@ -7891,6 +7930,13 @@ bool Unit::HandleAuraProc(Unit * pVictim, uint32 damage, Aura * triggeredByAura,
                     RemoveAuraFromStack(71564);
                     *handled = true;
                     break;
+                case 71756:
+                case 72782:
+                case 72783:
+                case 72784:
+                    RemoveAuraFromStack(dummySpell->Id);
+                    *handled = true;
+                    break;
             }
             break;
         case SPELLFAMILY_PALADIN:
@@ -9846,8 +9892,11 @@ int32 Unit::DealHeal(Unit *pVictim, uint32 addhealth)
 {
     int32 gain = 0;
 
-    if (pVictim->GetTypeId() == TYPEID_UNIT && pVictim->ToCreature()->IsAIEnabled)
-        pVictim->ToCreature()->AI()->HealReceived(this, addhealth);
+    if (pVictim->IsAIEnabled)
+        pVictim->GetAI()->HealReceived(this, addhealth);
+
+    if (IsAIEnabled)
+        GetAI()->HealDone(pVictim, addhealth);
 
     if (addhealth)
         gain = pVictim->ModifyHealth(int32(addhealth));
@@ -13525,6 +13574,10 @@ void Unit::CleanupsBeforeDelete(bool finalCleanup)
     DeleteThreatList();
     getHostileRefManager().setOnlineOfflineState(false);
     GetMotionMaster()->Clear(false);                    // remove different non-standard movement generators.
+
+    if (Creature* thisCreature = ToCreature())
+        if (GetTransport())
+            GetTransport()->RemovePassenger(thisCreature);
 }
 
 void Unit::UpdateCharmAI()
@@ -13767,7 +13820,7 @@ void CharmInfo::LoadPetActionBar(const std::string& data)
 {
     InitPetActionBar();
 
-    Tokens tokens = StrSplit(data, " ");
+    Tokens tokens(data, ' ');
 
     if (tokens.size() != (ACTION_BAR_INDEX_END-ACTION_BAR_INDEX_START)*2)
         return;                                             // non critical, will reset to default
@@ -13777,9 +13830,9 @@ void CharmInfo::LoadPetActionBar(const std::string& data)
     for (iter = tokens.begin(), index = ACTION_BAR_INDEX_START; index < ACTION_BAR_INDEX_END; ++iter, ++index)
     {
         // use unsigned cast to avoid sign negative format use at long-> ActiveStates (int) conversion
-        ActiveStates type  = ActiveStates(atol(iter->c_str()));
+        ActiveStates type  = ActiveStates(atol(*iter));
         ++iter;
-        uint32 action = uint32(atol(iter->c_str()));
+        uint32 action = uint32(atol(*iter));
 
         PetActionBar[index].SetActionAndType(action, type);
 
