@@ -27,6 +27,7 @@ void AddSC_example_misc();
 
 //TeleNPC2
 void AddSC_npc_teleport();
+void AddSC_npc_ihelp();
 
 // spells
 void AddSC_deathknight_spell_scripts();
@@ -1176,5 +1177,6 @@ void AddCustomScripts()
     /* This is where custom scripts should be added. */
     //TeleNPC2
     AddSC_npc_teleport();
+	AddSC_npc_ihelp();
 #endif
 }
