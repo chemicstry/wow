@@ -354,11 +354,6 @@ uint32 Group::RemoveMember(const uint64 &guid, const RemoveMethod &method)
 {
     BroadcastGroupUpdate();
 
-    if (isLfgQueued())
-        sLFGMgr.Leave(NULL, this);
-    else if (isLFGGroup() && !isLfgDungeonComplete())
-        sLFGMgr.OfferContinue(this);
-
     sScriptMgr.OnGroupRemoveMember(this, guid, method);
 
     // remove member and change leader (if need) only if strong more 2 members _before_ member remove
