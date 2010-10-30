@@ -6,42 +6,22 @@
 *
 * @Date : 27/10/2010
 *
-* @Version : 1.0
+* @Version : 1.1
 *
 **/
  /*
-player->ADD_GOSSIP_ITEM_EXTENDED(0, GOSSIP_ITEM_1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1, "", 0, true);
-if (action == GOSSIP_ACTION_INFO_DEF+2)
-{
-DoScriptText(SAY_NOT_INTERESTED, creature);
-player->CLOSE_GOSSIP_MENU();
-}
-
-        bool OnGossipSelectCode(Player* player, Creature* creature, uint32 sender, uint32 action, const char* code)
-        {
-            if (sender == GOSSIP_SENDER_MAIN)
-            {
-                switch (action)
-                {
-                case GOSSIP_ACTION_INFO_DEF+1:
-                    if (std::strcmp(code, player->GetName()) != 0)
-                    {
-                        DoScriptText(SAY_WRONG, creature);
-                        creature->CastSpell(player, SPELL_POLYMORPH, true);
-                    }
-                    else
-                    {
-                        DoScriptText(SAY_CORRECT, creature);
-                        creature->CastSpell(player, SPELL_MARK_OF_THE_WILD, true);
-                    }
-                    player->CLOSE_GOSSIP_MENU();
-
-                    return true;
-                }
-            }
-
-            return false;
-        }
+1 - cities
+2 - eastern kingdoms
+3 - kalimdor
+4 - outlands
+5 - northrend
+6 - vanilla instance
+7 - bc instance
+8 - wotlk instance
+9 - vanilla raid
+10 - bc raid
+11 - wotlk raid
+12 - arena
 */
 #include "ScriptPCH.h"
 #include <cstring>
@@ -58,6 +38,7 @@ enum eEnums
     SPELL_BUFF_6_2         = 58451, // Scroll of Agility
     
     SPELL_RESURRECTION_SICKNESS = 15007,
+    SPELL_VISUAL_TELEPORT  = 35517,
 
     SOUND_1                = 5934, // Gnome greetings
     SOUND_2                = 5935, // Gnome goodbye
@@ -68,6 +49,7 @@ enum eEnums
 #define GOSSIP_NO_DEST "I have no destinations!!!"
 #define GOSSIP_PREV "<- [Previous Page]"
 #define GOSSIP_NEXT "-> [Next Page]"
+#define GOSSIP_MMENU "<= [Main Menu]"
 
 #define GOSSIP_MAIN_1 "Teleport Me!"
 #define GOSSIP_MAIN_2 "Buff Me!"
@@ -117,12 +99,21 @@ class npc_ihelp : public CreatureScript
             player->PlayerTalkClass->ClearMenus();
             switch(action)
             {
+                case GOSSIP_ACTION_INFO_DEF+1:
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TAXI, GOSSIP_MAIN_1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+2);
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_BATTLE, GOSSIP_MAIN_2, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+3);
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_BATTLE, GOSSIP_MAIN_3, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+4);
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_MONEY_BAG, GOSSIP_MAIN_4, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+5);
+                    player->PlayerTalkClass->SendGossipMenu(907, creature->GetGUID());
+                    break;
+                    
                 case GOSSIP_ACTION_INFO_DEF+2:
                     player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TAXI, GOSSIP_TELE_1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+110);
                     player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TAXI, GOSSIP_TELE_2, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+62);
                     player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TAXI, GOSSIP_TELE_3, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+63);
                     player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TAXI, GOSSIP_TELE_4, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+64);
                     //player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TAXI, GOSSIP_TELE_5, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+50);
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_MMENU, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);
                     player->SEND_GOSSIP_MENU(907, creature->GetGUID());
                     break;
 
@@ -180,6 +171,7 @@ class npc_ihelp : public CreatureScript
                     player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TAXI, GOSSIP_MAP_1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+130);
                     player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TAXI, GOSSIP_MAP_2, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+140);
                     player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TAXI, GOSSIP_MAP_3, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+150);
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_MMENU, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);
                     player->SEND_GOSSIP_MENU(907, creature->GetGUID());
                     break;
                     
@@ -187,6 +179,7 @@ class npc_ihelp : public CreatureScript
                     player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TAXI, GOSSIP_DUNGEON_0, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+160);
                     player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TAXI, GOSSIP_DUNGEON_1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+170);
                     player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TAXI, GOSSIP_DUNGEON_2, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+180);
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_MMENU, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);
                     player->SEND_GOSSIP_MENU(907, creature->GetGUID());
                     break;
                     
@@ -194,18 +187,18 @@ class npc_ihelp : public CreatureScript
                     player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TAXI, GOSSIP_DUNGEON_0, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+190);
                     player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TAXI, GOSSIP_DUNGEON_1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+200);
                     player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TAXI, GOSSIP_DUNGEON_2, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+210);
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_MMENU, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);
                     player->SEND_GOSSIP_MENU(907, creature->GetGUID());
                     break;
                     
                 default:
-                    if (action >= GOSSIP_ACTION_INFO_DEF+100 && action <= GOSSIP_ACTION_INFO_DEF+300)
+                    if ((action >= GOSSIP_ACTION_INFO_DEF+100) && (action <= GOSSIP_ACTION_INFO_DEF+300))
                     {
                         ShowDest(player, creature, action);
                     }
                     else
                     {
-                        player->CLOSE_GOSSIP_MENU();
-                        creature->PlayDirectSound(SOUND_2, player);
+                        SelectDest(player, creature, action);
                     }
                     break;
             }
@@ -214,19 +207,30 @@ class npc_ihelp : public CreatureScript
         }
         
         void ShowDest(Player* player, Creature* creature, uint32 action)
-        {
-            uint32 mysql_limit = 7;
+        { 
             uint32 i;
+            uint32 faction = 0;
+        
+            uint32 type = floor(action / 10) - 110;
+            uint32 offset = (action - ((floor(action / 10)) * 10)) * 7;
             
-            if ((action - (floor(action / 10)) * 10 == 0) || (action - (floor(action / 10)) * 10 == 9))
+            switch(player->getFaction())
             {
-                mysql_limit = 8;
+                case 2:
+                case 5:
+                case 6:
+                case 8:
+                case 10:
+                    faction = 1;
+                    
+                default:
+                    faction = 2;
             }
             
-            QueryResult result = WorldDatabase.PQuery("SELECT * FROM custom_npc_tele_destination WHERE type = %d LIMIT %d OFFSET %d", floor(action / 10) - 10, mysql_limit, ((action - ((floor(action / 10)) * 10))) * 7);
+            QueryResult result = WorldDatabase.PQuery("SELECT * FROM custom_npc_tele_destination WHERE type = %u AND level <= %u AND faction != %u LIMIT %u OFFSET %u", type, player->getLevel(), faction, 7, offset);
             
             if (action - (floor(action / 10)) * 10 != 0)
-                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TAXI, GOSSIP_PREV, GOSSIP_SENDER_MAIN, action - 1);
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TALK, GOSSIP_PREV, GOSSIP_SENDER_MAIN, action - 1);
             
             if (result)
             {
@@ -238,10 +242,39 @@ class npc_ihelp : public CreatureScript
                 } while (result->NextRow());
             } else player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TAXI, GOSSIP_NO_DEST, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+6);
             
-            if ((action - (floor(action / 10)) * 10 != 9) && (i == mysql_limit))
-                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TAXI, GOSSIP_NEXT, GOSSIP_SENDER_MAIN, action + 1);
+            if ((action - (floor(action / 10)) * 10 != 9) && (i == 7))
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_NEXT, GOSSIP_SENDER_MAIN, action + 1);
+                
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_MMENU, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);
             
             player->SEND_GOSSIP_MENU(907, creature->GetGUID());
+        }
+        
+        void SelectDest(Player* player, Creature* creature, uint32 action)
+        {
+            action -= 1300;
+            QueryResult result = WorldDatabase.PQuery("SELECT * FROM custom_npc_tele_destination WHERE id = %u LIMIT 1", action);
+            player->CLOSE_GOSSIP_MENU();
+            
+            if (result)
+            {
+                do
+                {
+                    Field *fields = result->Fetch();
+                    uint16 tele_map = fields[6].GetUInt32();
+                    float tele_x = fields[3].GetFloat();
+                    float tele_y = fields[4].GetFloat();
+                    float tele_z = fields[5].GetFloat();
+                    float tele_o = fields[7].GetFloat();
+                    Teleport(player, tele_map, tele_x, tele_y, tele_z, tele_o);
+                } while (result->NextRow());
+            }
+        }
+        
+        void Teleport(Player * const player, const uint16 &map, const float &X, const float &Y, const float &Z, const float &orient)
+        {
+            player->CastSpell(player, SPELL_VISUAL_TELEPORT, true);
+            player->TeleportTo(map, X, Y, Z, orient);
         }
 };
 
