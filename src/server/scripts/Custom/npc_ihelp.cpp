@@ -10,6 +10,7 @@
 *
 **/
  /*
+### TYPE ###
 1 - cities
 2 - eastern kingdoms
 3 - kalimdor
@@ -22,6 +23,9 @@
 10 - bc raid
 11 - wotlk raid
 12 - arena
+### FACTION ###
+1 - Alliance
+2 - Horde
 */
 #include "ScriptPCH.h"
 #include <cstring>
@@ -45,12 +49,12 @@ enum eEnums
     SOUND_3                = 5936, // Gnome pissed
 };
 
-#define GOSSIP_NUM_DEST 8
-#define GOSSIP_NO_DEST "I have no destinations!!!"
+#define GOSSIP_NO_DEST "Ooops something gone wrong..."
 #define GOSSIP_PREV "<- [Previous Page]"
 #define GOSSIP_NEXT "-> [Next Page]"
 #define GOSSIP_MMENU "<= [Main Menu]"
 
+// Main Menu
 #define GOSSIP_MAIN_1 "Teleport Me!"
 #define GOSSIP_MAIN_2 "Buff Me!"
 #define GOSSIP_MAIN_3 "Remove Resurrection Sickness"
@@ -82,6 +86,13 @@ class npc_ihelp : public CreatureScript
 
         bool OnGossipHello(Player* player, Creature* creature)
         {
+            if(player->isInCombat()) // Check in combat
+            {
+                player->CLOSE_GOSSIP_MENU();
+                creature->MonsterWhisper("You are in combat. Come back later", player->GetGUID());
+                return true;
+            }
+            
             player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TAXI, GOSSIP_MAIN_1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+2);
             player->ADD_GOSSIP_ITEM(GOSSIP_ICON_BATTLE, GOSSIP_MAIN_2, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+3);
             player->ADD_GOSSIP_ITEM(GOSSIP_ICON_BATTLE, GOSSIP_MAIN_3, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+4);
@@ -214,22 +225,27 @@ class npc_ihelp : public CreatureScript
             uint32 type = floor(action / 10) - 110;
             uint32 offset = (action - ((floor(action / 10)) * 10)) * 7;
             
-            switch(player->getFaction())
+            switch(player->getFaction()) // Check player's faction
             {
                 case 2:
                 case 5:
                 case 6:
                 case 8:
                 case 10:
-                    faction = 1;
+                    faction = 1; // Set it reversed, because where are checking if it is not equal
+                    break;
                     
                 default:
                     faction = 2;
+                    break;
             }
+            // tarpas
+            if (player->isGameMaster()) // Show all locatoin for game master
+                faction = 3; // Since we don't have faction 3 it returns everything
             
             QueryResult result = WorldDatabase.PQuery("SELECT * FROM custom_npc_tele_destination WHERE type = %u AND level <= %u AND faction != %u LIMIT %u OFFSET %u", type, player->getLevel(), faction, 7, offset);
             
-            if (action - (floor(action / 10)) * 10 != 0)
+            if (action - (floor(action / 10)) * 10 != 0) // Add Previous Page Button
                 player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TALK, GOSSIP_PREV, GOSSIP_SENDER_MAIN, action - 1);
             
             if (result)
@@ -242,10 +258,12 @@ class npc_ihelp : public CreatureScript
                 } while (result->NextRow());
             } else player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TAXI, GOSSIP_NO_DEST, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+6);
             
-            if ((action - (floor(action / 10)) * 10 != 9) && (i == 7))
+            result = WorldDatabase.PQuery("SELECT id FROM custom_npc_tele_destination WHERE type = %u AND level <= %u AND faction != %u LIMIT %u OFFSET %u", type, player->getLevel(), faction, 7, offset+7); // Same query but with offset +6 because we are checking with "result->NextRow()"
+            
+            if ((action - (floor(action / 10)) * 10 != 9) && result)  // Add Next Page Button
                 player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_NEXT, GOSSIP_SENDER_MAIN, action + 1);
                 
-            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_MMENU, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_MMENU, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1); // Main menu Button
             
             player->SEND_GOSSIP_MENU(907, creature->GetGUID());
         }
