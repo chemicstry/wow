@@ -258,7 +258,7 @@ class npc_ihelp : public CreatureScript
                 } while (result->NextRow());
             } else player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TAXI, GOSSIP_NO_DEST, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+6);
             
-            result = WorldDatabase.PQuery("SELECT id FROM custom_npc_tele_destination WHERE type = %u AND level <= %u AND faction != %u LIMIT %u OFFSET %u", type, player->getLevel(), faction, 7, offset+7); // Same query but with offset +6 because we are checking with "result->NextRow()"
+            result = WorldDatabase.PQuery("SELECT id FROM custom_npc_tele_destination WHERE type = %u AND level <= %u AND faction != %u LIMIT %u OFFSET %u", type, player->getLevel(), faction, 7, offset+7); // Same query but with offset +7 because we are checking next page results
             
             if ((action - (floor(action / 10)) * 10 != 9) && result)  // Add Next Page Button
                 player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_NEXT, GOSSIP_SENDER_MAIN, action + 1);
