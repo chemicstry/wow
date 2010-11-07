@@ -44,9 +44,8 @@ enum eEnums
     SPELL_RESURRECTION_SICKNESS = 15007,
     SPELL_VISUAL_TELEPORT  = 35517,
 
-    SOUND_1                = 5934, // Gnome greetings
-    SOUND_2                = 5935, // Gnome goodbye
-    SOUND_3                = 5936, // Gnome pissed
+    SOUND_1                = 7224, // Greetings
+    SOUND_2                = 16171, // Goodbye
 };
 
 #define GOSSIP_NO_DEST "Ooops something gone wrong..."

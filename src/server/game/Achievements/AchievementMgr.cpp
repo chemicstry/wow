@@ -1913,6 +1913,9 @@ void AchievementMgr::CompletedAchievement(AchievementEntry const* achievement, b
     if (achievement->flags & ACHIEVEMENT_FLAG_COUNTER || HasAchieved(achievement))
         return;
 
+    /** World of Warcraft Armory **/
+    GetPlayer()->WriteWowArmoryDatabaseLog(1, achievement->ID);
+    /** World of Warcraft Armory **/
     SendAchievementEarned(achievement);
     CompletedAchievementData& ca =  m_completedAchievements[achievement->ID];
     ca.date = time(NULL);
