@@ -311,6 +311,11 @@ void WorldSession::HandleQuestgiverChooseRewardOpcode(WorldPacket & recv_data)
     Quest const *pQuest = sObjectMgr.GetQuestTemplate(quest);
     if (pQuest)
     {
+        if ((!_player->CanSeeStartQuest(pQuest) && _player->GetQuestStatus(quest)==QUEST_STATUS_NONE) || (_player->GetQuestStatus(quest) != QUEST_STATUS_COMPLETE && !pQuest->IsAutoComplete()))
+        {
+            sLog.outError("Player with guid %u trying to Complete quest (id %u) when he can't - cheat?", _player->GetGUID(), quest);
+            return;
+        }
         if (_player->CanRewardQuest(pQuest, reward, true))
         {
             _player->RewardQuest(pQuest, reward, pObject);
@@ -470,6 +475,11 @@ void WorldSession::HandleQuestgiverCompleteQuest(WorldPacket& recv_data)
     Quest const *pQuest = sObjectMgr.GetQuestTemplate(quest);
     if (pQuest)
     {
+        if (!_player->CanSeeStartQuest(pQuest) && _player->GetQuestStatus(quest)==QUEST_STATUS_NONE)
+        {
+            sLog.outError("Player with guid %u trying to See quest (id %u) when he can't - cheat?", _player->GetGUID(), quest);
+            return;
+        }
         // TODO: need a virtual function
         if (GetPlayer()->InBattleground())
             if (Battleground* bg = GetPlayer()->GetBattleground())

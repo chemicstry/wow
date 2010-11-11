@@ -738,7 +738,7 @@ void Battleground::EndBattleground(uint32 winner)
             SetArenaTeamRatingChangeForTeam(GetOtherTeam(winner), loser_change);
             /** World of Warcraft Armory **/
             uint32 maxChartID;
-            QueryResult_AutoPtr result = CharacterDatabase.PQuery("SELECT MAX(gameid) FROM armory_game_chart");
+            QueryResult result = CharacterDatabase.PQuery("SELECT MAX(gameid) FROM armory_game_chart");
             if(!result)
                 maxChartID = 0;
             else

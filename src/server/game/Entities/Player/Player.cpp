@@ -24502,7 +24502,7 @@ void Player::WriteWowArmoryDatabaseLog(uint32 type, uint32 data)
     if (type == 3)	// Do not write same bosses many times - just update counter.
     {
         uint8 Difficulty = GetMap()->GetDifficulty();
-        QueryResult_AutoPtr result = CharacterDatabase.PQuery("SELECT counter FROM character_feed_log WHERE guid='%u' AND type=3 AND data='%u' AND difficulty='%u' LIMIT 1", pGuid, data, Difficulty);
+        QueryResult result = CharacterDatabase.PQuery("SELECT counter FROM character_feed_log WHERE guid='%u' AND type=3 AND data='%u' AND difficulty='%u' LIMIT 1", pGuid, data, Difficulty);
         if (result)
         {
             CharacterDatabase.PExecute("UPDATE character_feed_log SET counter=counter+1, date=UNIX_TIMESTAMP(NOW()) WHERE guid='%u' AND type=3 AND data='%u' AND difficulty='%u' LIMIT 1", pGuid, data, Difficulty);
