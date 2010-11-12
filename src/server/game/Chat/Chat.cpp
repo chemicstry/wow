@@ -655,6 +655,17 @@ ChatCommand * ChatHandler::getCommandTable()
         { NULL,             0,                  false, NULL,                                          "", NULL }
     };
 
+    static ChatCommand wintergraspCommandTable[] =
+    {
+        { "status",         SEC_ADMINISTRATOR,  false, &ChatHandler::HandleWintergraspStatusCommand,       "", NULL },
+        { "enable",         SEC_ADMINISTRATOR,  false, &ChatHandler::HandleWintergraspEnableCommand,       "", NULL },
+        { "start",          SEC_ADMINISTRATOR,  false, &ChatHandler::HandleWintergraspStartCommand,        "", NULL },
+        { "stop",           SEC_ADMINISTRATOR,  false, &ChatHandler::HandleWintergraspStopCommand,         "", NULL },
+        { "switch",         SEC_ADMINISTRATOR,  false, &ChatHandler::HandleWintergraspSwitchTeamCommand,   "", NULL },
+        { "timer",          SEC_ADMINISTRATOR,  false, &ChatHandler::HandleWintergraspTimerCommand,        "", NULL },
+        { NULL,             0,                  false, NULL,                                               "", NULL }
+    };
+
     static ChatCommand wpCommandTable[] =
     {
         { "show",           SEC_GAMEMASTER,     false, &ChatHandler::HandleWpShowCommand,              "", NULL },
@@ -802,6 +813,7 @@ ChatCommand * ChatHandler::getCommandTable()
         { "unpossess",      SEC_ADMINISTRATOR,  false, &ChatHandler::HandleUnPossessCommand,           "", NULL },
         { "bindsight",      SEC_ADMINISTRATOR,  false, &ChatHandler::HandleBindSightCommand,           "", NULL },
         { "unbindsight",    SEC_ADMINISTRATOR,  false, &ChatHandler::HandleUnbindSightCommand,         "", NULL },
+        { "wg",             SEC_ADMINISTRATOR,  false, NULL,                                           "", wintergraspCommandTable },
         { "playall",        SEC_GAMEMASTER,     false, &ChatHandler::HandlePlayAllCommand,             "", NULL },
         { "findflyhacker",  SEC_MODERATOR,      false, &ChatHandler::HandleFlyHackerCommand,           "", NULL },
         { "goevent",        SEC_PLAYER,         false, &ChatHandler::HandlePEventCommand,              "", NULL },
