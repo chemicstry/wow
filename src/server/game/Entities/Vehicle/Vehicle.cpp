@@ -44,11 +44,6 @@ Vehicle::Vehicle(Unit *unit, VehicleEntry const *vehInfo) : me(unit), m_vehicleI
     // Set inmunities since db ones are rewritten with player's ones
     switch (GetVehicleInfo()->m_ID)
     {
-        case 244: //Wintergrasp tower
-            me->AddUnitMovementFlag(MOVEMENTFLAG_ROOT);
-            me->SetSpeed(MOVE_TURN_RATE, 0.7f);
-            me->SetSpeed(MOVE_PITCH_RATE, 0.7f);
-            me->m_movementInfo.flags2=59;
         case 160:
             me->SetControlled(true, UNIT_STAT_ROOT);
             me->ApplySpellImmune(0, IMMUNITY_EFFECT, SPELL_EFFECT_KNOCK_BACK, true);
@@ -446,23 +441,4 @@ void Vehicle::Dismiss()
     me->SendObjectDeSpawnAnim(me->GetGUID());
     me->CombatStop();
     me->AddObjectToRemoveList();
-}
-
-void Vehicle::TeleportVehicle(float x, float y, float z, float ang)
-{
-	std::set<Unit*> vehiclePlayers;
-    for(int8 i = 0; i < 8; i++)
-        vehiclePlayers.insert(GetPassenger(i));
-
-	RemoveAllPassengers();
-	me->NearTeleportTo(x, y, z, ang);
-
-	for (std::set<Unit*>::const_iterator itr = vehiclePlayers.begin(); itr != vehiclePlayers.end(); ++itr)
-	{
-		if(Unit *plr = (*itr))
-		{
-			plr->NearTeleportTo(x, y, z, ang);
-			//todo: ajout du joueur dans le vehicule
-		}
-	}
 }

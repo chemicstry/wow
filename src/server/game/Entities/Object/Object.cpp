@@ -41,7 +41,7 @@
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
 #include "SpellAuraEffects.h"
-#include "BattlefieldMgr.h"
+
 #include "TemporarySummon.h"
 #include "Totem.h"
 #include "OutdoorPvPMgr.h"
@@ -458,7 +458,7 @@ void Object::_BuildMovementUpdate(ByteBuffer * data, uint16 flags) const
     if (flags & UPDATEFLAG_VEHICLE)                          // unused for now
     {
         *data << uint32(((Unit*)this)->GetVehicleKit()->GetVehicleInfo()->m_ID);  // vehicle id
-        *data << float(((Creature*)this)->GetOrientation());                      // facing adjustment
+        *data << float(0);                                  // facing adjustment
     }
 
     // 0x200
@@ -1905,12 +1905,7 @@ void WorldObject::SetZoneScript()
         if (map->IsDungeon())
             m_zoneScript = (ZoneScript*)((InstanceMap*)map)->GetInstanceScript();
         else if (!map->IsBattlegroundOrArena())
-        {
-            if(Battlefield* Bf = sBattlefieldMgr.GetBattlefieldToZoneId(GetZoneId()))
-                m_zoneScript = Bf;
-            else
-                m_zoneScript = sOutdoorPvPMgr.GetZoneScript(GetZoneId());
-        }
+            m_zoneScript = sOutdoorPvPMgr.GetZoneScript(GetZoneId());
     }
 }
 

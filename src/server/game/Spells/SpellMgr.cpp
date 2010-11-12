@@ -25,7 +25,6 @@
 #include "Chat.h"
 #include "Spell.h"
 #include "BattlegroundMgr.h"
-#include "BattlefieldMgr.h"
 #include "CreatureAI.h"
 #include "MapManager.h"
 
@@ -3096,16 +3095,8 @@ bool SpellArea::IsFitToRequirements(Player const* player, uint32 newZone, uint32
     // Extra conditions -- leaving the possibility add extra conditions...
     switch(spellId)
     {
-	case 58730:
-	    {
-	    Battlefield * BF = sBattlefieldMgr.GetBattlefieldToZoneId(4197);
-	    if ((BF->CanFlyIn()==true) || !player || (!player->HasAuraType(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED) && !player->HasAuraType(SPELL_AURA_FLY)))
-                return false;
-	    break;
-	    }
         case 58600: // No fly Zone - Dalaran
-            {
-	    if (!player)
+            if (!player)
                 return false;
 
             AreaTableEntry const* pArea = GetAreaEntryByAreaID(player->GetAreaId());
@@ -3114,7 +3105,6 @@ bool SpellArea::IsFitToRequirements(Player const* player, uint32 newZone, uint32
             if (!player->HasAuraType(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED) && !player->HasAuraType(SPELL_AURA_FLY))
                 return false;
             break;
-	    }
     }
 
     return true;
