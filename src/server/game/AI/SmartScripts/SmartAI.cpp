@@ -466,7 +466,6 @@ void SmartAI::MoveInLineOfSight(Unit* who)
 {
     if (!who) return;
     GetScript()->OnMoveInLineOfSight(who);
-    //HasEscortState(SMART_ESCORT_ESCORTING) ||
     if (me->HasReactState(REACT_PASSIVE) || AssistPlayerInCombat(who))
         return;
 
@@ -572,6 +571,7 @@ void SmartAI::JustReachedHome()
 
 void SmartAI::EnterCombat(Unit* enemy)
 {
+    me->InterruptNonMeleeSpells(false);//msut be before ProcessEvents
     GetScript()->ProcessEventsFor(SMART_EVENT_AGGRO, enemy);
     me->GetPosition(&mLastOOCPos);
 }

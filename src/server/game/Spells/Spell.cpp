@@ -1888,7 +1888,7 @@ WorldObject* Spell::SearchNearbyTarget(float range, SpellTargets TargetType, Spe
             ConditionList conditions = sConditionMgr.GetConditionsForNotGroupedEntry(CONDITION_SOURCE_TYPE_SPELL_SCRIPT_TARGET, m_spellInfo->Id);
             if (conditions.empty())
             {
-                sLog.outDebug("Spell (ID: %u) (caster Entry: %u) does not have record in `conditions` for spell script target (ConditionSourceType 14)", m_spellInfo->Id, m_caster->GetEntry());
+                sLog.outDebug("Spell (ID: %u) (caster Entry: %u) does not have record in `conditions` for spell script target (ConditionSourceType 13)", m_spellInfo->Id, m_caster->GetEntry());
                 if (IsPositiveSpell(m_spellInfo->Id))
                     return SearchNearbyTarget(range, SPELL_TARGETS_ALLY, effIndex);
                 else
@@ -2885,15 +2885,16 @@ void Spell::prepare(SpellCastTargets const* targets, AuraEffect const * triggere
             return;
         }
     }
-    if (m_caster->ToPlayer())
+    if (Player* plrCaster = m_caster->GetCharmerOrOwnerPlayerOrPlayerItself())
     {
         //check for special spell conditions
         ConditionList conditions = sConditionMgr.GetConditionsForNotGroupedEntry(CONDITION_SOURCE_TYPE_SPELL, m_spellInfo->Id);
         if (!conditions.empty())
         {
-            if (!sConditionMgr.IsPlayerMeetToConditions(m_caster->ToPlayer(), conditions))
+            if (!sConditionMgr.IsPlayerMeetToConditions(plrCaster, conditions))
             {
-                SendCastResult(SPELL_FAILED_DONT_REPORT);
+                //SendCastResult(SPELL_FAILED_DONT_REPORT);
+                SendCastResult(plrCaster, m_spellInfo, m_cast_count, SPELL_FAILED_DONT_REPORT);
                 finish(false);
                 return;
             }
@@ -5605,6 +5606,9 @@ SpellCastResult Spell::CheckCast(bool strict)
     // check trade slot case (last, for allow catch any another cast problems)
     if (m_targets.getTargetMask() & TARGET_FLAG_TRADE_ITEM)
     {
+        if (m_CastItem)
+            return SPELL_FAILED_ITEM_ENCHANT_TRADE_WINDOW;
+
         if (m_caster->GetTypeId() != TYPEID_PLAYER)
             return SPELL_FAILED_NOT_TRADING;
 

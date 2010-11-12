@@ -1179,7 +1179,7 @@ bool ObjectMgr::CheckCreatureLinkedRespawn(uint32 guid, uint32 linkedGuid) const
 
     if (!slave || !master) // they must have a corresponding entry in db
     {
-        sLog.outError("LinkedRespawn: Creature '%u' linking to '%u' which doesn't exist",guid,linkedGuid);
+        sLog.outErrorDb("LinkedRespawn: Creature '%u' linking to '%u' which doesn't exist",guid,linkedGuid);
         return false;
     }
 
@@ -1188,14 +1188,14 @@ bool ObjectMgr::CheckCreatureLinkedRespawn(uint32 guid, uint32 linkedGuid) const
     if (master->mapid != slave->mapid        // link only to same map
         && (!map || map->Instanceable()))   // or to unistanced world
     {
-        sLog.outError("LinkedRespawn: Creature '%u' linking to '%u' on an unpermitted map",guid,linkedGuid);
+        sLog.outErrorDb("LinkedRespawn: Creature '%u' linking to '%u' on an unpermitted map",guid,linkedGuid);
         return false;
     }
 
     if (!(master->spawnMask & slave->spawnMask)  // they must have a possibility to meet (normal/heroic difficulty)
         && (!map || map->Instanceable()))
     {
-        sLog.outError("LinkedRespawn: Creature '%u' linking to '%u' with not corresponding spawnMask",guid,linkedGuid);
+        sLog.outErrorDb("LinkedRespawn: Creature '%u' linking to '%u' with not corresponding spawnMask",guid,linkedGuid);
         return false;
     }
 
@@ -7513,8 +7513,9 @@ void ObjectMgr::SaveCreatureRespawnTime(uint32 loguid, uint32 instance, time_t t
 {
     // This function can be Called from various map threads concurrently
     {
-        ACE_GUARD(ACE_Thread_Mutex, guard, m_CreatureRespawnTimesMtx);
+        m_CreatureRespawnTimesMtx.acquire();
         mCreatureRespawnTimes[MAKE_PAIR64(loguid,instance)] = t;
+        m_CreatureRespawnTimesMtx.release();
     }
 
     PreparedStatement* stmt = WorldDatabase.GetPreparedStatement(WORLD_DEL_CRESPAWNTIME);
@@ -7546,8 +7547,9 @@ void ObjectMgr::SaveGORespawnTime(uint32 loguid, uint32 instance, time_t t)
 {
     // This function can be called from different map threads concurrently
     {
-        ACE_GUARD(ACE_Thread_Mutex, guard, m_CreatureRespawnTimesMtx);
+        m_GORespawnTimesMtx.acquire();
         mGORespawnTimes[MAKE_PAIR64(loguid,instance)] = t;
+        m_GORespawnTimesMtx.release();
     }
 
     WorldDatabase.PExecute("DELETE FROM gameobject_respawn WHERE guid = '%u' AND instance = '%u'", loguid, instance);
@@ -7561,7 +7563,7 @@ void ObjectMgr::DeleteRespawnTimeForInstance(uint32 instance)
     RespawnTimes::iterator next;
 
     {
-        ACE_GUARD(ACE_Thread_Mutex, guard, m_GORespawnTimesMtx);
+        m_GORespawnTimesMtx.acquire();
         for (RespawnTimes::iterator itr = mGORespawnTimes.begin(); itr != mGORespawnTimes.end(); itr = next)
         {
             next = itr;
@@ -7570,9 +7572,10 @@ void ObjectMgr::DeleteRespawnTimeForInstance(uint32 instance)
             if (GUID_HIPART(itr->first) == instance)
                 mGORespawnTimes.erase(itr);
         }
+        m_GORespawnTimesMtx.release();
     }
     {
-        ACE_GUARD(ACE_Thread_Mutex, guard, m_CreatureRespawnTimesMtx);
+        m_CreatureRespawnTimesMtx.acquire();
         for (RespawnTimes::iterator itr = mCreatureRespawnTimes.begin(); itr != mCreatureRespawnTimes.end(); itr = next)
         {
             next = itr;
@@ -7581,6 +7584,7 @@ void ObjectMgr::DeleteRespawnTimeForInstance(uint32 instance)
             if (GUID_HIPART(itr->first) == instance)
                 mCreatureRespawnTimes.erase(itr);
         }
+        m_CreatureRespawnTimesMtx.release();
     }
     WorldDatabase.PExecute("DELETE FROM creature_respawn WHERE instance = '%u'", instance);
     WorldDatabase.PExecute("DELETE FROM gameobject_respawn WHERE instance = '%u'", instance);

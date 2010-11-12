@@ -733,13 +733,15 @@ void Spell::SpellDamageSchoolDmg(SpellEffIndex effIndex)
                 {
                     // Add main hand dps * effect[2] amount
                     float average = (m_caster->GetFloatValue(UNIT_FIELD_MINDAMAGE) + m_caster->GetFloatValue(UNIT_FIELD_MAXDAMAGE)) / 2;
-                    int32 count = m_caster->CalculateSpellDamage(unitTarget, m_spellInfo, 2);
+                    int32 count = m_caster->CalculateSpellDamage(unitTarget, m_spellInfo, EFFECT_2);
                     damage += count * int32(average * IN_MILLISECONDS) / m_caster->GetAttackTime(BASE_ATTACK);
+                    break;
                 }
                 // Shield of Righteousness
-                else if (m_spellInfo->SpellFamilyFlags[1]&0x00100000)
+                if (m_spellInfo->SpellFamilyFlags[EFFECT_1] & 0x100000)
                 {
-                    damage += int32(m_caster->GetShieldBlockValue() * 1.3f);
+                    damage += m_caster->GetShieldBlockValue() * SpellMgr::CalculateSpellEffectAmount(m_spellInfo, EFFECT_1) / 100;
+                    break;
                 }
                 break;
             }
@@ -1444,7 +1446,7 @@ void Spell::EffectDummy(SpellEffIndex effIndex)
                 GetSummonPosition(effIndex, pos);
                 if (Unit *unit = unitTarget->GetVehicleBase()) // what is this for?
                     unit->CastSpell(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), damage, true);
-                else
+                else if (!unitTarget->HasAuraType(SPELL_AURA_DEFLECT_SPELLS)) // Deterrence
                     unitTarget->CastSpell(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), damage, true);
                 return;
             case 46584: // Raise Dead
@@ -6443,7 +6445,7 @@ void Spell::EffectTransmitted(SpellEffIndex effIndex)
     }
 
     Map *cMap = m_caster->GetMap();
-    if (goinfo->type == GAMEOBJECT_TYPE_FISHINGNODE)
+    if (goinfo->type == GAMEOBJECT_TYPE_FISHINGNODE || goinfo->type == GAMEOBJECT_TYPE_FISHINGHOLE)
     {
         LiquidData liqData;
         if ( !cMap->IsInWater(fx, fy, fz + 1.f/* -0.5f */, &liqData))             // Hack to prevent fishing bobber from failing to land on fishing hole
@@ -6499,8 +6501,8 @@ void Spell::EffectTransmitted(SpellEffIndex effIndex)
         {
             if (m_caster->GetTypeId() == TYPEID_PLAYER)
             {
-          pGameObj->AddUniqueUse(m_caster->ToPlayer());
-          m_caster->AddGameObject(pGameObj);          // will removed at spell cancel
+                pGameObj->AddUniqueUse(m_caster->ToPlayer());
+                m_caster->AddGameObject(pGameObj);      // will removed at spell cancel
             }
             break;
         }
@@ -7019,7 +7021,7 @@ void Spell::EffectRenamePet(SpellEffIndex /*effIndex*/)
         !unitTarget->ToCreature()->isPet() || ((Pet*)unitTarget)->getPetType() != HUNTER_PET)
         return;
 
-    unitTarget->RemoveByteFlag(UNIT_FIELD_BYTES_2, 2, UNIT_CAN_BE_RENAMED);
+    unitTarget->SetByteFlag(UNIT_FIELD_BYTES_2, 2, UNIT_CAN_BE_RENAMED);
 }
 
 void Spell::EffectPlayMusic(SpellEffIndex effIndex)

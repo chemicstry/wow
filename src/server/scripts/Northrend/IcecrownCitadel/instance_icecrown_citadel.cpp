@@ -84,6 +84,10 @@ class instance_icecrown_citadel : public InstanceMapScript
                         if (TeamInInstance == ALLIANCE)
                             creature->UpdateEntry(NPC_ALLIANCE_COMMANDER, ALLIANCE);
                         break;
+                    case NPC_KOR_KRON_LIEUTENANT:
+                        if (TeamInInstance == ALLIANCE)
+                            creature->UpdateEntry(NPC_SKYBREAKER_LIEUTENANT, ALLIANCE);
+                        break;
                     case NPC_TORTUNOK:
                         if (TeamInInstance == ALLIANCE)
                             creature->UpdateEntry(NPC_ALANA_MOONSTRIKE, ALLIANCE);
@@ -107,6 +111,10 @@ class instance_icecrown_citadel : public InstanceMapScript
                     case NPC_HARAGG_THE_UNSEEN:
                         if (TeamInInstance == ALLIANCE)
                             creature->UpdateEntry(NPC_NIBY_THE_ALMIGHTY, ALLIANCE);
+                        break;
+                    case NPC_GARROSH_HELLSCREAM:
+                        if (TeamInInstance == ALLIANCE)
+                            creature->UpdateEntry(NPC_KING_VARIAN_WRYNN, ALLIANCE);
                         break;
                     case NPC_DEATHBRINGER_SAURFANG:
                         uiDeathbringerSaurfang = creature->GetGUID();

@@ -107,9 +107,12 @@ class SmartScript
         }
         bool IsSmart(Creature* c = NULL)
         {
-            if (c && c->GetAIName() != "SmartAI") return false;
-            if (!me || me->GetAIName() != "SmartAI") return false;
-            return true;
+            bool smart = true;
+            if (c && c->GetAIName() != "SmartAI") smart = false;
+            if (!me || me->GetAIName() != "SmartAI") smart = false;
+            if (!smart)
+                sLog.outErrorDb("SmartScript: Action target creature(entry: %u) is not using SmartAI, action skipped to prevent crash.", c?c->GetEntry():(me?me->GetEntry():0));
+            return smart;
         }
         ObjectList* GetTargetList(uint32 id)
         {
@@ -153,7 +156,6 @@ class SmartScript
         }
 
         ObjectListMap* mTargetStorage;
-        void ResetTexts() { mTextIDs.clear(); }
 
         void OnReset();
         void ResetBaseObject()
@@ -191,6 +193,8 @@ class SmartScript
 
         SmartAIEventList mEvents;
         SmartAIEventList mInstallEvents;
+        SmartAIEventList mTimedActionList;
+        bool mResumeActionList;
         Creature* me;
         uint64 meOrigGUID;
         GameObject* go;
@@ -205,11 +209,13 @@ class SmartScript
         SmartAIEventList mStoredEvents;
         std::list<uint32>mRemIDs;
 
-        std::vector<uint32>mTextIDs;
         uint32 mTextTimer;
         uint32 mLastTextID;
         uint64 mTextGUID;
+        Creature* talker;
         bool mUseTextTimer;
+        Unit* mLastInvoker;
+
         SMARTAI_TEMPLATE mTemplate;
         void InstallEvents();
 
@@ -244,6 +250,8 @@ class SmartScript
             SmartScriptHolder s;
             return s;
         }
+        //TIMED_ACTIONLIST (script type 9 aka script9)
+        void SetScript9(SmartScriptHolder &e, uint32 entry);
 };
 
 #endif

@@ -66,7 +66,6 @@ struct ItemPrototype;
 struct OutdoorPvPData;
 
 #define VISIBLE_RANGE       (166.0f)                        //MAX visible range (size of grid)
-#define DEFAULT_TEXT        "<Trinity Script Text Entry Missing!>"
 
 // Generic scripting text function.
 void DoScriptText(int32 textEntry, WorldObject* pSource, Unit *pTarget = NULL);
@@ -1043,7 +1042,7 @@ class ScriptMgr
                         else
                         {
                             // The script uses a script name from database, but isn't assigned to anything.
-                            if (script->GetName().find("example") == std::string::npos)
+                            if (script->GetName().find("example") == std::string::npos && script->GetName().find("Smart") == std::string::npos)
                                 sLog.outErrorDb("Script named '%s' does not have a script name assigned in database.",
                                     script->GetName().c_str());
                         }

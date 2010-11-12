@@ -941,8 +941,14 @@ class npc_blood_queen_lana_thel : public CreatureScript
             void Reset()
             {
                 events.Reset();
-                me->SetVisibility(VISIBILITY_ON);
                 me->AddUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
+                if (instance->GetBossState(DATA_BLOOD_PRINCE_COUNCIL) == DONE)
+                {
+                    me->SetVisibility(VISIBILITY_OFF);
+                    bIntroDone = true;
+                }
+                else
+                    me->SetVisibility(VISIBILITY_ON);
             }
 
             void MoveInLineOfSight(Unit* who)
@@ -1476,8 +1482,9 @@ class spell_blood_council_shadow_prison : public SpellScriptLoader
 
             void HandleDummyTick(AuraEffect const* aurEff, AuraApplication const* aurApp)
             {
-                if (aurApp->GetTarget()->isMoving())
-                    aurApp->GetTarget()->CastSpell(aurApp->GetTarget(), SPELL_SHADOW_PRISON_DAMAGE, true, NULL, aurEff);
+                if (aurApp)
+                    if (aurApp->GetTarget()->isMoving())
+                        aurApp->GetTarget()->CastSpell(aurApp->GetTarget(), SPELL_SHADOW_PRISON_DAMAGE, true, NULL, aurEff);
             }
 
             void Register()

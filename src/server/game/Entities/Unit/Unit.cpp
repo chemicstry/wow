@@ -7754,7 +7754,7 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
                 {
                     triggered_spell_id = 54445;
                     target = this;
-                    float addThreat = SpellMgr::CalculateSpellEffectAmount(procSpell, 0, this) * triggerAmount / 100.f;
+                    float addThreat = SpellMgr::CalculateSpellEffectAmount(procSpell, 0, this) * triggerAmount / 100.0f;
                     pVictim->AddThreat(this, addThreat);
                     break;
                 }
@@ -12530,7 +12530,7 @@ bool Unit::CanHaveThreatList() const
         return false;
 
     // only alive units can have threat list
-    if (!isAlive())
+    if (!isAlive() || isDying())
         return false;
 
     // totems can not have threat list
@@ -16850,7 +16850,7 @@ void Unit::SendThreatListUpdate()
         for (std::list<HostileReference*>::const_iterator itr = tlist.begin(); itr != tlist.end(); ++itr)
         {
             data.appendPackGUID((*itr)->getUnitGuid());
-            data << uint32((*itr)->getThreat());
+            data << uint32((*itr)->getThreat()*100);
         }
         SendMessageToSet(&data, false);
     }

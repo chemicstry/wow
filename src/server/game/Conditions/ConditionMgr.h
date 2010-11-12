@@ -28,7 +28,7 @@ class LootTemplate;
 enum ConditionType
 {                                                           // value1           value2      value3
     CONDITION_NONE                  = 0,                    // 0                0           0                  always true
-    CONDITION_AURA                  = 1,                    // spell_id         effindex    +referenceID       true if has aura of spell_id with effect effindex
+    CONDITION_AURA                  = 1,                    // spell_id         effindex    use target?        true if player (or target, if value3) has aura of spell_id with effect effindex
     CONDITION_ITEM                  = 2,                    // item_id          count       +referenceID       true if has #count of item_ids
     CONDITION_ITEM_EQUIPPED         = 3,                    // item_id          0           +referenceID       true if has item_id equipped
     CONDITION_ZONEID                = 4,                    // zone_id          0           +referenceID       true if in zone_id
@@ -56,7 +56,9 @@ enum ConditionType
     CONDITION_NOITEM                = 26,                   // item_id          bank        +referenceID       true if player does not have any of the item (if 'bank' is set it searches in bank slots too)
     CONDITION_LEVEL                 = 27,                   // level            opt         +referenceID       true if player's level is equal to param1 (param2 can modify the statement)
     CONDITION_QUEST_COMPLETE        = 28,                   // quest_id         0           +referenceID       true if player has quest_id with all objectives complete, but not yet rewarded
-    CONDITION_MAX                   = 29                    // MAX
+    CONDITION_NEAR_CREATURE         = 29,                   // creature entry   distance    +referenceID       true if there is a creature of entry in range
+    CONDITION_NEAR_GAMEOBJECT       = 30,                   // gameobject entry distance    +referenceID       true if there is a gameobject of entry in range
+    CONDITION_MAX                   = 31                    // MAX
 };
 
 enum LevelConditionType

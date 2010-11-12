@@ -16981,6 +16981,7 @@ INSERT INTO `spell_bonus_data` (`entry`,`direct_bonus`,`dot_bonus`,`ap_bonus`,`a
 (25742, 0.07, -1, 0.039, -1, 'Paladin - Seal of Righteousness Dummy Proc'),
 (53719, 0, 0, 0, 0, 'Paladin - Seal of the Martyr Proc Enemy'),
 (53718, 0, 0, 0, 0, 'Paladin - Seal of the Martyr Proc Self'),
+(53600, 0, 0, 0, 0 ,'Paladin - Shield of Righteousness'),
 (20267, 0, 0, 0, 0, 'Paladin - Judgement of Light Proc'),
 (25997, 0, 0, 0, 0, 'Paladin - Eye for an Eye'),
 (50256, -1, -1, 0.08, -1, 'Pet Skills - Bear (Swipe)'),
@@ -17149,7 +17150,8 @@ INSERT INTO `spell_bonus_data` (`entry`,`direct_bonus`,`dot_bonus`,`ap_bonus`,`a
 (60203, 0, -1, -1, -1, 'Darkmoon Card: Death'),
 (60488, 0, -1, -1, -1, 'Extract of Necromatic Power'),
 (45429, 0, -1, -1, -1, 'Shattered Sun Pendant of Acumen - Arcane Bolt'),
-(56161, 0, 0, 0, 0, 'Priest - Glyph of Prayer of Healing');
+(56161, 0, 0, 0, 0, 'Priest - Glyph of Prayer of Healing'),
+(46579, 0, 0, 0, 0, 'Deathfrost - Enchantment');
 /*!40000 ALTER TABLE `spell_bonus_data` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -19376,7 +19378,12 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 75474, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Charred Twilight Scale (Heroic)
 ( 75465, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Charred Twilight Scale
 ( 75457, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Sharpened Twilight Scale (Heroic)
-( 75455, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45); -- Sharpened Twilight Scale
+( 75455, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Sharpened Twilight Scale
+( 12281, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,  6), -- Sword Specialization (Rank 1)
+( 12812, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,  6), -- Sword Specialization (Rank 2)
+( 12813, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,  6), -- Sword Specialization (Rank 3)
+( 12814, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,  6), -- Sword Specialization (Rank 4)
+( 12815, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,  6); -- Sword Specialization (Rank 5)
 /*!40000 ALTER TABLE `spell_proc_event` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -26786,6 +26793,7 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 ( 74490, 'spell_creature_permanent_feign_death'),
 ( 72752, 'spell_pvp_trinket_wotf_shared_cd'),
 ( 72757, 'spell_pvp_trinket_wotf_shared_cd'),
+( 46221, 'spell_gen_animal_blood'),
 -- instances
 -- Forge of Souls
 ( 68793, 'spell_bronjahm_magic_bane'),
@@ -27959,7 +27967,7 @@ DROP TABLE IF EXISTS `version`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `version` (
   `core_version` varchar(120) DEFAULT NULL COMMENT 'Core revision dumped at startup.',
-  `core_revision` bigint(20) unsigned DEFAULT NULL,
+  `core_revision` varchar(120) DEFAULT NULL,
   `db_version` varchar(120) DEFAULT NULL COMMENT 'Version of world DB.',
   `script_version` varchar(120) DEFAULT NULL COMMENT 'Version of scripts DB.',
   `cache_id` int(10) DEFAULT '0'

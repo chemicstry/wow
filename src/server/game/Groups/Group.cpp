@@ -119,7 +119,8 @@ bool Group::Create(const uint64 &guid, const char * name)
         // store group in database
         SQLTransaction trans = CharacterDatabase.BeginTransaction();
         trans->PAppend("DELETE FROM groups WHERE guid ='%u'", lowguid);
-        trans->PAppend("DELETE FROM group_member WHERE guid ='%u'", lowguid);
+        trans->PAppend("DELETE FROM group_member WHERE guid = %u OR memberGuid = %u", lowguid, GUID_LOPART(guid));
+        trans->PAppend("INSERT INTO group_member (guid, memberGuid, subgroup) VALUES (%u, %u, 0)", lowguid, GUID_LOPART(guid));
         trans->PAppend("INSERT INTO groups (guid,leaderGuid,lootMethod,looterGuid,lootThreshold,icon1,icon2,icon3,icon4,icon5,icon6,icon7,icon8,groupType,difficulty,raiddifficulty) "
             "VALUES ('%u','%u','%u','%u','%u','" UI64FMTD "','" UI64FMTD "','" UI64FMTD "','" UI64FMTD "','" UI64FMTD "','" UI64FMTD "','" UI64FMTD "','" UI64FMTD "','%u','%u','%u')",
             lowguid, GUID_LOPART(m_leaderGuid), uint32(m_lootMethod),
@@ -270,16 +271,19 @@ bool Group::AddLeaderInvite(Player *player)
 
 uint32 Group::RemoveInvite(Player *player)
 {
-    m_invitees.erase(player);
-
-    player->SetGroupInvite(NULL);
+    if (player)
+    {
+        m_invitees.erase(player);
+        player->SetGroupInvite(NULL);
+    }
     return GetMembersCount();
 }
 
 void Group::RemoveAllInvites()
 {
     for (InvitesList::iterator itr=m_invitees.begin(); itr != m_invitees.end(); ++itr)
-        (*itr)->SetGroupInvite(NULL);
+        if (*itr)
+            (*itr)->SetGroupInvite(NULL);
 
     m_invitees.clear();
 }
@@ -288,7 +292,7 @@ Player* Group::GetInvited(const uint64& guid) const
 {
     for (InvitesList::const_iterator itr = m_invitees.begin(); itr != m_invitees.end(); ++itr)
     {
-        if ((*itr)->GetGUID() == guid)
+        if ((*itr) && (*itr)->GetGUID() == guid)
             return (*itr);
     }
     return NULL;
@@ -298,7 +302,7 @@ Player* Group::GetInvited(const std::string& name) const
 {
     for (InvitesList::const_iterator itr = m_invitees.begin(); itr != m_invitees.end(); ++itr)
     {
-        if ((*itr)->GetName() == name)
+        if ((*itr) && (*itr)->GetName() == name)
             return (*itr);
     }
     return NULL;
