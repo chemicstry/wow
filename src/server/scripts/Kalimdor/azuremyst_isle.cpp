@@ -805,6 +805,29 @@ public:
 
 };
 
+/*########
+## Quest: The Prophecy of Akida
+########*/
+
+enum eKesselsRunData
+{
+    QUEST_KESSELS_RUN           = 9663,
+};
+
+class npc_kessels_run : public CreatureScript
+{
+public:
+    npc_kessels_run() : CreatureScript("npc_kessels_run") { }
+
+    bool OnGossipHello(Player* pPlayer, Creature* pCreature)
+    {
+        if (pPlayer->IsActiveQuest(QUEST_KESSELS_RUN))
+        {
+            pPlayer->KilledMonsterCredit(pCreature->GetEntry(), 0);
+        }
+    }
+};
+
 void AddSC_azuremyst_isle()
 {
     new npc_draenei_survivor();
@@ -817,4 +840,5 @@ void AddSC_azuremyst_isle()
     new go_ravager_cage();
     new npc_stillpine_capitive();
     new go_bristlelimb_cage();
+	new npc_kessels_run();
 }

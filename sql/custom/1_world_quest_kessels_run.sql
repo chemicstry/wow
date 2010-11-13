@@ -1,0 +1,1 @@
+UPDATE `creature_template` SET `ScriptName` = "npc_kessels_run" WHERE `entry` IN ('17116','17240','17440');
