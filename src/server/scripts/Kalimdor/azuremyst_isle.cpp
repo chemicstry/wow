@@ -840,5 +840,5 @@ void AddSC_azuremyst_isle()
     new go_ravager_cage();
     new npc_stillpine_capitive();
     new go_bristlelimb_cage();
-	new npc_kessels_run();
+    new npc_kessels_run();
 }
