@@ -828,6 +828,48 @@ public:
     }
 };
 
+/*########
+## Quest: Help Tavara
+########*/
+
+enum eHelpTavaraData
+{
+    QUEST_HELP_TAVARA            = 9663,
+	NPC_TAVARA                   = 17551,
+};
+
+class npc_tavara : public CreatureScript
+{
+public:
+    npc_tavara() : CreatureScript("npc_tavara") { }
+
+    CreatureAI* GetAI(Creature* pCreature) const
+    {
+        return new npc_tavaraAI (pCreature);
+    }
+
+    struct npc_tavaraAI : public ScriptedAI
+    {
+        npc_tavaraAI(Creature *c) : ScriptedAI(c) {}
+
+        void Reset() {}
+
+        void EnterCombat(Unit * /*who*/) {}
+
+        void MoveInLineOfSight(Unit *who) {}
+
+        void SpellHit(Unit *Caster, const SpellEntry *Spell)
+        {
+            if ((Spell->Effect[0] == SPELL_EFFECT_HEAL) && (Caster->GetTypeId() == TYPEID_PLAYER) && (CAST_PLR(Caster)->IsActiveQuest(QUEST_HELP_TAVARA)))
+            {
+                CAST_PLR(Caster)->KilledMonsterCredit(NPC_TAVARA, 0);
+            }
+        }
+
+        void UpdateAI(const uint32 diff) {}
+    };
+};
+
 void AddSC_azuremyst_isle()
 {
     new npc_draenei_survivor();
@@ -841,4 +883,5 @@ void AddSC_azuremyst_isle()
     new npc_stillpine_capitive();
     new go_bristlelimb_cage();
     new npc_kessels_run();
+	new npc_tavara();
 }
