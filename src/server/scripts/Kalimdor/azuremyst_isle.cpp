@@ -825,6 +825,8 @@ public:
         {
             pPlayer->KilledMonsterCredit(pCreature->GetEntry(), 0);
         }
+        
+        return false;
     }
 };
 
@@ -835,7 +837,7 @@ public:
 enum eHelpTavaraData
 {
     QUEST_HELP_TAVARA            = 9663,
-	NPC_TAVARA                   = 17551,
+    NPC_TAVARA                   = 17551,
 };
 
 class npc_tavara : public CreatureScript
@@ -883,5 +885,5 @@ void AddSC_azuremyst_isle()
     new npc_stillpine_capitive();
     new go_bristlelimb_cage();
     new npc_kessels_run();
-	new npc_tavara();
+    new npc_tavara();
 }
