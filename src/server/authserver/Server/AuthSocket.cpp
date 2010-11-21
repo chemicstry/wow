@@ -835,47 +835,50 @@ bool AuthSocket::_HandleRealmList()
     size_t RealmListSize = 0;
     for (RealmList::RealmMap::const_iterator i = sRealmList->begin(); i != sRealmList->end(); ++i)
     {
-        // don't work with realms which not compatible with the client
-        if (_expversion & POST_BC_EXP_FLAG)                 // 2.4.3 and 3.1.3 cliens
+        if (i->second.allowedSecurityLevel <= _accountSecurityLevel)
         {
-            if (i->second.gamebuild != _build)
+            // don't work with realms which not compatible with the client
+            if (_expversion & POST_BC_EXP_FLAG)                 // 2.4.3 and 3.1.3 cliens
+            {
+                if (i->second.gamebuild != _build)
                 continue;
-        }
-        else if (_expversion & PRE_BC_EXP_FLAG)             // 1.12.1 and 1.12.2 clients are compatible with eachother
-        {
-            if (!AuthHelper::IsPreBCAcceptedClientBuild(i->second.gamebuild))
+            }
+            else if (_expversion & PRE_BC_EXP_FLAG)             // 1.12.1 and 1.12.2 clients are compatible with eachother
+            {
+                if (!AuthHelper::IsPreBCAcceptedClientBuild(i->second.gamebuild))
                 continue;
+            }
+
+            uint8 AmountOfCharacters;
+
+            // No SQL injection. id of realm is controlled by the database.
+            stmt = LoginDatabase.GetPreparedStatement(LOGIN_GET_NUMCHARSONREALM);
+            stmt->setUInt32(0, i->second.m_ID);
+            stmt->setUInt32(1, id);
+            result = LoginDatabase.Query(stmt);
+            if (result)
+                AmountOfCharacters = (*result)[0].GetUInt8();
+            else
+                AmountOfCharacters = 0;
+
+            uint8 lock = (i->second.allowedSecurityLevel > _accountSecurityLevel) ? 1 : 0;
+
+            pkt << i->second.icon;                              // realm type
+            if ( _expversion & POST_BC_EXP_FLAG )               // only 2.4.3 and 3.1.3 cliens
+                pkt << lock;                                    // if 1, then realm locked
+            pkt << i->second.color;                             // if 2, then realm is offline
+            pkt << i->first;
+            pkt << i->second.address;
+            pkt << i->second.populationLevel;
+            pkt << AmountOfCharacters;
+            pkt << i->second.timezone;                          // realm category
+            if ( _expversion & POST_BC_EXP_FLAG )               // 2.4.3 and 3.1.3 clients
+                pkt << (uint8) 0x2C;                            // unk, may be realm number/id?
+            else
+                pkt << (uint8) 0x0;                             // 1.12.1 and 1.12.2 clients
+
+            ++RealmListSize;
         }
-
-        uint8 AmountOfCharacters;
-
-        // No SQL injection. id of realm is controlled by the database.
-        stmt = LoginDatabase.GetPreparedStatement(LOGIN_GET_NUMCHARSONREALM);
-        stmt->setUInt32(0, i->second.m_ID);
-        stmt->setUInt32(1, id);
-        result = LoginDatabase.Query(stmt);
-        if (result)
-            AmountOfCharacters = (*result)[0].GetUInt8();
-        else
-            AmountOfCharacters = 0;
-
-        uint8 lock = (i->second.allowedSecurityLevel > _accountSecurityLevel) ? 1 : 0;
-
-        pkt << i->second.icon;                              // realm type
-        if ( _expversion & POST_BC_EXP_FLAG )               // only 2.4.3 and 3.1.3 cliens
-            pkt << lock;                                    // if 1, then realm locked
-        pkt << i->second.color;                             // if 2, then realm is offline
-        pkt << i->first;
-        pkt << i->second.address;
-        pkt << i->second.populationLevel;
-        pkt << AmountOfCharacters;
-        pkt << i->second.timezone;                          // realm category
-        if ( _expversion & POST_BC_EXP_FLAG )               // 2.4.3 and 3.1.3 clients
-            pkt << (uint8) 0x2C;                            // unk, may be realm number/id?
-        else
-            pkt << (uint8) 0x0;                             // 1.12.1 and 1.12.2 clients
-
-        ++RealmListSize;
     }
 
     if ( _expversion & POST_BC_EXP_FLAG )                   // 2.4.3 and 3.1.3 cliens
