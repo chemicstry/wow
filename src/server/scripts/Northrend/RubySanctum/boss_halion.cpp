@@ -216,7 +216,7 @@ class boss_halion : public CreatureScript
                     DoCast(me, SPELL_SUMMON_TWILIGHT_PORTAL);
     				DoCast(me, SPELL_TWILIGHT_DIVISION);
                     me->SummonCreature(NPC_TWILIGHT_HALION,SpawnPos);
-                    me->SetVisibility(VISIBILITY_OFF);
+                    me->SetVisible(false);
                     instance->SetBossState(DATA_HALION, SPECIAL);
     			}
                 DoMeleeAttackIfReady();
@@ -444,7 +444,7 @@ class boss_twilight_halion : public CreatureScript
     				DoScriptText(SAY_PHASE3, me);
                     pHalion->SetReactState(REACT_AGGRESSIVE);
     				pHalion->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
-                    pHalion->SetVisibility(VISIBILITY_ON);
+                    pHalion->SetVisible(true);
                     CAST_AI(boss_halion::boss_halionAI, pHalion->AI())->SetPhase3();
                     events.ScheduleEvent(EVENT_DPS, 5000,PHASE_3);
     			}

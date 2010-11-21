@@ -60,7 +60,7 @@ void _RespawnCreatureIfNeeded(Creature *cr, uint32 entry)
         cr->SetOriginalEntry(entry);
         if (entry != cr->GetEntry() || !cr->isAlive())
             cr->Respawn(true);
-        cr->SetVisibility(VISIBILITY_ON);
+        cr->SetVisible(true);
     }
 }
 
@@ -977,26 +977,26 @@ bool OutdoorPvPWG::UpdateCreatureInfo(Creature *creature)
                 if (!creature->isAlive())
                     creature->Respawn(true);
                 creature->setFaction(WintergraspFaction[getDefenderTeam()]);
-                creature->SetVisibility(VISIBILITY_ON);
+                creature->SetVisible(true);
             }
             else
             {
                 if (creature->IsVehicle() && creature->GetVehicleKit())
                     creature->GetVehicleKit()->RemoveAllPassengers();
-                creature->SetVisibility(VISIBILITY_OFF);
+                creature->SetVisible(false);
                 creature->setFaction(35);
             }
             return false;
         case CREATURE_OTHER:
             if (isWarTime())
             {
-                creature->SetVisibility(VISIBILITY_OFF);
+                creature->SetVisible(false);
                 creature->setFaction(35);
             }
             else
             {
                 creature->RestoreFaction();
-                creature->SetVisibility(VISIBILITY_ON);
+                creature->SetVisible(true);
             }
             return false;
         case CREATURE_SPIRIT_GUIDE:
@@ -1016,17 +1016,17 @@ bool OutdoorPvPWG::UpdateCreatureInfo(Creature *creature)
                     FortressSpirit->UpdateEntry(CRE_SPI_H);
                  }
                }
-                creature->SetVisibility(VISIBILITY_ON);
+                creature->SetVisible(true);
                 //creature->setDeathState(ALIVE);
             }
             else
             {
-                creature->SetVisibility(VISIBILITY_OFF);
+                creature->SetVisible(false);
                 //creature->setDeathState(DEAD);
             }
             return false;
         case CREATURE_SPIRIT_HEALER:
-            creature->SetVisibility(isWarTime() ? VISIBILITY_OFF : VISIBILITY_ON);
+            creature->SetVisible(isWarTime() ? false : true);
             return false;
         case CREATURE_ENGINEER:
             return false;
@@ -1423,7 +1423,7 @@ bool OutdoorPvPWG::Update(uint32 diff)
                                 {
                                     i->getSource()->ExitVehicle();
                                     i->getSource()->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-                                    Old->SetVisibility(VISIBILITY_ON);
+                                    Old->SetVisible(true);
                                     Old->ToTempSummon()->UnSummon();
                                 }
                                 else
@@ -1442,7 +1442,7 @@ bool OutdoorPvPWG::Update(uint32 diff)
                                 New->SetHealth(Old->GetHealth());
                                 New->SetRespawnTime(Old->GetRespawnTime());
                                 Old->GetVehicleKit()->Uninstall();
-                                Old->SetVisibility(VISIBILITY_ON);
+                                Old->SetVisible(true);
                                 Old->ForcedDespawn();
                                 Vehicle *vehicle = New->GetVehicleKit();
 								Driver->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
@@ -1472,7 +1472,7 @@ bool OutdoorPvPWG::Update(uint32 diff)
                                 {
                                     i->getSource()->ExitVehicle();
                                     i->getSource()->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-                                    Old->SetVisibility(VISIBILITY_ON);
+                                    Old->SetVisible(true);
                                     Old->ToTempSummon()->UnSummon();
                                 }
                                 else
@@ -1491,7 +1491,7 @@ bool OutdoorPvPWG::Update(uint32 diff)
                                 New->SetHealth(Old->GetHealth());
                                 New->SetRespawnTime(Old->GetRespawnTime());
                                 Old->GetVehicleKit()->Uninstall();
-                                Old->SetVisibility(VISIBILITY_ON);
+                                Old->SetVisible(true);
                                 Old->ForcedDespawn();
                                 Vehicle *vehicle = New->GetVehicleKit();
 								Driver->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
@@ -1527,7 +1527,7 @@ bool OutdoorPvPWG::Update(uint32 diff)
                                 {
                                     i->getSource()->ExitVehicle();
                                     i->getSource()->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-                                    Old->SetVisibility(VISIBILITY_ON);
+                                    Old->SetVisible(true);
                                     Old->ToTempSummon()->UnSummon();
                                 }
                                 else
@@ -1546,7 +1546,7 @@ bool OutdoorPvPWG::Update(uint32 diff)
                                 New->SetHealth(Old->GetHealth());
                                 New->SetRespawnTime(Old->GetRespawnTime());
                                 Old->GetVehicleKit()->Uninstall();
-                                Old->SetVisibility(VISIBILITY_ON);
+                                Old->SetVisible(true);
                                 Old->ForcedDespawn();
                                 Vehicle *vehicle = New->GetVehicleKit();
 								Driver->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
@@ -1576,7 +1576,7 @@ bool OutdoorPvPWG::Update(uint32 diff)
                                 {
                                     i->getSource()->ExitVehicle();
                                     i->getSource()->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-                                    Old->SetVisibility(VISIBILITY_ON);
+                                    Old->SetVisible(true);
                                     Old->ToTempSummon()->UnSummon();
                                 }
                                 else
@@ -1595,7 +1595,7 @@ bool OutdoorPvPWG::Update(uint32 diff)
                                 New->SetHealth(Old->GetHealth());
                                 New->SetRespawnTime(Old->GetRespawnTime());
                                 Old->GetVehicleKit()->Uninstall();
-                                Old->SetVisibility(VISIBILITY_ON);
+                                Old->SetVisible(true);
                                 Old->ForcedDespawn();
                                 Vehicle *vehicle = New->GetVehicleKit();
 								Driver->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
@@ -2334,7 +2334,7 @@ void OPvPCapturePointWG::ChangeTeam(TeamId oldTeam)
         }
     }
     else if (m_engineer)
-        m_engineer->SetVisibility(VISIBILITY_OFF);
+        m_engineer->SetVisible(false);
 
     sLog.outDebug("Wintergrasp workshop now belongs to %u.", (uint32)m_buildingState->GetTeam());
 }

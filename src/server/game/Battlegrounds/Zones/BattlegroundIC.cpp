@@ -548,7 +548,7 @@ void BattlegroundIC::SpawnNpcType(uint32 type)
         if(type==BG_IC_NPC[i].type)
         {
             if(GetBGCreature(id)){
-                GetBGCreature(id)->SetVisibility(VISIBILITY_ON);
+                GetBGCreature(id)->SetVisible(true);
                 GetBGCreature(id)->SetRespawnTime(30);
                 GetBGCreature(id)->Respawn(true);
             }
@@ -574,13 +574,13 @@ void BattlegroundIC::DeSpawnNpcType(uint32 type)
                 {
                     if(!GetBGCreature(id)->GetVehicleKit()->IsVehicleInUse())
                     {
-                        GetBGCreature(id)->SetVisibility(VISIBILITY_OFF);
+                        GetBGCreature(id)->SetVisible(false);
                         GetBGCreature(id)->DisappearAndDie();
                     }
                 }
                 else
                 {
-                    GetBGCreature(id)->SetVisibility(VISIBILITY_OFF);
+                    GetBGCreature(id)->SetVisible(false);
                     GetBGCreature(id)->DisappearAndDie();
                 }
             }

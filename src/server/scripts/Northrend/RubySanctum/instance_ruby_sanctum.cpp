@@ -66,7 +66,7 @@ class instance_ruby_sanctum : public InstanceMapScript
                         break;
                     case NPC_HALION:        
                         m_uiHalionGUID = pCreature->GetGUID();
-                        pCreature->SetVisibility(VISIBILITY_OFF);
+                        pCreature->SetVisible(false);
                         pCreature->SetReactState(REACT_PASSIVE);
                         pCreature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
                         break;
@@ -152,7 +152,7 @@ class instance_ruby_sanctum : public InstanceMapScript
                                 if (Creature* halion = instance->GetCreature(GetData64(DATA_HALION)))
                                 {
                                     halion->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
-                                    halion->SetVisibility(VISIBILITY_ON);
+                                    halion->SetVisible(true);
                                     halion->SetReactState(REACT_AGGRESSIVE);
                                 }
                             }
