@@ -2263,7 +2263,7 @@ CharDelete.KeepDays = 30
 #
 ###############################################################################
 
-Anticheat.Movement.Enable = 1
+Anticheat.Movement.Enable = 0
 Anticheat.Movement.AlarmCount = 5
 Anticheat.Movement.AlarmTime = 5000
 Anticheat.Movement.Kill = 0
