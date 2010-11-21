@@ -3802,6 +3802,11 @@ void SpellMgr::LoadSpellCustomAttr()
             spellInfo->Targets |= TARGET_FLAG_UNIT_CASTER;
             count++;
             break;
+        case 16834: // Natural shapeshifter
+        case 16835:
+            spellInfo->DurationIndex = 21;
+            count++;
+            break;
         case 51735: // Ebon Plague
         case 51734:
         case 51726:
@@ -3893,6 +3898,11 @@ void SpellMgr::LoadSpellCustomAttr()
             spellInfo->EffectImplicitTargetA[0] = TARGET_DST_DB;
             count++;
             break;
+        // Deathbringer Saurfang achievement (must be cast on players, cannot do that with ENTRY target)
+        case 72928:
+            spellInfo->EffectImplicitTargetB[0] = TARGET_UNIT_AREA_ENEMY_SRC;
+            count++;
+            break;
         case 63675: // Improved Devouring Plague
             spellInfo->AttributesEx3 |= SPELL_ATTR_EX3_NO_DONE_BONUS;
             count++;
@@ -3914,6 +3924,11 @@ void SpellMgr::LoadSpellCustomAttr()
         case 70840: // Devious Minds
             spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_CASTER;
             spellInfo->EffectImplicitTargetB[0] = TARGET_UNIT_PET;
+            count++;
+            break;
+        case 70893: // Culling The Herd
+            spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_CASTER;
+            spellInfo->EffectImplicitTargetB[0] = TARGET_UNIT_MASTER;
             count++;
             break;
         case 71413: // Green Ooze Summon

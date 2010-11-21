@@ -307,7 +307,7 @@ const uint32 ItemQualityColors[MAX_ITEM_QUALITY] = {
 #define SPELL_ATTR_EX_NO_THREAT                   0x00000400            // 10 no generates threat on cast 100% (old NO_INITIAL_AGGRO)
 #define SPELL_ATTR_EX_UNK11                       0x00000800            // 11 aura
 #define SPELL_ATTR_EX_UNK12                       0x00001000            // 12
-#define SPELL_ATTR_EX_UNK13                       0x00002000            // 13
+#define SPELL_ATTR_EX_USE_RADIUS_AS_MAX_DISTANCE  0x00002000            // 13
 #define SPELL_ATTR_EX_STACK_FOR_DIFF_CASTERS      0x00004000            // 14
 #define SPELL_ATTR_EX_DISPEL_AURAS_ON_IMMUNITY    0x00008000            // 15 remove auras on immunity
 #define SPELL_ATTR_EX_UNAFFECTED_BY_SCHOOL_IMMUNE 0x00010000            // 16 on immuniy
@@ -978,6 +978,46 @@ enum SpellCastResult
     SPELL_FAILED_UNKNOWN = 187, // actually doesn't exist in client
 
     SPELL_CAST_OK = 255 // custom value, don't must be send to client
+};
+
+enum StealthType
+{
+    STEALTH_GENERAL     = 0,
+    STEALTH_TRAP        = 1,
+
+    TOTAL_STEALTH_TYPES = 2
+};
+
+enum InvisibilityType
+{
+    INVISIBILITY_GENERAL     =  0,
+    INVISIBILITY_UNK1        =  1,
+    INVISIBILITY_UNK2        =  2,
+    INVISIBILITY_TRAP        =  3,
+    INVISIBILITY_UNK4        =  4,
+    INVISIBILITY_UNK5        =  5,
+    INVISIBILITY_DRUNK       =  6,
+    INVISIBILITY_UNK7        =  7,
+    INVISIBILITY_UNK8        =  8,
+    INVISIBILITY_UNK9        =  9,
+    INVISIBILITY_UNK10       = 10,
+    INVISIBILITY_UNK11       = 11,
+
+    TOTAL_INVISIBILITY_TYPES = 12
+};
+
+enum ServerSideVisibilityType
+{
+    SERVERSIDE_VISIBILITY_GM          = 0,
+    SERVERSIDE_VISIBILITY_GHOST       = 1,
+
+    TOTAL_SERVERSIDE_VISIBILITY_TYPES = 2
+};
+
+enum GhostVisibilityType
+{
+    GHOST_VISIBILITY_ALIVE = 0x1,
+    GHOST_VISIBILITY_GHOST = 0x2
 };
 
 // Spell aura states

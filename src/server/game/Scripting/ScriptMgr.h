@@ -689,14 +689,14 @@ class PlayerScript : public ScriptObject
         virtual void OnDuelStart(Player* /*player1*/, Player* /*player2*/) { }
 
         // Called when a duel ends
-        virtual void OnDuelEnd(Player* /*winner*/, Player* /*looser*/, DuelCompleteType /*type*/) { }
+        virtual void OnDuelEnd(Player* /*winner*/, Player* /*loser*/, DuelCompleteType /*type*/) { }
 
         // The following methods are called when a player sends a chat message
-        virtual void OnChat(Player* /*player*/, uint32 /*type*/, uint32 /*lang*/, std::string /*msg*/) { }
-        virtual void OnChat(Player* /*player*/, uint32 /*type*/, uint32 /*lang*/, std::string /*msg*/, Player* /*receiver*/) { }
-        virtual void OnChat(Player* /*player*/, uint32 /*type*/, uint32 /*lang*/, std::string /*msg*/, Group* /*group*/) { }
-        virtual void OnChat(Player* /*player*/, uint32 /*type*/, uint32 /*lang*/, std::string /*msg*/, Guild* /*guild*/) { }
-        virtual void OnChat(Player* /*player*/, uint32 /*type*/, uint32 /*lang*/, std::string /*msg*/, Channel* /*channel*/) { }
+        virtual void OnChat(Player* /*player*/, uint32 /*type*/, uint32 /*lang*/, std::string& /*msg*/) { }
+        virtual void OnChat(Player* /*player*/, uint32 /*type*/, uint32 /*lang*/, std::string& /*msg*/, Player* /*receiver*/) { }
+        virtual void OnChat(Player* /*player*/, uint32 /*type*/, uint32 /*lang*/, std::string& /*msg*/, Group* /*group*/) { }
+        virtual void OnChat(Player* /*player*/, uint32 /*type*/, uint32 /*lang*/, std::string& /*msg*/, Guild* /*guild*/) { }
+        virtual void OnChat(Player* /*player*/, uint32 /*type*/, uint32 /*lang*/, std::string& /*msg*/, Channel* /*channel*/) { }
 
         // Both of the below are called on emote opcodes
         virtual void OnEmote(Player* /*player*/, uint32 /*emote*/) { }
@@ -934,12 +934,12 @@ class ScriptMgr
         void OnPlayerReputationChange(Player *player, uint32 factionID, int32& standing, bool incremental);
         void OnPlayerDuelRequest(Player* target, Player* challenger);
         void OnPlayerDuelStart(Player* player1, Player* player2);
-        void OnPlayerDuelEnd(Player* winner, Player* looser, DuelCompleteType type);
-        void OnPlayerChat(Player* player, uint32 type, uint32 lang, std::string msg);
-        void OnPlayerChat(Player* player, uint32 type, uint32 lang, std::string msg, Player* receiver);
-        void OnPlayerChat(Player* player, uint32 type, uint32 lang, std::string msg, Group* group);
-        void OnPlayerChat(Player* player, uint32 type, uint32 lang, std::string msg, Guild* guild);
-        void OnPlayerChat(Player* player, uint32 type, uint32 lang, std::string msg, Channel* channel);
+        void OnPlayerDuelEnd(Player* winner, Player* loser, DuelCompleteType type);
+        void OnPlayerChat(Player* player, uint32 type, uint32 lang, std::string& msg);
+        void OnPlayerChat(Player* player, uint32 type, uint32 lang, std::string& msg, Player* receiver);
+        void OnPlayerChat(Player* player, uint32 type, uint32 lang, std::string& msg, Group* group);
+        void OnPlayerChat(Player* player, uint32 type, uint32 lang, std::string& msg, Guild* guild);
+        void OnPlayerChat(Player* player, uint32 type, uint32 lang, std::string& msg, Channel* channel);
         void OnPlayerEmote(Player* player, uint32 emote);
         void OnPlayerTextEmote(Player* player, uint32 text_emote, uint32 emoteNum, uint64 guid);
         void OnPlayerSpellCast(Player* player, Spell *spell, bool skipCheck);

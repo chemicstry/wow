@@ -279,6 +279,7 @@ bool SmartAIMgr::IsTargetValid(SmartScriptHolder e)
         case SMART_TARGET_CLOSEST_PLAYER:
         case SMART_TARGET_ACTION_INVOKER_VEHICLE:
         case SMART_TARGET_OWNER_OR_SUMMONER:
+        case SMART_TARGET_THREAT_LIST:
             break;
         default:
             sLog.outErrorDb("SmartAIMgr: Not handled target_type(%u), Entry %d SourceType %u Event %u Action %u, skipped.", e.GetTargetType(), e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType());
@@ -449,6 +450,10 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder &e)
                     }
                     break;
                 }
+            case SMART_EVENT_DUMMY_EFFECT:
+                if (!IsSpellValid(e, e.event.dummy.spell)) return false;
+                if (e.event.dummy.effIndex > EFFECT_2) return false;
+                break;
             case SMART_EVENT_TIMED_EVENT_TRIGGERED:
             case SMART_EVENT_INSTANCE_PLAYER_ENTER:
             case SMART_EVENT_TRANSPORT_RELOCATE:
@@ -479,7 +484,7 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder &e)
             case SMART_EVENT_GOSSIP_SELECT:
             case SMART_EVENT_GOSSIP_HELLO:
             case SMART_EVENT_JUST_CREATED:
-            case SMART_EVENT_FOLLOW_COPMLETE:
+            case SMART_EVENT_FOLLOW_COMPLETED:
                 break;
             default: 
                 sLog.outErrorDb("SmartAIMgr: Not handled event_type(%u), Entry %d SourceType %u Event %u Action %u, skipped.", e.GetEventType(), e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType());
@@ -537,6 +542,15 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder &e)
         case SMART_ACTION_ADD_QUEST:
             if (e.action.quest.quest && !IsQuestValid(e, e.action.quest.quest)) return false;
             break;
+        case SMART_ACTION_ACTIVATE_TAXI:
+            {
+                if (!sTaxiPathStore.LookupEntry(e.action.taxi.id))
+                {
+                    sLog.outErrorDb("SmartAIMgr: Entry %d SourceType %u Event %u Action %u uses invalid Taxi path ID %u, skipped.", e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType(), e.action.taxi.id);
+                    return false;
+                }
+                break;
+            }
         case SMART_ACTION_RANDOM_EMOTE:
             if (e.action.randomEmote.emote1 && !IsEmoteValid(e, e.action.randomEmote.emote1)) return false;
             if (e.action.randomEmote.emote2 && !IsEmoteValid(e, e.action.randomEmote.emote2)) return false;
@@ -657,13 +671,6 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder &e)
         case SMART_ACTION_SUMMON_GO:
             if (!IsGameObjectValid(e, e.action.summonGO.entry)) return false;
             break;
-        case SMART_ACTION_WP_LOAD:
-            if (!sSmartWaypointMgr.GetPath(e.action.wpLoad.id))
-            {
-                sLog.outErrorDb("SmartAIMgr: Creature %d Event %u Action %u uses non-existent WaypointPath id %u, skipped.", e.entryOrGuid, e.event_id, e.GetActionType(), e.action.wpLoad.id);
-                return false;
-            }
-            break;
         case SMART_ACTION_ADD_ITEM:
         case SMART_ACTION_REMOVE_ITEM:
             if (!IsItemValid(e, e.action.item.entry)) return false;
@@ -688,6 +695,11 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder &e)
             break;
         case SMART_ACTION_WP_START:
             {
+                if (!sSmartWaypointMgr.GetPath(e.action.wpStart.pathID))
+                {
+                    sLog.outErrorDb("SmartAIMgr: Creature %d Event %u Action %u uses non-existent WaypointPath id %u, skipped.", e.entryOrGuid, e.event_id, e.GetActionType(), e.action.wpStart.pathID);
+                    return false;
+                }
                 if (e.action.wpStart.quest && !IsQuestValid(e, e.action.wpStart.quest)) return false;
                 if (e.action.wpStart.reactState > REACT_AGGRESSIVE)
                 {
@@ -756,9 +768,10 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder &e)
         case SMART_ACTION_CROSS_CAST:
         case SMART_ACTION_CALL_RANDOM_TIMED_ACTIONLIST:
         case SMART_ACTION_CALL_RANDOM_RANGE_TIMED_ACTIONLIST:
+        case SMART_ACTION_RANDOM_MOVE:
             break;
         default:
-            sLog.outErrorDb("SmartAIMgr: Not handled action_type(%u), Entry %d SourceType %u Event %u, skipped.", e.GetActionType(), e.GetEventType(), e.entryOrGuid, e.GetScriptType(), e.event_id);
+            sLog.outErrorDb("SmartAIMgr: Not handled action_type(%u), event_type(%u), Entry %d SourceType %u Event %u, skipped.", e.GetActionType(), e.GetEventType(), e.entryOrGuid, e.GetScriptType(), e.event_id);
             return false;
     }
 

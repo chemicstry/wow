@@ -88,10 +88,11 @@ void SmartScript::ProcessEventsFor(SMART_EVENT e, Unit* unit, uint32 var0, uint3
     }
     for (SmartAIEventList::iterator i = mEvents.begin(); i != mEvents.end(); ++i)
     {
-        if ((*i).GetEventType() == SMART_EVENT_LINK)//special handling
+        SMART_EVENT eventType = SMART_EVENT((*i).GetEventType());
+        if (eventType == SMART_EVENT_LINK)//special handling
             continue;
         
-        if ((*i).GetEventType() == e/* && (!(*i).event.event_phase_mask || IsInPhase((*i).event.event_phase_mask)) && !((*i).event.event_flags & SMART_EVENT_FLAG_NOT_REPEATABLE && (*i).runOnce)*/)
+        if (eventType == e/* && (!(*i).event.event_phase_mask || IsInPhase((*i).event.event_phase_mask)) && !((*i).event.event_flags & SMART_EVENT_FLAG_NOT_REPEATABLE && (*i).runOnce)*/)
             ProcessEvent(*i, unit, var0, var1, bvar, spell, gob);
     }
 }
@@ -140,7 +141,7 @@ void SmartScript::ProcessAction(SmartScriptHolder &e, Unit* unit, uint32 var0, u
                 }
                 mLastTextID = e.action.talk.textGroupID;
                 mTextTimer = e.action.talk.duration;
-                mTextGUID = IsPlayer(unit)? unit->GetGUID() : NULL;//invoker, used for $vars in texts
+                mTextGUID = IsPlayer(mLastInvoker)? mLastInvoker->GetGUID() : NULL;//invoker, used for $vars in texts
                 mUseTextTimer = true;
                 sCreatureTextMgr.SendChat(talker, uint8(e.action.talk.textGroupID), mTextGUID);
                 break;
@@ -154,10 +155,10 @@ void SmartScript::ProcessAction(SmartScriptHolder &e, Unit* unit, uint32 var0, u
                     {
                         if (IsCreature((*itr)))
                         {
-                            sCreatureTextMgr.SendChat((*itr)->ToCreature(), uint8(e.action.talk.textGroupID));
+                            sCreatureTextMgr.SendChat((*itr)->ToCreature(), uint8(e.action.talk.textGroupID), IsPlayer(mLastInvoker)? mLastInvoker->GetGUID() : NULL);
                         } else if (IsPlayer((*itr)))
                         {
-                            sCreatureTextMgr.SendChat(me, uint8(e.action.talk.textGroupID),NULL,CHAT_TYPE_END,LANG_ADDON,TEXT_RANGE_NORMAL,NULL,TEAM_OTHER,false, (*itr)->ToPlayer());
+                            sCreatureTextMgr.SendChat(me, uint8(e.action.talk.textGroupID),IsPlayer(mLastInvoker)? mLastInvoker->GetGUID() : NULL,CHAT_TYPE_END,LANG_ADDON,TEXT_RANGE_NORMAL,NULL,TEAM_OTHER,false, (*itr)->ToPlayer());
                         }
                     }
                 }
@@ -459,11 +460,13 @@ void SmartScript::ProcessAction(SmartScriptHolder &e, Unit* unit, uint32 var0, u
         case SMART_ACTION_CALL_CASTEDCREATUREORGO:
             {
                 if (!me) return;
-                std::list<HostileReference*>& threatList = me->getThreatManager().getThreatList();
-                for (std::list<HostileReference*>::iterator i = threatList.begin(); i != threatList.end(); ++i)
-                    if (Unit* Temp = Unit::GetUnit(*me,(*i)->getUnitGuid()))
-                        if (IsPlayer(Temp))
-                            Temp->ToPlayer()->CastedCreatureOrGO(e.action.castedCreatureOrGO.creature, me->GetGUID(), e.action.castedCreatureOrGO.spell);
+                ObjectList* targets = GetTargets(e, unit);
+                if (!targets) return;
+                for (ObjectList::const_iterator itr = targets->begin(); itr != targets->end(); itr++)
+                {
+                    if (IsPlayer((*itr)))
+                        (*itr)->ToPlayer()->CastedCreatureOrGO(e.action.castedCreatureOrGO.creature, me->GetGUID(), e.action.castedCreatureOrGO.spell);
+                }
                 break;
             }
         case SMART_ACTION_REMOVEAURASFROMSPELL:
@@ -681,7 +684,7 @@ void SmartScript::ProcessAction(SmartScriptHolder &e, Unit* unit, uint32 var0, u
         case SMART_ACTION_SET_VISIBILITY:
             {
                 if (me)
-                    me->SetVisibility(e.action.visibility.state ? VISIBILITY_ON : VISIBILITY_OFF);
+                    me->SetVisible(e.action.visibility.state ? true : false);
                 break;
             }
         case SMART_ACTION_SET_ACTIVE:
@@ -808,7 +811,6 @@ void SmartScript::ProcessAction(SmartScriptHolder &e, Unit* unit, uint32 var0, u
             {
                 ObjectList* targets = GetTargets(e, unit);
                 if (!targets) return;
-                uint32 map = e.action.teleport.mapID;
                 for (ObjectList::const_iterator itr = targets->begin(); itr != targets->end(); itr++)
                 {
                     if(!IsPlayer((*itr))) continue;
@@ -833,12 +835,6 @@ void SmartScript::ProcessAction(SmartScriptHolder &e, Unit* unit, uint32 var0, u
             {
                 if (!IsSmart()) return;
                 CAST_AI(SmartAI, me->AI())->SetSwimm(e.action.setSwimm.swimm ? true : false);
-                break;
-            }
-        case SMART_ACTION_WP_LOAD:
-            {
-                if (!me) return;
-                uint32 entry = e.action.wpLoad.id;
                 break;
             }
         case SMART_ACTION_WP_START:
@@ -1142,6 +1138,29 @@ void SmartScript::ProcessAction(SmartScriptHolder &e, Unit* unit, uint32 var0, u
         case SMART_ACTION_CALL_RANDOM_RANGE_TIMED_ACTIONLIST:
             {
                 SetScript9(e, urand(e.action.randTimedActionList.entry1, e.action.randTimedActionList.entry2));
+                break;
+            }
+        case SMART_ACTION_ACTIVATE_TAXI:
+            {
+                ObjectList* targets = GetTargets(e, unit);
+                if (!targets) return;
+                for (ObjectList::const_iterator itr = targets->begin(); itr != targets->end(); itr++)
+                    if (IsPlayer((*itr)))
+                        (*itr)->ToPlayer()->ActivateTaxiPathTo(e.action.taxi.id);
+                break;
+            }
+        case SMART_ACTION_RANDOM_MOVE:
+            {
+                ObjectList* targets = GetTargets(e, unit);
+                if (!targets) return;
+                for (ObjectList::const_iterator itr = targets->begin(); itr != targets->end(); itr++)
+                    if (IsCreature((*itr)))
+                    {
+                        if (e.action.moveRandom.distance)
+                            (*itr)->ToCreature()->GetMotionMaster()->MoveRandom((float)e.action.moveRandom.distance);
+                        else
+                            (*itr)->ToCreature()->GetMotionMaster()->MoveIdle();
+                    }
                 break;
             }
         default:
@@ -1479,6 +1498,15 @@ ObjectList* SmartScript::GetTargets(SmartScriptHolder e, Unit* invoker)
                     l->push_back(owner);
                 break;
             }
+        case SMART_TARGET_THREAT_LIST:
+            {
+                if (!me) return NULL;
+                std::list<HostileReference*>& threatList = me->getThreatManager().getThreatList();
+                for (std::list<HostileReference*>::iterator i = threatList.begin(); i != threatList.end(); ++i)
+                    if (Unit* Temp = Unit::GetUnit(*me,(*i)->getUnitGuid()))
+                        l->push_back(Temp);
+                break;
+            }
         case SMART_TARGET_POSITION:
         default:
             return NULL;
@@ -1670,7 +1698,7 @@ void SmartScript::ProcessEvent(SmartScriptHolder &e, Unit* unit, uint32 var0, ui
         case SMART_EVENT_RESET:
         case SMART_EVENT_JUST_CREATED:
         case SMART_EVENT_GOSSIP_HELLO:
-        case SMART_EVENT_FOLLOW_COPMLETE:
+        case SMART_EVENT_FOLLOW_COMPLETED:
             ProcessAction(e, unit, var0, var1, bvar, spell, gob);
             break;
         case SMART_EVENT_RECEIVE_EMOTE:
@@ -1860,6 +1888,13 @@ void SmartScript::ProcessEvent(SmartScriptHolder &e, Unit* unit, uint32 var0, ui
             {
                 sLog.outString("SmartScript: Gossip Select:  menu %u action %u", var0, var1);//little help for scripters
                 if (e.event.gossip.sender != var0 || e.event.gossip.action != var1)
+                    return;
+                ProcessAction(e, unit, var0, var1);
+                break;
+            }
+        case SMART_EVENT_DUMMY_EFFECT:
+            {
+                if (e.event.dummy.spell != var0 || e.event.dummy.effIndex != var1)
                     return;
                 ProcessAction(e, unit, var0, var1);
                 break;

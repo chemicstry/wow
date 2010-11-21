@@ -426,7 +426,7 @@ public:
 
         void FlyMode()
         {
-            me->SetVisibility(VISIBILITY_OFF);
+            me->SetVisible(false);
             me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
             me->AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT | MOVEMENTFLAG_LEVITATING);
             me->SetSpeed(MOVE_WALK,5.0f,true);
@@ -447,7 +447,7 @@ public:
             switch (id)
             {
                 case 0:
-                    me->SetVisibility(VISIBILITY_ON);
+                    me->SetVisible(true);
                     break;
                 case 1:
                 {
@@ -625,18 +625,18 @@ public:
                             if (say_timer <= diff)
                             {
                                 say_timer = 3000;
-                                Player *plr = SelectRandomPlayer(100.0f,false);
+                                Player *plr = SelectRandomPlayer(100.0f, false);
                                 if (count < 3)
                                 {
                                     if (plr)
-                                        plr->Say(Text[count],0);
+                                        plr->Say(Text[count], 0);
                                 }
                                 else
                                 {
                                     DoCast(me, SPELL_RHYME_BIG);
                                     if (plr)
                                     {
-                                        plr->Say(Text[count],0);
+                                        plr->Say(Text[count], 0);
                                         plr->HandleEmoteCommand(ANIM_EMOTE_SHOUT);
                                     }
                                     wp_reached = true;
@@ -802,7 +802,7 @@ public:
             if (!debuffGUID) return;
             Unit *debuff = Unit::GetUnit((*me),debuffGUID);
             if (debuff)
-                debuff->SetVisibility(VISIBILITY_OFF);
+                debuff->SetVisible(false);
                 debuffGUID = 0;
         }
 

@@ -611,7 +611,7 @@ UPDATE `creature_template` SET `ScriptName`='npc_restless_apparition' WHERE `ent
 UPDATE `creature_template` SET `ScriptName`='npc_private_hendel' WHERE `entry`=4966;
 UPDATE `creature_template` SET `ScriptName`='npc_zelfrax' WHERE `entry`=23864;
 UPDATE `creature_template` SET `ScriptName`='npc_stinky' WHERE `entry`=4880;
-
+UPDATE `creature_template` SET `ScriptName`='npc_theramore_guard' WHERE `entry`=4979;
 /* EASTERN PLAGUELANDS */
 UPDATE `creature_template` SET `ScriptName`='mobs_ghoul_flayer' WHERE `entry` IN (8530,8531,8532);
 UPDATE `creature_template` SET `ScriptName`='npc_augustus_the_touched' WHERE `entry`=12384;
@@ -674,6 +674,8 @@ UPDATE `creature_template` SET `ScriptName`='npc_outhouse_bunny' WHERE `entry`=2
 UPDATE `creature_template` SET `ScriptName`='npc_tallhorn_stag' WHERE `entry`=26363;
 UPDATE `creature_template` SET `ScriptName`='npc_amberpine_woodsman' WHERE `entry`=27293;
 UPDATE `creature_template` SET `ScriptName`='npc_wounded_skirmisher' WHERE `entry`=27463;
+UPDATE `creature_template` SET `ScriptName`='npc_lightning_sentry' WHERE `entry`=26407;
+UPDATE `creature_template` SET `ScriptName`='npc_venture_co_straggler',`AIName`='' WHERE `entry`=27570;
 
 /* DRAK'THARON KEEP */
 UPDATE `instance_template` SET `script`='instance_drak_tharon' WHERE `map`=600;

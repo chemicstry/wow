@@ -15,7 +15,6 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ScriptPCH.h"
 #include "ScriptLoader.h"
 
 
@@ -46,17 +45,23 @@ void AddSC_example_spell_scripts();
 
 void AddSC_SmartSCripts();
 
-/*
 //Commands
 void AddSC_account_commandscript();
 void AddSC_achievement_commandscript();
+void AddSC_debug_commandscript();
+void AddSC_event_commandscript();
 void AddSC_gm_commandscript();
-void AddSC_npc_commandscript();
 void AddSC_go_commandscript();
+void AddSC_gobject_commandscript();
+void AddSC_honor_commandscript();
 void AddSC_learn_commandscript();
 void AddSC_modify_commandscript();
-void AddSC_debug_commandscript();
-*/
+void AddSC_npc_commandscript();
+void AddSC_quest_commandscript();
+void AddSC_reload_commandscript();
+void AddSC_tele_commandscript();
+void AddSC_titles_commandscript();
+void AddSC_wp_commandscript();
 
 #ifdef SCRIPTS
 //world
@@ -595,9 +600,7 @@ void AddScripts()
     AddExampleScripts();
     AddSpellScripts();
     AddSC_SmartSCripts();
-/*
     AddCommandScripts();
-*/
 #ifdef SCRIPTS
     AddWorldScripts();
     AddEasternKingdomsScripts();
@@ -637,19 +640,25 @@ void AddSpellScripts()
     AddSC_example_spell_scripts();
 }
 
-/*
 void AddCommandScripts()
 {
     AddSC_account_commandscript();
     AddSC_achievement_commandscript();
+    AddSC_debug_commandscript();
+    AddSC_event_commandscript();
     AddSC_gm_commandscript();
-    AddSC_npc_commandscript();
     AddSC_go_commandscript();
+    AddSC_gobject_commandscript();
+    AddSC_honor_commandscript();
     AddSC_learn_commandscript();
     AddSC_modify_commandscript();
-    AddSC_debug_commandscript();
+    AddSC_npc_commandscript();
+    AddSC_quest_commandscript();
+    AddSC_reload_commandscript();
+    AddSC_tele_commandscript();
+    AddSC_titles_commandscript();
+    AddSC_wp_commandscript();
 }
-*/
 
 void AddWorldScripts()
 {

@@ -77,7 +77,7 @@ enum SpellAuraInterruptFlags
     AURA_INTERRUPT_FLAG_MOUNT               = 0x00020000,   // 17   misdirect, aspect, swim speed
     AURA_INTERRUPT_FLAG_NOT_SEATED          = 0x00040000,   // 18   removed by standing up (used by food and drink mostly and sleep/Fake Death like)
     AURA_INTERRUPT_FLAG_CHANGE_MAP          = 0x00080000,   // 19   leaving map/getting teleported
-    AURA_INTERRUPT_FLAG_IMMUNE_OR_LOST_SELECTION    = 0x00100000,   // 20   removed by auras that make you invulnerable, or make other to loose selection on you
+    AURA_INTERRUPT_FLAG_IMMUNE_OR_LOST_SELECTION    = 0x00100000,   // 20   removed by auras that make you invulnerable, or make other to lose selection on you
     AURA_INTERRUPT_FLAG_UNK21               = 0x00200000,   // 21
     AURA_INTERRUPT_FLAG_TELEPORTED          = 0x00400000,   // 22
     AURA_INTERRUPT_FLAG_ENTER_PVP_COMBAT    = 0x00800000,   // 23   removed by entering pvp combat
@@ -199,6 +199,10 @@ enum ShapeshiftForm
     FORM_AMBIENT            = 0x06,
     FORM_GHOUL              = 0x07,
     FORM_DIREBEAR           = 0x08,
+    FORM_STEVES_GHOUL       = 0x09,
+    FORM_THARONJA_SKELETON  = 0x0A,
+    FORM_TEST_OF_STRENGTH   = 0x0B,
+    FORM_BLB_PLAYER         = 0x0C,
     FORM_SHADOW_DANCE       = 0x0D,
     FORM_CREATUREBEAR       = 0x0E,
     FORM_CREATURECAT        = 0x0F,
@@ -538,16 +542,6 @@ enum DamageEffectType
     HEAL                    = 3,
     NODAMAGE                = 4,                            // used also in case when damage applied to health but not applied to spell channelInterruptFlags/etc
     SELF_DAMAGE             = 5
-};
-
-enum UnitVisibility
-{
-    VISIBILITY_OFF                = 0,                      // absolute, not detectable, GM-like, can see all other
-    VISIBILITY_ON                 = 1,
-    VISIBILITY_GROUP_STEALTH      = 2,                      // detect chance, seen and can see group members
-    //VISIBILITY_GROUP_INVISIBILITY = 3,                      // invisibility, can see and can be seen only another invisible unit or invisible detection unit, set only if not stealthed, and in checks not used (mask used instead)
-    //VISIBILITY_GROUP_NO_DETECT    = 4,                      // state just at stealth apply for update Grid state. Don't remove, otherwise stealth spells will break
-    VISIBILITY_RESPAWN            = 5                       // special totally not detectable visibility for force delete object at respawn command
 };
 
 // Value masks for UNIT_FIELD_FLAGS
@@ -1083,7 +1077,7 @@ enum PlayerTotemType
 
 // delay time next attack to prevent client attack animation problems
 #define ATTACK_DISPLAY_DELAY 200
-#define MAX_PLAYER_STEALTH_DETECT_RANGE 45.0f               // max distance for detection targets by player
+#define MAX_PLAYER_STEALTH_DETECT_RANGE 30.0f               // max distance for detection targets by player
 
 struct SpellProcEventEntry;                                 // used only privately
 
@@ -1194,7 +1188,7 @@ class Unit : public WorldObject
         bool IsVehicle() const  { return m_unitTypeMask & UNIT_MASK_VEHICLE; }
 
         uint8 getLevel() const { return uint8(GetUInt32Value(UNIT_FIELD_LEVEL)); }
-        virtual uint8 getLevelForTarget(Unit const* /*target*/) const { return getLevel(); }
+        uint8 getLevelForTarget(WorldObject const* /*target*/) const { return getLevel(); }
         void SetLevel(uint8 lvl);
         uint8 getRace() const { return GetByteValue(UNIT_FIELD_BYTES_0, 0); }
         uint32 getRaceMask() const { return 1 << (getRace()-1); }
@@ -1640,6 +1634,7 @@ class Unit : public WorldObject
         uint32 GetAuraCount(uint32 spellId) const;
         bool HasAura(uint32 spellId, uint64 caster = 0, uint8 reqEffMask = 0) const;
         bool HasAuraType(AuraType auraType) const;
+        bool HasAuraTypeWithCaster(AuraType auratype, uint64 caster) const;
         bool HasAuraTypeWithMiscvalue(AuraType auratype, int32 miscvalue) const;
         bool HasAuraTypeWithAffectMask(AuraType auratype, SpellEntry const * affectedSpell) const;
         bool HasAuraTypeWithValue(AuraType auratype, int32 value) const;
@@ -1717,8 +1712,6 @@ class Unit : public WorldObject
         uint32 m_addDmgOnce;
         uint64 m_SummonSlot[MAX_SUMMON_SLOT];
         uint64 m_ObjectSlot[4];
-        uint32 m_detectInvisibilityMask;
-        uint32 m_invisibilityMask;
 
         uint32 m_ShapeShiftFormSpellId;
         ShapeshiftForm m_form;
@@ -1768,23 +1761,18 @@ class Unit : public WorldObject
         void SetFacingToObject(WorldObject* pObject);
 
         // Visibility system
-        UnitVisibility GetVisibility() const { return m_Visibility; }
-        void SetVisibility(UnitVisibility x);
+        bool IsVisible() const { return (m_serverSideVisibility.GetValue(SERVERSIDE_VISIBILITY_GM) > SEC_PLAYER) ? false : true; }
+        void SetVisible(bool x);
 
         // common function for visibility checks for player/creatures with detection code
-        virtual bool canSeeOrDetect(Unit const* u, bool detect, bool inVisibleList = false, bool is3dDistance = true) const = 0;
-        bool isVisibleForOrDetect(Unit const* u, bool detect, bool inVisibleList = false, bool is3dDistance = true) const;
-        bool canDetectInvisibilityOf(Unit const* u) const;
-        bool canDetectStealthOf(Unit const* u, float distance) const;
+
+        bool isValid() const { return WorldObject::isValid(); }
+
         void SetPhaseMask(uint32 newPhaseMask, bool update);// overwrite WorldObject::SetPhaseMask
         void UpdateObjectVisibility(bool forced = true);
 
-        // virtual functions for all world objects types
-        bool isVisibleForInState(Player const* u, bool inVisibleList) const;
-        // function for low level grid visibility checks in player/creature cases
-        virtual bool IsVisibleInGridForPlayer(Player const* pl) const = 0;
-
         SpellImmuneList m_spellImmune[MAX_SPELL_IMMUNITY];
+        uint32 m_lastSanctuaryTime;
 
         // Threat related methods
         bool CanHaveThreatList() const;
@@ -2074,6 +2062,12 @@ class Unit : public WorldObject
 
         uint32 m_unitTypeMask;
 
+        bool isAlwaysVisibleFor(WorldObject const* seer) const;
+        bool canSeeAlways(WorldObject const* obj) const { return WorldObject::canSeeAlways(obj); }
+
+        bool isVisibleForInState(WorldObject const* seer) const { return WorldObject::isVisibleForInState(seer); };
+
+        bool isAlwaysDetectableFor(WorldObject const* seer) const;
     private:
         bool IsTriggeredAtSpellProcEvent(Unit *pVictim, Aura * aura, SpellEntry const * procSpell, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, bool isVictim, bool active, SpellProcEventEntry const *& spellProcEvent);
         bool HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
@@ -2103,8 +2097,6 @@ class Unit : public WorldObject
         uint32 m_lastManaUse;                               // msecs
 
         Spell* m_currentSpells[CURRENT_MAX_SPELL];
-
-        UnitVisibility m_Visibility;
 
         Diminishing m_Diminishing;
         // Manage all Units threatening us

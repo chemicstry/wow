@@ -54,7 +54,7 @@ bool Condition::Meets(Player * player, Unit* invoker)
                 condMeets = target->HasAuraEffect(mConditionValue1, mConditionValue2);
             break;
         case CONDITION_ITEM:
-            condMeets = player->HasItemCount(mConditionValue1, mConditionValue2);
+            condMeets = (mConditionValue2 && player->HasItemCount(mConditionValue1, mConditionValue2)) || (!mConditionValue2 && !player->HasItemCount(mConditionValue1, mConditionValue2));//HasItemCount returns false if 0 count is used
             break;
         case CONDITION_ITEM_EQUIPPED:
             condMeets = player->HasItemOrGemWithIdEquipped(mConditionValue1,1);
@@ -520,23 +520,24 @@ void ConditionMgr::LoadConditions(bool isReload)
                     bIsDone = addToGossipMenuItems(cond);
                     break;
                 case CONDITION_SOURCE_TYPE_VEHICLE_SPELL:
+                {
+                    //if no list for vehicle create one
+                    if (m_VehicleSpellConditions.find(cond->mSourceGroup) == m_VehicleSpellConditions.end())
                     {
-                        //if no list for vehicle create one
-                        if (m_VehicleSpellConditions.find(cond->mSourceGroup) == m_VehicleSpellConditions.end())
-                        {
-                            ConditionTypeMap cmap;
-                            m_VehicleSpellConditions[cond->mSourceGroup] = cmap;
-                        }
-                        //if no list for vehicle's spell create one
-                        if (m_VehicleSpellConditions[cond->mSourceGroup].find(cond->mSourceEntry) == m_VehicleSpellConditions[cond->mSourceGroup].end())
-                        {
-                            ConditionList clist;
-                            m_VehicleSpellConditions[cond->mSourceGroup][cond->mSourceEntry] = clist;
-                        }
-                        m_VehicleSpellConditions[cond->mSourceGroup][cond->mSourceEntry].push_back(cond);
-                        bIsDone = true;
-                        break;
+                        ConditionTypeMap cmap;
+                        m_VehicleSpellConditions[cond->mSourceGroup] = cmap;
                     }
+                    //if no list for vehicle's spell create one
+                    if (m_VehicleSpellConditions[cond->mSourceGroup].find(cond->mSourceEntry) == m_VehicleSpellConditions[cond->mSourceGroup].end())
+                    {
+                        ConditionList clist;
+                        m_VehicleSpellConditions[cond->mSourceGroup][cond->mSourceEntry] = clist;
+                    }
+                    m_VehicleSpellConditions[cond->mSourceGroup][cond->mSourceEntry].push_back(cond);
+                    bIsDone = true;
+                    ++count;
+                    continue;   // do not add to m_AllocatedMemory to avoid double deleting
+                }
                 default:
                     break;
             }

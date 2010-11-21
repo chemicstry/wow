@@ -427,57 +427,14 @@ bool ChatHandler::HandleGMTicketDeleteByIdCommand(const char* args)
     return true;
 }
 
-bool ChatHandler::HandleGMTicketReloadCommand(const char* /* args */)
-{
-    sTicketMgr.LoadGMTickets();
-    return true;
-}
-
 bool ChatHandler::HandleToggleGMTicketSystem(const char* /* args */)
 {
     sTicketMgr.SetStatus(!sTicketMgr.GetStatus());
-    return true;
-}
+    if(sTicketMgr.GetStatus())
+        PSendSysMessage(LANG_ALLOW_TICKETS);
+    else
+        PSendSysMessage(LANG_DISALLOW_TICKETS);
 
-bool ChatHandler::HandleGoTicketCommand(const char * args)
-{
-    if (!*args)
-        return false;
-
-    char *cstrticket_id = strtok((char*)args, " ");
-
-    if (!cstrticket_id)
-        return false;
-
-    uint64 ticket_id = atoi(cstrticket_id);
-    if (!ticket_id)
-        return false;
-
-    GM_Ticket *ticket = sTicketMgr.GetGMTicket(ticket_id);
-    if (!ticket)
-    {
-        SendSysMessage(LANG_COMMAND_TICKETNOTEXIST);
-        return true;
-    }
-
-    float x, y, z;
-    int mapid;
-
-    x = ticket->pos_x;
-    y = ticket->pos_y;
-    z = ticket->pos_z;
-    mapid = ticket->map;
-
-    Player* _player = m_session->GetPlayer();
-    if (_player->isInFlight())
-    {
-        _player->GetMotionMaster()->MovementExpired();
-        _player->CleanupAfterTaxiFlight();
-    }
-     else
-        _player->SaveRecallPosition();
-
-    _player->TeleportTo(mapid, x, y, z, 1, 0);
     return true;
 }
 

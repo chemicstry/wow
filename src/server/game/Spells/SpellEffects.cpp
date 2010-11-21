@@ -1703,41 +1703,20 @@ void Spell::EffectTriggerSpell(SpellEffIndex effIndex)
             unitTarget->RemoveMovementImpairingAuras();
             unitTarget->RemoveAurasByType(SPELL_AURA_MOD_STALKED);
 
-            // if this spell is given to NPC it must handle rest by it's own AI
+            // If this spell is given to an NPC, it must handle the rest using its own AI
             if (unitTarget->GetTypeId() != TYPEID_PLAYER)
                 return;
 
-            // get highest rank of the Stealth spell
-            uint32 spellId = 0;
-            SpellEntry const *spellInfo;
-            const PlayerSpellMap& sp_list = unitTarget->ToPlayer()->GetSpellMap();
-            for (PlayerSpellMap::const_iterator itr = sp_list.begin(); itr != sp_list.end(); ++itr)
-            {
-                // only highest rank is shown in spell book, so simply check if shown in spell book
-                if (!itr->second->active || itr->second->disabled || itr->second->state == PLAYERSPELL_REMOVED)
-                    continue;
-
-                spellInfo = sSpellStore.LookupEntry(itr->first);
-                if (!spellInfo)
-                    continue;
-
-                if (spellInfo->SpellFamilyName == SPELLFAMILY_ROGUE && spellInfo->SpellFamilyFlags[0] & SPELLFAMILYFLAG_ROGUE_STEALTH)
-                {
-                    spellId = spellInfo->Id;
-                    break;
-                }
-            }
-
-            // no Stealth spell found
-            if (!spellId)
+            // See if we already are stealthed. If so, we're done.
+            if (unitTarget->HasAura(1784))
                 return;
 
-            // reset cooldown on it if needed
-            if (unitTarget->ToPlayer()->HasSpellCooldown(spellId))
-                unitTarget->ToPlayer()->RemoveSpellCooldown(spellId);
+            // Reset cooldown on stealth if needed
+            if (unitTarget->ToPlayer()->HasSpellCooldown(1784))
+                unitTarget->ToPlayer()->RemoveSpellCooldown(1784);
 
-            triggered_spell_id =  spellId;
-            return;
+            triggered_spell_id = 1784;
+            break;
         }
         // Demonic Empowerment -- succubus
         case 54437:
@@ -2890,8 +2869,8 @@ void Spell::EffectSummonChangeItem(SpellEffIndex effIndex)
 
     if (m_CastItem->GetUInt32Value(ITEM_FIELD_DURABILITY) < m_CastItem->GetUInt32Value(ITEM_FIELD_MAXDURABILITY))
     {
-        double loosePercent = 1 - m_CastItem->GetUInt32Value(ITEM_FIELD_DURABILITY) / double(m_CastItem->GetUInt32Value(ITEM_FIELD_MAXDURABILITY));
-        player->DurabilityLoss(pNewItem, loosePercent);
+        double lossPercent = 1 - m_CastItem->GetUInt32Value(ITEM_FIELD_DURABILITY) / double(m_CastItem->GetUInt32Value(ITEM_FIELD_MAXDURABILITY));
+        player->DurabilityLoss(pNewItem, lossPercent);
     }
 
     if (player->IsInventoryPos(pos))
@@ -4595,7 +4574,7 @@ void Spell::EffectScriptEffect(SpellEffIndex effIndex)
                     unitTarget->GetPosition(x, y, z);
                     uint32 areaFlag = unitTarget->GetBaseMap()->GetAreaFlag(x, y, z);
                     AreaTableEntry const *pArea = sAreaStore.LookupEntry(areaFlag);
-                    if (canFly && pArea->flags & AREA_FLAG_NO_FLY_ZONE)
+                    if (!pArea || (canFly && (pArea->flags & AREA_FLAG_NO_FLY_ZONE)))
                         canFly = false;
 
                     switch(unitTarget->ToPlayer()->GetBaseSkillValue(SKILL_RIDING))
@@ -4640,7 +4619,7 @@ void Spell::EffectScriptEffect(SpellEffIndex effIndex)
                     unitTarget->GetPosition(x, y, z);
                     uint32 areaFlag = unitTarget->GetBaseMap()->GetAreaFlag(x, y, z);
                     AreaTableEntry const *pArea = sAreaStore.LookupEntry(areaFlag);
-                    if (canFly && pArea->flags & AREA_FLAG_NO_FLY_ZONE)
+                    if (!pArea || (canFly && (pArea->flags & AREA_FLAG_NO_FLY_ZONE)))
                         canFly = false;
 
                     switch(unitTarget->ToPlayer()->GetBaseSkillValue(SKILL_RIDING))
@@ -4971,7 +4950,7 @@ void Spell::EffectScriptEffect(SpellEffIndex effIndex)
                     unitTarget->GetPosition(x, y, z);
                     uint32 areaFlag = unitTarget->GetBaseMap()->GetAreaFlag(x, y, z);
                     AreaTableEntry const *pArea = sAreaStore.LookupEntry(areaFlag);
-                    if (canFly && pArea->flags & AREA_FLAG_NO_FLY_ZONE)
+                    if (!pArea || (canFly && (pArea->flags & AREA_FLAG_NO_FLY_ZONE)))
                         canFly = false;
 
                     switch(unitTarget->ToPlayer()->GetBaseSkillValue(SKILL_RIDING))
@@ -5017,7 +4996,7 @@ void Spell::EffectScriptEffect(SpellEffIndex effIndex)
                     unitTarget->GetPosition(x, y, z);
                     uint32 areaFlag = unitTarget->GetBaseMap()->GetAreaFlag(x, y, z);
                     AreaTableEntry const *pArea = sAreaStore.LookupEntry(areaFlag);
-                    if (canFly && pArea->flags & AREA_FLAG_NO_FLY_ZONE)
+                    if (!pArea || (canFly && (pArea->flags & AREA_FLAG_NO_FLY_ZONE)))
                         canFly = false;
 
                     switch(unitTarget->ToPlayer()->GetBaseSkillValue(SKILL_RIDING))
@@ -5080,7 +5059,7 @@ void Spell::EffectScriptEffect(SpellEffIndex effIndex)
                     unitTarget->GetPosition(x, y, z);
                     uint32 areaFlag = unitTarget->GetBaseMap()->GetAreaFlag(x, y, z);
                     AreaTableEntry const *pArea = sAreaStore.LookupEntry(areaFlag);
-                    if (canFly && pArea->flags & AREA_FLAG_NO_FLY_ZONE)
+                    if (!pArea || (canFly && (pArea->flags & AREA_FLAG_NO_FLY_ZONE)))
                         canFly = false;
 
                     switch(unitTarget->ToPlayer()->GetBaseSkillValue(SKILL_RIDING))
@@ -5457,27 +5436,19 @@ void Spell::EffectSanctuary(SpellEffIndex /*effIndex*/)
     if (!unitTarget)
         return;
 
-    std::list<Unit*> targets;
-    Trinity::AnyUnfriendlyUnitInObjectRangeCheck u_check(unitTarget, unitTarget, m_caster->GetMap()->GetVisibilityDistance());
-    Trinity::UnitListSearcher<Trinity::AnyUnfriendlyUnitInObjectRangeCheck> searcher(unitTarget, targets, u_check);
-    unitTarget->VisitNearbyObject(m_caster->GetMap()->GetVisibilityDistance(), searcher);
-    for (std::list<Unit*>::iterator iter = targets.begin(); iter != targets.end(); ++iter)
-    {
-        if (!(*iter)->hasUnitState(UNIT_STAT_CASTING))
-            continue;
+    unitTarget->getHostileRefManager().UpdateVisibility();
 
-        for (uint32 i = CURRENT_FIRST_NON_MELEE_SPELL; i < CURRENT_MAX_SPELL; i++)
-        {
-            if ((*iter)->GetCurrentSpell(i)
-            && (*iter)->GetCurrentSpell(i)->m_targets.getUnitTargetGUID() == unitTarget->GetGUID())
-            {
-                (*iter)->InterruptSpell(CurrentSpellTypes(i), false);
-            }
-        }
+    Unit::AttackerSet const& attackers = unitTarget->getAttackers();
+    for (Unit::AttackerSet::const_iterator itr = attackers.begin(); itr != attackers.end();)
+    {
+        if (!(*itr)->canSeeOrDetect(unitTarget))
+            (*(itr++))->AttackStop();
+        else
+            ++itr;
     }
 
-    unitTarget->CombatStop();
-    unitTarget->getHostileRefManager().deleteReferences();   // stop all fighting
+    unitTarget->m_lastSanctuaryTime = getMSTime();
+
     // Vanish allows to remove all threat and cast regular stealth so other spells can be used
     if (m_caster->GetTypeId() == TYPEID_PLAYER
         && m_spellInfo->SpellFamilyName == SPELLFAMILY_ROGUE

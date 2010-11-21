@@ -181,6 +181,7 @@ class SmartAI : public CreatureAI
         //void sQuestSelect(Player* player, Quest const* quest);
         //void sQuestComplete(Player* player, Quest const* quest);
         void sQuestReward(Player* player, Quest const* quest, uint32 opt);
+        void sOnDummyEffect(Unit* caster, uint32 spellId, SpellEffIndex effIndex);
 
         uint32 mEscortQuestID;
 
@@ -229,7 +230,7 @@ class SmartAI : public CreatureAI
 class SmartGameObjectAI : public GameObjectAI
 {
 public:
-    SmartGameObjectAI(GameObject *g) : go(g), GameObjectAI(g) {}
+    SmartGameObjectAI(GameObject *g) : GameObjectAI(g), go(g) {}
     ~SmartGameObjectAI() {}
 
     void UpdateAI(const uint32 diff);

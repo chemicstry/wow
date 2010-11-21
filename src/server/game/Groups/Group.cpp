@@ -1149,7 +1149,7 @@ void Group::UpdatePlayerOutOfRange(Player* pPlayer)
     for (GroupReference *itr = GetFirstMember(); itr != NULL; itr = itr->next())
     {
         player = itr->getSource();
-        if (player && player != pPlayer && !pPlayer->isVisibleFor(player))
+        if (player && !player->IsWithinDist(pPlayer, player->GetSightRange(), false))
             player->GetSession()->SendPacket(&data);
     }
 }
@@ -1517,7 +1517,7 @@ void Group::ChangeMembersGroup(Player *player, const uint8 &group)
 // If ifneed is true,
 //      the current RR player is checked to be near the looted object.
 //      if yes, no update done.
-//      if not, he looses his turn.
+//      if not, he loses his turn.
 void Group::UpdateLooterGuid(WorldObject* pLootedObject, bool ifneed)
 {
     switch (GetLootMethod())
