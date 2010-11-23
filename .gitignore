@@ -8,6 +8,7 @@ build/
 *~
 *.kdev*
 *.DS_Store
+*.patch
 
 # use regexp syntax.
 syntax: regexp
