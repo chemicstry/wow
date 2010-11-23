@@ -4939,28 +4939,6 @@ bool ChatHandler::HandlePlayAllCommand(const char *args)
     return true;
 }
 
-bool ChatHandler::HandleFlyHackerCommand(const char* args)
-{
-       bool foundAtLeastOneFlyHacker = false;
-       sObjectAccessor.GetPlayers();
-       ACE_GUARD_RETURN(ACE_Thread_Mutex, guard, *HashMapHolder<Player>::GetLock(), true);
-       HashMapHolder<Player>::MapType const& plist = sObjectAccessor.GetPlayers();
-       for (HashMapHolder<Player>::MapType::const_iterator itr = plist.begin(); itr != plist.end(); ++itr)
-        {
-               if(itr->second->HasUnitMovementFlag(MOVEMENTFLAG_FLYING) && !itr->second->isGameMaster() && !itr->second->HasAuraType(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED) && !itr->second->HasAuraType(SPELL_AURA_FLY))
-               {
-                       foundAtLeastOneFlyHacker = true;
-                       PSendSysMessage("Flyhacker %s",itr->second->GetName());
-               }
-        }
-
-       if(!foundAtLeastOneFlyHacker)
-       {
-               PSendSysMessage("Found no flyhackers");
-       }
-       return true ;
- }
-
 bool ChatHandler::HandleFreezeCommand(const char *args)
 {
     std::string name;

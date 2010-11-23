@@ -450,7 +450,6 @@ ChatCommand * ChatHandler::getCommandTable()
         { "unbindsight",    SEC_ADMINISTRATOR,  false, OldHandler<&ChatHandler::HandleUnbindSightCommand>,         "", NULL },
         { "playall",        SEC_GAMEMASTER,     false, OldHandler<&ChatHandler::HandlePlayAllCommand>,             "", NULL },
         { "wg",             SEC_ADMINISTRATOR,  false, NULL,                                                       "", wintergraspCommandTable },
-        { "findflyhacker",  SEC_MODERATOR,      false, OldHandler<&ChatHandler::HandleFlyHackerCommand>,           "", NULL },
         { "goevent",        SEC_PLAYER,         false, OldHandler<&ChatHandler::HandlePEventCommand>,              "", NULL },
         { "gmevent",        SEC_ADMINISTRATOR,  false, OldHandler<&ChatHandler::HandleGMEventToggleCommand>,       "", NULL },
         { NULL,             0,                  false, NULL,                                                       "", NULL }

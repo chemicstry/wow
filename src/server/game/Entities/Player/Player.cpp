@@ -519,17 +519,6 @@ Player::Player (WorldSession *session): Unit(), m_achievementMgr(this), m_reputa
     rest_type=REST_TYPE_NO;
     ////////////////////Rest System/////////////////////
 
-    //movement anticheat
-    m_anti_lastmovetime = 0;   //last movement time
-    m_anti_NextLenCheck = 0;
-    m_anti_MovedLen = 0.0f;
-    m_anti_BeginFallZ = INVALID_HEIGHT;
-    m_anti_lastalarmtime = 0;    //last time when alarm generated
-    m_anti_alarmcount = 0;       //alarm counter
-    m_anti_TeleTime = 0;
-    m_CanFly=false;
-    /////////////////////////////////
-
     m_mailsLoaded = false;
     m_mailsUpdated = false;
     unReadMails = 0;
@@ -23068,9 +23057,7 @@ uint8 Player::CanEquipUniqueItem(ItemPrototype const* itemProto, uint8 except_sl
 void Player::HandleFall(MovementInfo const& movementInfo)
 {
     // calculate total z distance of the fall
-    float z_diff = (m_lastFallZ >= m_anti_BeginFallZ ? m_lastFallZ : m_anti_BeginFallZ) - movementInfo.pos.GetPositionZ();
-    
-    m_anti_BeginFallZ=INVALID_HEIGHT;
+    float z_diff = m_lastFallZ - movementInfo.pos.GetPositionZ();
     //sLog.outDebug("zDiff = %f", z_diff);
 
     //Players with low fall distance, Feather Fall or physical immunity (charges used) are ignored
