@@ -340,8 +340,61 @@ void WorldSession::HandleMovementOpcodes(WorldPacket & recv_data)
 	}
 
 	/*----------------------*/
-    
-	/* process position-change */
+	
+	// ANTICHEAT CHECKS
+	if (sWorld.getBoolConfig(CONFIG_ANTICHEAT_ENABLE))
+	{
+		/*********************/
+		/* Exceptions:
+		 In Flight
+		 On Transport
+		 Being Teleported
+		 Can't free move
+		 Is GameMaster
+         **********************/
+		
+		// preventing escape from JAIL! MUAHAHHAHA
+		if (plMover && plMover->GetAreaId() == 876 && !plMover->isGameMaster())
+		{
+			if (plMover->GetBaseMap()->GetAreaId(movementInfo.pos.GetPositionX(), movementInfo.pos.GetPositionY(), movementInfo.pos.GetPositionZ()) != 876)
+			{
+				plMover->TeleportTo(1,16226.5f,16403.6f,-64.5f,3.2f);
+				return;
+			}
+		}
+		
+		if (plMover && !plMover->isInFlight() && !plMover->GetTransport() && !plMover->IsBeingTeleported() && plMover->CanFreeMove() && !plMover->isGameMaster())
+		{
+			// speed hack detection called!
+			plMover->SpeedHackDetection(plMover->GetLastPacket(), movementInfo,opcode, plMover->GetLastSpeedRate());
+			
+			if (plMover->isAlive())
+				plMover->WalkOnWaterHackDetection(plMover->GetLastPacket(),movementInfo);
+			
+			// fly hack detection called!
+			plMover->FlyHackDetection(plMover->GetLastPacket(),movementInfo);
+		}
+		
+		// save packet time for next control.
+		if (plMover)
+		{
+			uint8 uiMoveType = 0;
+			
+			if (plMover->IsFlying())
+				uiMoveType = MOVE_FLIGHT;
+			else if (plMover->IsUnderWater())
+				uiMoveType = MOVE_SWIM;
+			else 
+				uiMoveType = MOVE_RUN;
+			
+			plMover->SaveLastPacket(movementInfo);
+			plMover->SetLastSpeedRate(plMover->GetSpeedRate(UnitMoveType(uiMoveType)));//plMover->GetSpeed(UnitMoveType(uiMoveType)));//Rate(UnitMoveType(uiMoveType)));
+			plMover->SetLastOpcode(opcode);
+		}
+	}
+	
+	
+    /* process position-change */
     WorldPacket data(opcode, recv_data.size());
     movementInfo.time = getMSTime();
     movementInfo.guid = mover->GetGUID();
