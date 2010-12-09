@@ -206,100 +206,9 @@ bool ChatHandler::HandleDeMorphCommand(const char* /*args*/)
 //kick player
 bool ChatHandler::HandleKickPlayerCommand(const char *args)
 {
-/*    const char* kickName = strtok((char*)args, " ");
-    char* kickReason = strtok(NULL, "\n");
-    std::string reason = "No Reason";
-    std::string kicker = "Console";
-    if (kickReason)
-        reason = kickReason;
-    if (m_session)
-        kicker = m_session->GetPlayer()->GetName();
-
-    if (!kickName)
-    {
-        Player* player = getSelectedPlayer();
-        if (!player)
-        {
-            SendSysMessage(LANG_NO_CHAR_SELECTED);
-            SetSentErrorMessage(true);
-            return false;
-        }
-
-        if (player == m_session->GetPlayer())
-        {
-            SendSysMessage(LANG_COMMAND_KICKSELF);
-            SetSentErrorMessage(true);
-            return false;
-        }
-
-        // check online security
-        if (HasLowerSecurity(player, 0))
-            return false;
-
-        if (sWorld.getIntConfig(CONFIG_SHOW_KICK_IN_WORLD) == 1)
-        {
-            sWorld.SendWorldText(LANG_COMMAND_KICKMESSAGE, player->GetName(), kicker.c_str(), reason.c_str());
-        }
-        else
-        {
-            PSendSysMessage(LANG_COMMAND_KICKMESSAGE, player->GetName(), kicker.c_str(), reason.c_str());
-        }
-
-        player->GetSession()->KickPlayer();
-    }
-    else
-    {
-        std::string name = extractPlayerNameFromLink((char*)kickName);
-        if (name.empty())
-        {
-            SendSysMessage(LANG_PLAYER_NOT_FOUND);
-            SetSentErrorMessage(true);
-            return false;
-        }
-
-        if (m_session && name == m_session->GetPlayer()->GetName())
-        {
-            SendSysMessage(LANG_COMMAND_KICKSELF);
-            SetSentErrorMessage(true);
-            return false;
-        }
-
-        Player* player = sObjectMgr.GetPlayer(kickName);
-        if (!player)
-        {
-            SendSysMessage(LANG_PLAYER_NOT_FOUND);
-            SetSentErrorMessage(true);
-            return false;
-        }
-
-        if (HasLowerSecurity(player, 0))
-        {
-            SendSysMessage(LANG_YOURS_SECURITY_IS_LOW); //maybe replacement string for this later on
-            SetSentErrorMessage(true);
-            return false;
-        }
-
-        std::string nameLink = playerLink(name);
-
-        if (sWorld.KickPlayer(name))
-        {
-            if (sWorld.getIntConfig(CONFIG_SHOW_KICK_IN_WORLD) == 1)
-            {
-                sWorld.SendWorldText(LANG_COMMAND_KICKMESSAGE, nameLink.c_str(), kicker.c_str(), reason.c_str());
-            }
-            else
-            {
-                PSendSysMessage(LANG_COMMAND_KICKMESSAGE,nameLink.c_str());
-            }
-        }
-        else
-        {
-            PSendSysMessage(LANG_COMMAND_KICKNOTFOUNDPLAYER,nameLink.c_str());
-            return false;
-        }
-    }*/
-    Player* target;
-    if (!extractPlayerTarget((char*)args,&target))
+    Player* target = NULL;
+    std::string playerName;
+    if (!extractPlayerTarget((char*)args, &target, NULL, &playerName))
         return false;
 
     if (m_session && target == m_session->GetPlayer())
@@ -313,8 +222,11 @@ bool ChatHandler::HandleKickPlayerCommand(const char *args)
     if (HasLowerSecurity(target, 0))
         return false;
 
-    // send before target pointer invalidate
-    PSendSysMessage(LANG_COMMAND_KICKMESSAGE,GetNameLink(target).c_str());
+    if (sWorld.getBoolConfig(CONFIG_SHOW_KICK_IN_WORLD))
+        sWorld.SendWorldText(LANG_COMMAND_KICKMESSAGE, playerName.c_str());
+    else
+        PSendSysMessage(LANG_COMMAND_KICKMESSAGE, playerName.c_str());
+
     target->GetSession()->KickPlayer();
     return true;
 }

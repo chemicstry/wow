@@ -33,6 +33,7 @@
 #include "ScriptedCreature.h"
 #include "SmartScript.h"
 #include "SmartAI.h"
+#include "Group.h"
 
 SmartScript::SmartScript()
 {
@@ -549,7 +550,8 @@ void SmartScript::ProcessAction(SmartScriptHolder &e, Unit* unit, uint32 var0, u
                 WorldObject* obj = GetBaseObject();
                 if (!obj)
                     obj = unit;
-                if (obj) return;
+                if (!obj)
+                    return;
                 InstanceScript* pInst = (InstanceScript*)obj->GetInstanceScript();
                 if (!pInst)
                 {
@@ -564,7 +566,8 @@ void SmartScript::ProcessAction(SmartScriptHolder &e, Unit* unit, uint32 var0, u
                 WorldObject* obj = GetBaseObject();
                 if (!obj)
                     obj = unit;
-                if (obj) return;
+                if (!obj)
+                    return;
                 InstanceScript* pInst = (InstanceScript*)obj->GetInstanceScript();
                 if (!pInst)
                 {
@@ -1060,7 +1063,27 @@ void SmartScript::ProcessAction(SmartScriptHolder &e, Unit* unit, uint32 var0, u
             }
         case SMART_ACTION_CALL_TIMED_ACTIONLIST:
             {
-                SetScript9(e, e.action.timedActionList.id);
+                if (e.GetTargetType() == SMART_TARGET_NONE)
+                {
+                    sLog.outErrorDb("SmartScript: Entry %d SourceType %u Event %u Action %u is using TARGET_NONE(0) for Script9 target. Please correct target_type in database.", e.entryOrGuid, e.GetScriptType(), e.GetEventType(), e.GetActionType());
+                    return;
+                }
+                ObjectList* targets = GetTargets(e, unit);
+                if (targets)
+                {
+                    for (ObjectList::iterator itr = targets->begin(); itr != targets->end(); itr++)
+                    {
+                        if (Creature* target = (*itr)->ToCreature())
+                        {
+                            if (IsSmart(target))
+                                CAST_AI(SmartAI, target->AI())->SetScript9(e, e.action.timedActionList.id, mLastInvoker);
+                        } else if (GameObject* target = (*itr)->ToGameObject())
+                        {
+                            if (IsSmartGO(target))
+                                CAST_AI(SmartGameObjectAI, target->AI())->SetScript9(e, e.action.timedActionList.id, mLastInvoker);
+                        }
+                    }
+                }
                 break;
             }
         case SMART_ACTION_SET_NPC_FLAG:
@@ -1132,12 +1155,54 @@ void SmartScript::ProcessAction(SmartScriptHolder &e, Unit* unit, uint32 var0, u
                         count++;
                     }
                 }
-                SetScript9(e, temp[urand(0, count)]);
+                uint32 id = temp[urand(0, count)];
+                if (e.GetTargetType() == SMART_TARGET_NONE)
+                {
+                    sLog.outErrorDb("SmartScript: Entry %d SourceType %u Event %u Action %u is using TARGET_NONE(0) for Script9 target. Please correct target_type in database.", e.entryOrGuid, e.GetScriptType(), e.GetEventType(), e.GetActionType());
+                    return;
+                }
+                ObjectList* targets = GetTargets(e, unit);
+                if (targets)
+                {
+                    for (ObjectList::iterator itr = targets->begin(); itr != targets->end(); itr++)
+                    {
+                        if (Creature* target = (*itr)->ToCreature())
+                        {
+                            if (IsSmart(target))
+                                CAST_AI(SmartAI, target->AI())->SetScript9(e, id, mLastInvoker);
+                        } else if (GameObject* target = (*itr)->ToGameObject())
+                        {
+                            if (IsSmartGO(target))
+                                CAST_AI(SmartGameObjectAI, target->AI())->SetScript9(e, id, mLastInvoker);
+                        }
+                    }
+                }
                 break;
             }
         case SMART_ACTION_CALL_RANDOM_RANGE_TIMED_ACTIONLIST:
             {
-                SetScript9(e, urand(e.action.randTimedActionList.entry1, e.action.randTimedActionList.entry2));
+                uint32 id = urand(e.action.randTimedActionList.entry1, e.action.randTimedActionList.entry2);
+                if (e.GetTargetType() == SMART_TARGET_NONE)
+                {
+                    sLog.outErrorDb("SmartScript: Entry %d SourceType %u Event %u Action %u is using TARGET_NONE(0) for Script9 target. Please correct target_type in database.", e.entryOrGuid, e.GetScriptType(), e.GetEventType(), e.GetActionType());
+                    return;
+                }
+                ObjectList* targets = GetTargets(e, unit);
+                if (targets)
+                {
+                    for (ObjectList::iterator itr = targets->begin(); itr != targets->end(); itr++)
+                    {
+                        if (Creature* target = (*itr)->ToCreature())
+                        {
+                            if (IsSmart(target))
+                                CAST_AI(SmartAI, target->AI())->SetScript9(e, id, mLastInvoker);
+                        } else if (GameObject* target = (*itr)->ToGameObject())
+                        {
+                            if (IsSmartGO(target))
+                                CAST_AI(SmartGameObjectAI, target->AI())->SetScript9(e, id, mLastInvoker);
+                        }
+                    }
+                }
                 break;
             }
         case SMART_ACTION_ACTIVATE_TAXI:

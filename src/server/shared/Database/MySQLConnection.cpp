@@ -34,18 +34,9 @@
 
 MySQLConnection::MySQLConnection(MySQLConnectionInfo& connInfo) :
 m_queue(NULL),
-m_worker(NULL),
 m_Mysql(NULL),
 m_connectionInfo(connInfo)
 {
-}
-
-MySQLConnection::MySQLConnection(ACE_Activation_Queue* queue, MySQLConnectionInfo& connInfo) :
-m_queue(queue),
-m_Mysql(NULL),
-m_connectionInfo(connInfo)
-{
-    m_worker = new DatabaseWorker(m_queue, this);
 }
 
 MySQLConnection::~MySQLConnection()
@@ -155,7 +146,7 @@ bool MySQLConnection::Execute(const char* sql)
         return false;
 
     {
-        uint32 _s;
+        uint32 _s = 0;
         if (sLog.GetSQLDriverQueryLogging())
             _s = getMSTime();
 
@@ -191,7 +182,7 @@ bool MySQLConnection::Execute(PreparedStatement* stmt)
         MYSQL_STMT* msql_STMT = m_mStmt->GetSTMT();
         MYSQL_BIND* msql_BIND = m_mStmt->GetBind();
 
-        uint32 _s;
+        uint32 _s = 0;
         if (sLog.GetSQLDriverQueryLogging())
             _s = getMSTime();
 
@@ -237,7 +228,7 @@ bool MySQLConnection::_Query(PreparedStatement* stmt, MYSQL_RES **pResult, uint6
         MYSQL_STMT* msql_STMT = m_mStmt->GetSTMT();
         MYSQL_BIND* msql_BIND = m_mStmt->GetBind();
 
-        uint32 _s;
+        uint32 _s = 0;
         if (sLog.GetSQLDriverQueryLogging())
             _s = getMSTime();
 
@@ -294,7 +285,7 @@ bool MySQLConnection::_Query(const char *sql, MYSQL_RES **pResult, MYSQL_FIELD *
         return false;
 
     {
-        uint32 _s;
+        uint32 _s = 0;
         if (sLog.GetSQLDriverQueryLogging())
             _s = getMSTime();
 

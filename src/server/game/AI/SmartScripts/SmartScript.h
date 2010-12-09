@@ -53,7 +53,7 @@ class SmartScript
         SmartScriptHolder CreateEvent(SMART_EVENT e, uint32 event_flags, uint32 event_param1, uint32 event_param2, uint32 event_param3, uint32 event_param4, SMART_ACTION action, uint32 action_param1, uint32 action_param2, uint32 action_param3, uint32 action_param4, uint32 action_param5, uint32 action_param6, SMARTAI_TARGETS t, uint32 target_param1, uint32 target_param2, uint32 target_param3, uint32 phaseMask = 0);
         void AddEvent(SMART_EVENT e, uint32 event_flags, uint32 event_param1, uint32 event_param2, uint32 event_param3, uint32 event_param4, SMART_ACTION action, uint32 action_param1, uint32 action_param2, uint32 action_param3, uint32 action_param4, uint32 action_param5, uint32 action_param6, SMARTAI_TARGETS t, uint32 target_param1, uint32 target_param2, uint32 target_param3, uint32 phaseMask = 0);
         void SetPathId(uint32 id) { mPathId = id; }
-        uint32 GetPathId() { return mPathId; }
+        uint32 GetPathId() const { return mPathId; }
         WorldObject* GetBaseObject()
         {
             WorldObject* obj = NULL;
@@ -111,7 +111,16 @@ class SmartScript
             if (c && c->GetAIName() != "SmartAI") smart = false;
             if (!me || me->GetAIName() != "SmartAI") smart = false;
             if (!smart)
-                sLog.outErrorDb("SmartScript: Action target creature(entry: %u) is not using SmartAI, action skipped to prevent crash.", c?c->GetEntry():(me?me->GetEntry():0));
+                sLog.outErrorDb("SmartScript: Action target Creature(entry: %u) is not using SmartAI, action skipped to prevent crash.", c?c->GetEntry():(me?me->GetEntry():0));
+            return smart;
+        }
+        bool IsSmartGO(GameObject* g = NULL)
+        {
+            bool smart = true;
+            if (g && g->GetAIName() != "SmartGameObjectAI") smart = false;
+            if (!go || go->GetAIName() != "SmartGameObjectAI") smart = false;
+            if (!smart)
+                sLog.outErrorDb("SmartScript: Action target GameObject(entry: %u) is not using SmartGameObjectAI, action skipped to prevent crash.", g?g->GetEntry():(go?go->GetEntry():0));
             return smart;
         }
         ObjectList* GetTargetList(uint32 id)
@@ -180,6 +189,10 @@ class SmartScript
             meOrigGUID = 0;
         }
 
+        //TIMED_ACTIONLIST (script type 9 aka script9)
+        void SetScript9(SmartScriptHolder &e, uint32 entry);
+        Unit* mLastInvoker;
+
     private:
         void IncPhase(int32 p = 1) { 
             if(p >= 0)
@@ -188,7 +201,7 @@ class SmartScript
                 DecPhase(abs(p)); 
         }
         void DecPhase(int32 p = 1) { mEventPhase  -= (mEventPhase < (uint32)p ? (uint32)p - mEventPhase : (uint32)p); }
-        bool IsInPhase(uint32 p) { return mEventPhase & p; }
+        bool IsInPhase(uint32 p) const { return mEventPhase & p; }
         void SetPhase(uint32 p = 0) { mEventPhase = p; }
 
         SmartAIEventList mEvents;
@@ -214,7 +227,6 @@ class SmartScript
         uint64 mTextGUID;
         Creature* talker;
         bool mUseTextTimer;
-        Unit* mLastInvoker;
 
         SMARTAI_TEMPLATE mTemplate;
         void InstallEvents();
@@ -250,8 +262,6 @@ class SmartScript
             SmartScriptHolder s;
             return s;
         }
-        //TIMED_ACTIONLIST (script type 9 aka script9)
-        void SetScript9(SmartScriptHolder &e, uint32 entry);
 };
 
 #endif

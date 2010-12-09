@@ -72,6 +72,7 @@
 #include "WeatherMgr.h"
 #include "CreatureTextMgr.h"
 #include "SmartAI.h"
+#include "Channel.h"
 #include "AuctionHouseBot.h"
 
 volatile bool World::m_stopEvent = false;
@@ -222,9 +223,9 @@ World::AddSession_(WorldSession* s)
 
     ///- kick already loaded player with same account (if any) and remove session
     ///- if player is in loading and want to load again, return
-    if (!RemoveSession (s->GetAccountId ()))
+    if (!RemoveSession (s->GetAccountId()))
     {
-        s->KickPlayer ();
+        s->KickPlayer();
         delete s;                                           // session not added yet in session list, so not listed in queue
         return;
     }
@@ -235,7 +236,7 @@ World::AddSession_(WorldSession* s)
     // if session already exist, prepare to it deleting at next world update
     // NOTE - KickPlayer() should be called on "old" in RemoveSession()
     {
-        SessionMap::const_iterator old = m_sessions.find(s->GetAccountId ());
+        SessionMap::const_iterator old = m_sessions.find(s->GetAccountId());
 
         if (old != m_sessions.end())
         {
@@ -247,22 +248,22 @@ World::AddSession_(WorldSession* s)
         }
     }
 
-    m_sessions[s->GetAccountId ()] = s;
+    m_sessions[s->GetAccountId()] = s;
 
-    uint32 Sessions = GetActiveAndQueuedSessionCount ();
-    uint32 pLimit = GetPlayerAmountLimit ();
-    uint32 QueueSize = GetQueueSize ();                     //number of players in the queue
+    uint32 Sessions = GetActiveAndQueuedSessionCount();
+    uint32 pLimit = GetPlayerAmountLimit();
+    uint32 QueueSize = GetQueuedSessionCount();             //number of players in the queue
 
     //so we don't count the user trying to
     //login as a session and queue the socket that we are using
     if (decrease_session)
         --Sessions;
 
-    if (pLimit > 0 && Sessions >= pLimit && s->GetSecurity () == SEC_PLAYER && !HasRecentlyDisconnected(s))
+    if (pLimit > 0 && Sessions >= pLimit && s->GetSecurity() == SEC_PLAYER && !HasRecentlyDisconnected(s))
     {
         AddQueuedPlayer (s);
-        UpdateMaxSessionCounters ();
-        sLog.outDetail ("PlayerQueue: Account id %u is in Queue Position (%u).", s->GetAccountId (), ++QueueSize);
+        UpdateMaxSessionCounters();
+        sLog.outDetail ("PlayerQueue: Account id %u is in Queue Position (%u).", s->GetAccountId(), ++QueueSize);
         return;
     }
 
@@ -274,7 +275,7 @@ World::AddSession_(WorldSession* s)
 
     s->SendTutorialsData();
 
-    UpdateMaxSessionCounters ();
+    UpdateMaxSessionCounters();
 
     // Updates the population
     if (pLimit > 0)
@@ -578,6 +579,8 @@ void World::LoadConfigSettings(bool reload)
     m_int_configs[CONFIG_AUCTION_LEVEL_REQ] = sConfig.GetIntDefault("LevelReq.Auction", 1);
     m_int_configs[CONFIG_MAIL_LEVEL_REQ] = sConfig.GetIntDefault("LevelReq.Mail", 1);
     m_bool_configs[CONFIG_ALLOW_PLAYER_COMMANDS] = sConfig.GetBoolDefault("AllowPlayerCommands", 1);
+    m_bool_configs[CONFIG_PRESERVE_CUSTOM_CHANNELS] = sConfig.GetBoolDefault("PreserveCustomChannels", false);
+    m_int_configs[CONFIG_PRESERVE_CUSTOM_CHANNEL_DURATION] = sConfig.GetIntDefault("PreserveCustomChannelDuration", 14);
     m_bool_configs[CONFIG_GRID_UNLOAD] = sConfig.GetBoolDefault("GridUnload", true);
     m_int_configs[CONFIG_INTERVAL_SAVE] = sConfig.GetIntDefault("PlayerSaveInterval", 15 * MINUTE * IN_MILLISECONDS);
     m_int_configs[CONFIG_INTERVAL_DISCONNECT_TOLERANCE] = sConfig.GetIntDefault("DisconnectToleranceInterval", 0);
@@ -1190,6 +1193,9 @@ void World::LoadConfigSettings(bool reload)
 
     // Dungeon finder
     m_bool_configs[CONFIG_DUNGEON_FINDER_ENABLE] = sConfig.GetBoolDefault("DungeonFinder.Enable", false);
+    
+    // DBC_ItemAttributes
+    m_bool_configs[CONFIG_DBC_ENFORCE_ITEM_ATTRIBUTES] = sConfig.GetBoolDefault("DBC.EnforceItemAttributes", true);
 
     // AutoBroadcast
     m_bool_configs[CONFIG_AUTOBROADCAST] = sConfig.GetBoolDefault("AutoBroadcast.On", false);
@@ -1197,7 +1203,7 @@ void World::LoadConfigSettings(bool reload)
     m_int_configs[CONFIG_AUTOBROADCAST_INTERVAL] = sConfig.GetIntDefault("AutoBroadcast.Timer", 60000);
 
     // MySQL ping time interval
-    m_int_configs[CONFIG_DB_PING_INTERVAL] = sConfig.GetIntDefault("MaxPingTime", 1800);
+    m_int_configs[CONFIG_DB_PING_INTERVAL] = sConfig.GetIntDefault("MaxPingTime", 30);
 
     // anticheat configs
     m_bool_configs[CONFIG_ANTICHEAT_ENABLE] = sConfig.GetBoolDefault("Anticheat.Enable", false);
@@ -1669,7 +1675,7 @@ void World::SetInitialWorldSettings()
     m_timers[WUPDATE_AUTOBROADCAST].SetInterval(getIntConfig(CONFIG_AUTOBROADCAST_INTERVAL));
     m_timers[WUPDATE_DELETECHARS].SetInterval(DAY*IN_MILLISECONDS); // check for chars to delete every day
 
-    m_timers[WUPDATE_PINGDB].SetInterval(getIntConfig(CONFIG_DB_PING_INTERVAL)*IN_MILLISECONDS);    // Mysql ping time in seconds
+    m_timers[WUPDATE_PINGDB].SetInterval(getIntConfig(CONFIG_DB_PING_INTERVAL)*MINUTE*IN_MILLISECONDS);    // Mysql ping time in minutes
 
     //to set mailtimer to return mails every day between 4 and 5 am
     //mailtimer is increased when updating auctions
@@ -1694,6 +1700,9 @@ void World::SetInitialWorldSettings()
 
     // Delete all characters which have been deleted X days before
     Player::DeleteOldCharacters();
+
+    // Delete all custom channels which haven't been used for PreserveCustomChannelDuration days.
+    Channel::CleanOldChannelsInDB();
 
     sLog.outString("Starting Arena Season...");
     sGameEventMgr.StartArenaSeason();

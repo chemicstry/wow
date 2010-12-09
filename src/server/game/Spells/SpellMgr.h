@@ -48,14 +48,6 @@ enum SpellCategories
     SPELLCATEGORY_DRINK            = 59,
 };
 
-enum SpellDisableTypes
-{
-    SPELL_DISABLE_PLAYER            = 0x1,
-    SPELL_DISABLE_CREATURE          = 0x2,
-    SPELL_DISABLE_PET               = 0x4,
-    SPELL_DISABLE_DEPRECATED_SPELL  = 0x8
-};
-
 enum SpellEffectTargetTypes
 {
     SPELL_REQUIRE_NONE,
@@ -407,6 +399,13 @@ inline bool IsAreaOfEffectSpell(SpellEntry const *spellInfo)
     if (IsAreaEffectTarget[spellInfo->EffectImplicitTargetA[1]] || IsAreaEffectTarget[spellInfo->EffectImplicitTargetB[1]])
         return true;
     if (IsAreaEffectTarget[spellInfo->EffectImplicitTargetA[2]] || IsAreaEffectTarget[spellInfo->EffectImplicitTargetB[2]])
+        return true;
+    return false;
+}
+
+inline bool IsAreaOfEffectSpellEffect(SpellEntry const *spellInfo, uint8 effIndex)
+{
+    if (IsAreaEffectTarget[spellInfo->EffectImplicitTargetA[effIndex]] || IsAreaEffectTarget[spellInfo->EffectImplicitTargetB[effIndex]])
         return true;
     return false;
 }
@@ -1057,10 +1056,10 @@ class SpellMgr
         SpellEntry const* GetSpellForDifficultyFromSpell(SpellEntry const* spell, Unit* Caster)
         {
             //spell never can be NULL in this case!
-            if (!Caster->ToCreature() || !Caster->ToCreature()->GetMap() ||  !Caster->ToCreature()->GetMap()->IsDungeon())
+            if (!Caster || !Caster->GetMap() ||  !Caster->GetMap()->IsDungeon())
                 return spell;
 
-            uint32 mode = uint32(Caster->ToCreature()->GetMap()->GetSpawnMode());
+            uint32 mode = uint32(Caster->GetMap()->GetSpawnMode());
             if (mode >= MAX_DIFFICULTY)
             {
                 sLog.outError("GetSpellForDifficultyFromSpell: Incorrect Difficulty for spell %u.", spell->Id);

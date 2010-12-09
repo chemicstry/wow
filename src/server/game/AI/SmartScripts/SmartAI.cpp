@@ -29,6 +29,7 @@
 #include "CellImpl.h"
 #include "InstanceScript.h"
 #include "ScriptedCreature.h"
+#include "Group.h"
 
 #include "SmartAI.h"
 #include "ScriptPCH.h"
@@ -788,6 +789,13 @@ void SmartAI::SetFollow(Unit* target, float dist, float angle, uint32 credit, ui
     me->GetMotionMaster()->MoveFollow(target, dist, angle);
     mFollowCreditType = creditType;
 }
+
+void SmartAI::SetScript9(SmartScriptHolder &e, uint32 entry, Unit* invoker)
+{
+    if (invoker)
+        GetScript()->mLastInvoker = invoker;
+    GetScript()->SetScript9(e, entry);
+}
 /*
 SMART_EVENT_UPDATE_OOC
 SMART_EVENT_SPELLHIT
@@ -881,6 +889,13 @@ void SmartGameObjectAI::Destroyed(Player* player, uint32 eventId)
 void SmartGameObjectAI::SetData(uint32 id, uint32 value)
 {
     GetScript()->ProcessEventsFor(SMART_EVENT_DATA_SET, NULL, id, value);
+}
+
+void SmartGameObjectAI::SetScript9(SmartScriptHolder &e, uint32 entry, Unit* invoker)
+{
+    if (invoker)
+        GetScript()->mLastInvoker = invoker;
+    GetScript()->SetScript9(e, entry);
 }
 
 class SmartTrigger : public AreaTriggerScript

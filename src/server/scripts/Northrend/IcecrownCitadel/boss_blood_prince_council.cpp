@@ -299,10 +299,12 @@ class boss_blood_council_controller : public CreatureScript
                             }
 
                             if (newPrince)
+                            {
                                 newPrince->SetHealth(me->GetHealth());
+                                newPrince->AI()->Talk(invocationOrder[invocationStage].textId);
+                            }
 
                             DoCast(me, invocationOrder[invocationStage].spellId);
-                            Talk(invocationOrder[invocationStage].textId);
                             events.ScheduleEvent(EVENT_INVOCATION_OF_BLOOD, 30000);
                             break;
                         }
@@ -1506,9 +1508,8 @@ class spell_blood_council_shadow_prison : public SpellScriptLoader
 
             void HandleDummyTick(AuraEffect const* aurEff, AuraApplication const* aurApp)
             {
-                if (aurApp)
-                    if (aurApp->GetTarget()->isMoving())
-                        aurApp->GetTarget()->CastSpell(aurApp->GetTarget(), SPELL_SHADOW_PRISON_DAMAGE, true, NULL, aurEff);
+                if (aurApp->GetTarget()->isMoving())
+                    aurApp->GetTarget()->CastSpell(aurApp->GetTarget(), SPELL_SHADOW_PRISON_DAMAGE, true, NULL, aurEff);
             }
 
             void Register()

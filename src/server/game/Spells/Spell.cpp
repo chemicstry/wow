@@ -435,6 +435,7 @@ m_caster(Caster), m_spellValue(new SpellValue(m_spellInfo))
     m_delayStart = 0;
     m_delayAtDamageCount = 0;
 
+    m_applyMultiplierMask = 0;
     m_effectMask = 0;
     m_auraScaleMask = 0;
 
@@ -2384,6 +2385,10 @@ void Spell::SelectEffectTargets(uint32 i, uint32 cur)
 
         if (maxTargets > 1)
         {
+            //otherwise, this multiplier is used for something else
+            m_damageMultipliers[i] = 1.0f;
+            m_applyMultiplierMask |= 1 << i;
+
             float range;
             std::list<Unit*> unitList;
 
@@ -2802,6 +2807,32 @@ void Spell::SelectEffectTargets(uint32 i, uint32 cur)
                                 ++itr;
                         }
                         break;
+                    case 71390:                             // Pact of the Darkfallen
+                    {
+                        for (std::list<Unit*>::iterator itr = unitList.begin(); itr != unitList.end();)
+                        {
+                            if (!(*itr)->HasAura(71340))
+                                itr = unitList.erase(itr);
+                            else
+                                ++itr;
+                        }
+                        bool remove = true;
+                        // we can do this, unitList is MAX 4 in size
+                        for (std::list<Unit*>::const_iterator itr = unitList.begin(); itr != unitList.end() && remove; ++itr)
+                        {
+                            if (!m_caster->IsWithinDist(*itr, 5.0f, false))
+                                remove = false;
+
+                            for (std::list<Unit*>::const_iterator itr2 = unitList.begin(); itr2 != unitList.end() && remove; ++itr2)
+                                if (itr != itr2 && !(*itr2)->IsWithinDist(*itr, 5.0f, false))
+                                    remove = false;
+                        }
+
+                        if (remove)
+                            for (std::list<Unit*>::iterator itr = unitList.begin(); itr != unitList.end(); ++itr)
+                                (*itr)->RemoveAura(71340);
+                        break;
+                    }
                 }
                 // Death Pact
                 if (m_spellInfo->SpellFamilyName == SPELLFAMILY_DEATHKNIGHT && m_spellInfo->SpellFamilyFlags[0] & 0x00080000)
@@ -4759,7 +4790,7 @@ SpellCastResult Spell::CheckCast(bool strict)
         if (checkForm)
         {
             // Cannot be used in this stance/form
-            SpellCastResult shapeError = GetErrorAtShapeshiftedCast(m_spellInfo, m_caster->m_form);
+            SpellCastResult shapeError = GetErrorAtShapeshiftedCast(m_spellInfo, m_caster->GetShapeshiftForm());
             if (shapeError != SPELL_CAST_OK)
                 return shapeError;
 
@@ -5538,11 +5569,7 @@ SpellCastResult Spell::CheckCast(bool strict)
                 if (m_caster->GetTypeId() == TYPEID_PLAYER && !AllowMount && !m_IsTriggeredSpell && !m_spellInfo->AreaGroupId)
                     return SPELL_FAILED_NO_MOUNTS_ALLOWED;
 
-                ShapeshiftForm form = m_caster->m_form;
-                if (form == FORM_CAT          || form == FORM_TREE      || form == FORM_TRAVEL   ||
-                    form == FORM_AQUA         || form == FORM_BEAR      || form == FORM_DIREBEAR ||
-                    form == FORM_CREATUREBEAR || form == FORM_GHOSTWOLF || form == FORM_FLIGHT   ||
-                    form == FORM_FLIGHT_EPIC  || form == FORM_MOONKIN   || form == FORM_METAMORPHOSIS)
+                if (m_caster->IsInDisallowedMountForm())
                     return SPELL_FAILED_NOT_SHAPESHIFT;
 
                 break;
@@ -6860,10 +6887,8 @@ void Spell::CalculateDamageDoneForAllTargets()
 {
     float multiplier[MAX_SPELL_EFFECTS];
     for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
-    {
-        // Get multiplier
-        multiplier[i] = SpellMgr::CalculateSpellEffectDamageMultiplier(m_spellInfo, i, m_originalCaster, this);
-    }
+        if (m_applyMultiplierMask & (1 << i))
+            multiplier[i] = SpellMgr::CalculateSpellEffectDamageMultiplier(m_spellInfo, i, m_originalCaster, this);
 
     bool usesAmmo = true;
     Unit::AuraEffectList const& Auras = m_caster->GetAuraEffectsByType(SPELL_AURA_ABILITY_CONSUME_NO_AMMO);
@@ -6923,7 +6948,7 @@ void Spell::CalculateDamageDoneForAllTargets()
     }
 }
 
-int32 Spell::CalculateDamageDone(Unit *unit, const uint32 effectMask, float * /*multiplier*/)
+int32 Spell::CalculateDamageDone(Unit *unit, const uint32 effectMask, float * multiplier)
 {
     int32 damageDone = 0;
     unitTarget = unit;
@@ -6965,6 +6990,12 @@ int32 Spell::CalculateDamageDone(Unit *unit, const uint32 effectMask, float * /*
                             m_damage = m_damage * 10/targetAmount;
                     }
                 }
+            }
+
+            if (m_applyMultiplierMask & (1 << i))
+            {
+                m_damage = int32(m_damage * m_damageMultipliers[i]);
+                m_damageMultipliers[i] *= multiplier[i];
             }
 
             damageDone += m_damage;

@@ -28,6 +28,7 @@ class Transaction
 {
     friend class TransactionTask;
     public:
+        Transaction() {}
         ~Transaction() { Cleanup(); }
 
         void Append(PreparedStatement* statement);
@@ -40,8 +41,6 @@ class Transaction
         void Cleanup();
         std::queue<SQLElementData> m_queries;
 
-    private:
-        bool m_actioned;
 };
 typedef ACE_Refcounted_Auto_Ptr<Transaction, ACE_Null_Mutex> SQLTransaction;
 
@@ -49,7 +48,7 @@ typedef ACE_Refcounted_Auto_Ptr<Transaction, ACE_Null_Mutex> SQLTransaction;
 class TransactionTask : public SQLOperation
 {
     template <class T> friend class DatabaseWorkerPool;
-    friend class DatabaseWorker;
+    template <class T> friend class DatabaseWorker;
 
     public:
         TransactionTask(SQLTransaction trans) : m_trans(trans) {} ;

@@ -366,6 +366,7 @@ INSERT INTO `command` VALUES
 ('character titles',2,'Syntax: .character titles [$player_name]\r\n\r\nShow known titles list for selected player or player find by $player_name.'),
 ('character changefaction',2,'Syntax: .character changefaction $name\r\n\r\nChange character faction.'),
 ('character changerace',2,'Syntax: .character changerace $name\r\n\r\nChange character race.'),
+('channel set ownership', 3, 'Syntax: .channel set ownership $channel [on/off]\n\n\Grant ownership to the first person that joins the channel.'),
 ('channel set public', 3, 'Syntax: .channel set public  $channel $public\r\n\r\nChange password-changing ability for a channel. 1 for possible, 0 for GM only.'),
 ('combatstop',2,'Syntax: .combatstop [$playername]\r\nStop combat for selected character. If selected non-player then command applied to self. If $playername provided then attempt applied to online player $playername.'),
 ('cometome',3,'SYntax: .cometome $parameter\nMake selected creature come to your current location (new position not saved to DB).'),
@@ -1851,6 +1852,8 @@ CREATE TABLE `disables` (
   `sourceType` int(10) unsigned NOT NULL,
   `entry` int(10) unsigned NOT NULL,
   `flags` tinyint(3) unsigned NOT NULL default '0',
+  `params_0` varchar(255) NOT NULL default '',
+  `params_1` varchar(255) NOT NULL default '',
   `comment` varchar(255) character set utf8 NOT NULL default '',
   PRIMARY KEY  (`sourceType`,`entry`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -18096,6 +18099,25 @@ INSERT INTO `spell_linked_spell` (`spell_trigger`,`spell_effect`,`type`,`comment
 (-71224, 69706, 0, 'Rotface: Mutated Infection Summon'),
 (-73022, 69706, 0, 'Rotface: Mutated Infection Summon'),
 (-73023, 69706, 0, 'Rotface: Mutated Infection Summon'),
+( 70867, 70871, 2, 'Blood-Queen: Essence of the Blood Queen'),
+( 71473, 70871, 2, 'Blood-Queen: Essence of the Blood Queen'),
+( 71532, 70871, 2, 'Blood-Queen: Essence of the Blood Queen'),
+( 71533, 70871, 2, 'Blood-Queen: Essence of the Blood Queen'),
+( 70879, 70871, 2, 'Blood-Queen: Essence of the Blood Queen'),
+( 71525, 70871, 2, 'Blood-Queen: Essence of the Blood Queen'),
+( 71530, 70871, 2, 'Blood-Queen: Essence of the Blood Queen'),
+( 71531, 70871, 2, 'Blood-Queen: Essence of the Blood Queen'),
+( 70877, 72649, 2, 'Blood-Queen: Frenzied Bloodthirst 10man'),
+( 70877, 72151, 2, 'Blood-Queen: Frenzied Bloodthirst 10man'),
+( 71474, 72648, 2, 'Blood-Queen: Frenzied Bloodthirst 25man'),
+( 71474, 72650, 2, 'Blood-Queen: Frenzied Bloodthirst 25man'),
+( 70923, 70924, 2, 'Blood-Queen: Uncontrollable Frenzy'),
+( 71446, 71447, 1, 'Blood-Queen: Bloodbolt Splash'),
+( 71478, 71481, 1, 'Blood-Queen: Bloodbolt Splash'),
+( 71479, 71482, 1, 'Blood-Queen: Bloodbolt Splash'),
+( 71480, 71483, 1, 'Blood-Queen: Bloodbolt Splash'),
+( 71952, 70995, 1, 'Blood-Queen: Presence of the Darkfallen'),
+( 71390, 71341, 0, 'Blood-Queen: Pact of the Darkfallen'),
 -- Warsong Gulch
 ( 54861,-23335, 0, 'Drop Flag on Nitro Boost WSG'),
 ( 54861,-23333, 0, 'Drop Flag on Nitro Boost WSG'),
@@ -18283,7 +18305,6 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 11185, 0x00,   3, 0x00000080, 0x00000000, 0x00000000, 0x00050000, 0x00000000,   0,   0,   0), -- Improved Blizzard (Rank 1)
 ( 11255, 0x00,   3, 0x00004000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Improved Counterspell (Rank 1)
 ( 12169, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000040,   0,   0,   0), -- Shield Block
-( 12281, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Sword Specialization (Rank 1)
 ( 12289, 0x00,   4, 0x00000002, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Improved Hamstring (Rank 1)
 ( 12298, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000070,   0,   0,   0), -- Shield Specialization (Rank 1)
 ( 12311, 0x00,   4, 0x00000800, 0x00000001, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Gag Order (Rank 1)
@@ -18299,10 +18320,11 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 12727, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000070,   0,   0,   0), -- Shield Specialization (Rank 5)
 ( 12797, 0x00,   4, 0x00000400, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Improved Revenge (Rank 1)
 ( 12799, 0x00,   4, 0x00000400, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Improved Revenge (Rank 2)
-( 12812, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Sword Specialization (Rank 2)
-( 12813, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Sword Specialization (Rank 3)
-( 12814, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Sword Specialization (Rank 4)
-( 12815, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Sword Specialization (Rank 5)
+( 12281, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Sword Specialization (Rank 1)
+( 12812, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Sword Specialization (Rank 2)
+( 12813, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Sword Specialization (Rank 3)
+( 12814, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Sword Specialization (Rank 4)
+( 12815, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Sword Specialization (Rank 5)
 ( 12834, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Deep Wounds (Rank 1)
 ( 12846, 0x04,   3, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Ignite (Rank 3)
 ( 12847, 0x04,   3, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Ignite (Rank 4)
@@ -19308,12 +19330,7 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 75474, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Charred Twilight Scale (Heroic)
 ( 75465, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Charred Twilight Scale
 ( 75457, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Sharpened Twilight Scale (Heroic)
-( 75455, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Sharpened Twilight Scale
-( 12281, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,  6), -- Sword Specialization (Rank 1)
-( 12812, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,  6), -- Sword Specialization (Rank 2)
-( 12813, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,  6), -- Sword Specialization (Rank 3)
-( 12814, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,  6), -- Sword Specialization (Rank 4)
-( 12815, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,  6); -- Sword Specialization (Rank 5)
+( 75455, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45); -- Sharpened Twilight Scale
 /*!40000 ALTER TABLE `spell_proc_event` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -26707,6 +26724,7 @@ LOCK TABLES `spell_script_names` WRITE;
 INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 -- generic
 (  6962, 'spell_gen_pet_summoned'),
+( 10848, 'spell_gen_shroud_of_death'),
 ( 24750, 'spell_gen_trick'),
 ( 24751, 'spell_gen_trick_or_treat'),
 ( 29266, 'spell_creature_permanent_feign_death'),
@@ -26746,14 +26764,14 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 ( 70835, 'spell_marrowgar_bone_storm'),
 ( 70836, 'spell_marrowgar_bone_storm'),
 ( 70842, 'spell_deathwhisper_mana_barrier'),
-( 70903, 'spell_cultist_dark_martyrdrom'),
-( 72498, 'spell_cultist_dark_martyrdrom'),
-( 72499, 'spell_cultist_dark_martyrdrom'),
-( 72500, 'spell_cultist_dark_martyrdrom'),
-( 71236, 'spell_cultist_dark_martyrdrom'),
-( 72495, 'spell_cultist_dark_martyrdrom'),
-( 72496, 'spell_cultist_dark_martyrdrom'),
-( 72497, 'spell_cultist_dark_martyrdrom'),
+( 70903, 'spell_cultist_dark_martyrdom'),
+( 72498, 'spell_cultist_dark_martyrdom'),
+( 72499, 'spell_cultist_dark_martyrdom'),
+( 72500, 'spell_cultist_dark_martyrdom'),
+( 71236, 'spell_cultist_dark_martyrdom'),
+( 72495, 'spell_cultist_dark_martyrdom'),
+( 72496, 'spell_cultist_dark_martyrdom'),
+( 72497, 'spell_cultist_dark_martyrdom'),
 ( 72202, 'spell_deathbringer_blood_link'),
 ( 72178, 'spell_deathbringer_blood_link_aura'),
 ( 72371, 'spell_deathbringer_blood_power'),
@@ -26834,6 +26852,16 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 ( 72087, 'spell_valanar_kinetic_bomb_knockback'),
 ( 73001, 'spell_blood_council_shadow_prison'),
 ( 72999, 'spell_blood_council_shadow_prison_damage'),
+( 70877, 'spell_blood_queen_frenzied_bloodthirst'),
+( 71474, 'spell_blood_queen_frenzied_bloodthirst'),
+( 70946, 'spell_blood_queen_vampiric_bite'),
+( 71475, 'spell_blood_queen_vampiric_bite'),
+( 71476, 'spell_blood_queen_vampiric_bite'),
+( 71477, 'spell_blood_queen_vampiric_bite'),
+( 71899, 'spell_blood_queen_bloodbolt'),
+( 71900, 'spell_blood_queen_bloodbolt'),
+( 71901, 'spell_blood_queen_bloodbolt'),
+( 71902, 'spell_blood_queen_bloodbolt'),
 -- Ulduar
 ( 62717, 'spell_ignis_slag_pot'),
 ( 63477, 'spell_ignis_slag_pot'),
@@ -26891,6 +26919,7 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 -- priest
 ( 47948, 'spell_pri_pain_and_suffering_proc'),
 (-47540, 'spell_pri_penance'),
+( -8129, 'spell_pri_mana_burn'),
 -- death knight
 (-49158, 'spell_dk_corpse_explosion'),
 ( 50524, 'spell_dk_runic_power_feed'),
@@ -27744,8 +27773,8 @@ INSERT INTO `trinity_string` (`entry`,`content_default`,`content_loc1`,`content_
 (5019, '[Mountable]', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (5020, 'Phasemask: %u', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (5021, 'Armor: %u', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(5022, 'Channel password not changed due to channel being marked public. GM Powers required.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(5023, 'Channel: %s publicity set to: %u', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(5022, 'Granting ownership to first person that joins the channel \"%s\": Enabled.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(5023, 'Granting ownership to first person that joins the channel \"%s\": Disabled.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (5024, 'Entry: %u', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (5025, 'Type: %u', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (5026, 'DisplayID: %u', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),

@@ -19,38 +19,39 @@
 #ifndef _PLAYER_H
 #define _PLAYER_H
 
-#include "Common.h"
-#include "ItemPrototype.h"
-#include "Unit.h"
-#include "Item.h"
-#include "DatabaseEnv.h"
-#include "NPCHandler.h"
-#include "QuestDef.h"
-#include "Group.h"
-#include "Bag.h"
-#include "WorldSession.h"
-#include "Pet.h"
-#include "MapReference.h"
-#include "Util.h"                                           // for Tokens typedef
 #include "AchievementMgr.h"
-#include "ReputationMgr.h"
 #include "Battleground.h"
+#include "Bag.h"
+#include "Common.h"
+#include "DatabaseEnv.h"
 #include "DBCEnums.h"
+#include "GroupReference.h"
+#include "ItemPrototype.h"
+#include "Item.h"
 #include "LFG.h"
-
+#include "MapReference.h"
+#include "NPCHandler.h"
+#include "Pet.h"
+#include "QuestDef.h"
+#include "ReputationMgr.h"
+#include "Unit.h"
+#include "Util.h"                                           // for Tokens typedef
+#include "WorldSession.h"
+ 
 #include<string>
 #include<vector>
-
+ 
 struct Mail;
 class Channel;
-class DynamicObject;
 class Creature;
+class DynamicObject;
+class Group;
+class OutdoorPvP;
 class Pet;
 class PlayerMenu;
-class UpdateMask;
-class SpellCastTargets;
 class PlayerSocial;
-class OutdoorPvP;
+class SpellCastTargets;
+class UpdateMask;
 
 typedef std::deque<Mail*> PlayerMails;
 
@@ -444,8 +445,9 @@ enum PlayerFieldByteFlags
 // used in PLAYER_FIELD_BYTES2 values
 enum PlayerFieldByte2Flags
 {
-    PLAYER_FIELD_BYTE2_NONE              = 0x0000,
-    PLAYER_FIELD_BYTE2_INVISIBILITY_GLOW = 0x4000
+    PLAYER_FIELD_BYTE2_NONE                 = 0x00,
+    PLAYER_FIELD_BYTE2_STEALTH              = 0x20,
+    PLAYER_FIELD_BYTE2_INVISIBILITY_GLOW    = 0x40
 };
 
 enum ActivateTaxiReplies
@@ -1710,7 +1712,7 @@ class Player : public Unit, public GridObject<Player>
         bool IsInSameGroupWith(Player const* p) const;
         bool IsInSameRaidWith(Player const* p) const { return p == this || (GetGroup() != NULL && GetGroup() == p->GetGroup()); }
         void UninviteFromGroup();
-        static void RemoveFromGroup(Group* group, uint64 guid, RemoveMethod method = GROUP_REMOVEMETHOD_DEFAULT);
+        static void RemoveFromGroup(Group* group, uint64 guid, RemoveMethod method = GROUP_REMOVEMETHOD_DEFAULT, uint64 kicker = 0 , const char* reason = NULL);
         void RemoveFromGroup(RemoveMethod method = GROUP_REMOVEMETHOD_DEFAULT) { RemoveFromGroup(GetGroup(),GetGUID(), method); }
         void SendUpdateToOutOfRangeGroupMembers();
 
@@ -1992,6 +1994,8 @@ class Player : public Unit, public GridObject<Player>
         void _ApplyAllStatBonuses();
         void _RemoveAllStatBonuses();
 
+        void ResetAllPowers();
+
         void _ApplyWeaponDependentAuraMods(Item *item, WeaponAttackType attackType, bool apply);
         void _ApplyWeaponDependentAuraCritMod(Item *item, WeaponAttackType attackType, AuraEffect const * aura, bool apply);
         void _ApplyWeaponDependentAuraDamageMod(Item *item, WeaponAttackType attackType, AuraEffect const * aura, bool apply);
@@ -2257,10 +2261,27 @@ class Player : public Unit, public GridObject<Player>
         void SetLfgComment(std::string _comment) { m_LookingForGroup.comment = _comment; }
         uint8 GetLfgRoles() { return m_LookingForGroup.roles; }
         void SetLfgRoles(uint8 _roles) { m_LookingForGroup.roles = _roles; }
-        bool GetLfgUpdate() { return m_LookingForGroup.update; }
-        void SetLfgUpdate(bool update) { m_LookingForGroup.update = update; }
-        LfgState GetLfgState() { return m_LookingForGroup.state; }
-        void SetLfgState(LfgState state) { m_LookingForGroup.state = state; }
+        LfgState GetLfgState() const { return m_LookingForGroup.state; }
+        void SetLfgState(LfgState state)
+        {
+            
+            switch(state)
+            {
+                case LFG_STATE_NONE:
+                case LFG_STATE_DUNGEON:
+                case LFG_STATE_FINISHED_DUNGEON:
+                    m_LookingForGroup.oldState = state;
+                    // No break on purpose
+                default:
+                    m_LookingForGroup.state = state;
+            }
+        }
+        void ClearLfgState()
+        {
+            m_LookingForGroup.applyDungeons.clear();
+            m_LookingForGroup.roles = ROLE_NONE;
+            m_LookingForGroup.state = m_LookingForGroup.oldState;
+        }
         bool isUsingLfg() { return GetLfgState() != LFG_STATE_NONE; }
 
         typedef std::set<uint32> DFQuestsDoneList;

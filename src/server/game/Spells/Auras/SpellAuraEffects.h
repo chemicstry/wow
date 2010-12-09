@@ -23,6 +23,7 @@ class AuraEffect
         uint64 GetCasterGUID() const { return GetBase()->GetCasterGUID(); }
         Aura * GetBase() const { return m_base; }
         void GetTargetList(std::list<Unit*> & targetList) const;
+        void GetApplicationList(std::list<AuraApplication*> & applicationList) const;
 
         SpellEntry const * GetSpellProto() const { return m_spellProto; }
         uint32 GetId() const { return m_spellProto->Id; }
@@ -63,7 +64,7 @@ class AuraEffect
 
         void SendTickImmune(Unit * target, Unit *caster) const;
 
-        void PeriodicTick(Unit * target, Unit * caster) const;
+        void PeriodicTick(AuraApplication * aurApp, Unit * caster) const;
         void PeriodicDummyTick(Unit * target, Unit * caster) const;
         Unit* GetTriggerTarget(Unit * target) const;
         void TriggerSpell(Unit * target, Unit * caster) const;
@@ -222,7 +223,7 @@ class AuraEffect
         void HandleModMeleeRangedSpeedPct(AuraApplication const * aurApp, uint8 mode, bool apply) const;
         void HandleModCombatSpeedPct(AuraApplication const * aurApp, uint8 mode, bool apply) const;
         void HandleModAttackSpeed(AuraApplication const * aurApp, uint8 mode, bool apply) const;
-        void HandleHaste(AuraApplication const * aurApp, uint8 mode, bool apply) const;
+        void HandleModMeleeSpeedPct(AuraApplication const * aurApp, uint8 mode, bool apply) const;
         void HandleAuraModRangedHaste(AuraApplication const * aurApp, uint8 mode, bool apply) const;
         void HandleRangedAmmoHaste(AuraApplication const * aurApp, uint8 mode, bool apply) const;
         //   combat rating
@@ -258,6 +259,7 @@ class AuraEffect
         void HandleAuraConvertRune(AuraApplication const * aurApp, uint8 mode, bool apply) const;
         void HandleAuraLinked(AuraApplication const * aurApp, uint8 mode, bool apply) const;
         void HandleAuraOpenStable(AuraApplication const * aurApp, uint8 mode, bool apply) const;
+        void HandleAuraOverrideSpells(AuraApplication const * aurApp, uint8 mode, bool apply) const;
         void HandleAuraSetVehicle(AuraApplication const * aurApp, uint8 mode, bool apply) const;
         void HandleAuraModFakeInebriation(AuraApplication const * aurApp, uint8 mode, bool apply) const;
 };

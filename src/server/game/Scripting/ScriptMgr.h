@@ -279,10 +279,7 @@ class FormulaScript : public ScriptObject
     public:
 
         // Called after calculating honor.
-        virtual void OnHonorCalculation(float& /*honor*/, uint8 /*level*/, uint32 /*count*/) { }
-
-        // Called after calculating honor.
-        virtual void OnHonorCalculation(uint32& /*honor*/, uint8 /*level*/, uint32 /*count*/) { }
+        virtual void OnHonorCalculation(float& /*honor*/, uint8 /*level*/, float /*multiplier*/) { }
 
         // Called after gray level calculation.
         virtual void OnGrayLevelCalculation(uint8& /*grayLevel*/, uint8 /*playerLevel*/) { }
@@ -748,7 +745,7 @@ public:
 
     virtual void OnAddMember(Group* /*group*/, uint64 /*guid*/) { }
     virtual void OnInviteMember(Group* /*group*/, uint64 /*guid*/) { }
-    virtual void OnRemoveMember(Group* /*group*/, uint64 /*guid*/, RemoveMethod& /*method*/) { }
+    virtual void OnRemoveMember(Group* /*group*/, uint64 /*guid*/, RemoveMethod& /*method*/, uint64 /*kicker*/, const char* /*reason*/) { }
     virtual void OnChangeLeader(Group* /*group*/, uint64 /*newLeaderGuid*/, uint64 /*oldLeaderGuid*/) { }
     virtual void OnDisband(Group* /*group*/) { }
 };
@@ -807,8 +804,7 @@ class ScriptMgr
 
     public: /* FormulaScript */
 
-        void OnHonorCalculation(float& honor, uint8 level, uint32 count);
-        void OnHonorCalculation(uint32& honor, uint8 level, uint32 count);
+        void OnHonorCalculation(float& honor, uint8 level, float multiplier);
         void OnGrayLevelCalculation(uint8& grayLevel, uint8 playerLevel);
         void OnColorCodeCalculation(XPColorChar& color, uint8 playerLevel, uint8 mobLevel);
         void OnZeroDifferenceCalculation(uint8& diff, uint8 playerLevel);
@@ -965,7 +961,7 @@ class ScriptMgr
     public: /* GroupScript */
         void OnGroupAddMember(Group* group, uint64 guid);
         void OnGroupInviteMember(Group* group, uint64 guid);
-        void OnGroupRemoveMember(Group* group, uint64 guid, RemoveMethod method);
+        void OnGroupRemoveMember(Group* group, uint64 guid, RemoveMethod method, uint64 kicker, const char* reason);
         void OnGroupChangeLeader(Group* group, uint64 newLeaderGuid, uint64 oldLeaderGuid);
         void OnGroupDisband(Group* group);
 

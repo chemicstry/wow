@@ -422,14 +422,9 @@ void ScriptMgr::OnWorldUpdate(uint32 diff)
     FOREACH_SCRIPT(WorldScript)->OnUpdate(NULL, diff);
 }
 
-void ScriptMgr::OnHonorCalculation(float& honor, uint8 level, uint32 count)
+void ScriptMgr::OnHonorCalculation(float& honor, uint8 level, float multiplier)
 {
-    FOREACH_SCRIPT(FormulaScript)->OnHonorCalculation(honor, level, count);
-}
-
-void ScriptMgr::OnHonorCalculation(uint32& honor, uint8 level, uint32 count)
-{
-    FOREACH_SCRIPT(FormulaScript)->OnHonorCalculation(honor, level, count);
+    FOREACH_SCRIPT(FormulaScript)->OnHonorCalculation(honor, level, multiplier);
 }
 
 void ScriptMgr::OnGrayLevelCalculation(uint8& grayLevel, uint8 playerLevel)
@@ -1267,10 +1262,10 @@ void ScriptMgr::OnGroupInviteMember(Group* group, uint64 guid)
     FOREACH_SCRIPT(GroupScript)->OnInviteMember(group, guid);
 }
 
-void ScriptMgr::OnGroupRemoveMember(Group* group, uint64 guid, RemoveMethod method)
+void ScriptMgr::OnGroupRemoveMember(Group* group, uint64 guid, RemoveMethod method, uint64 kicker, const char* reason)
 {
     ASSERT(group);
-    FOREACH_SCRIPT(GroupScript)->OnRemoveMember(group, guid, method);
+    FOREACH_SCRIPT(GroupScript)->OnRemoveMember(group, guid, method, kicker, reason);
 }
 
 void ScriptMgr::OnGroupChangeLeader(Group* group, uint64 newLeaderGuid, uint64 oldLeaderGuid)

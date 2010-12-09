@@ -30,7 +30,6 @@
 #include "Util.h"
 #include "SpellAuras.h"
 #include "Vehicle.h"
-#include "LFGMgr.h"
 
 class Aura;
 
@@ -60,6 +59,7 @@ void WorldSession::HandleGroupInviteOpcode(WorldPacket & recv_data)
 {
     std::string membername;
     recv_data >> membername;
+    recv_data.read_skip<uint32>();
 
     // attempt add selected player
 
@@ -189,8 +189,9 @@ void WorldSession::HandleGroupInviteOpcode(WorldPacket & recv_data)
     SendPartyResult(PARTY_OP_INVITE, membername, ERR_PARTY_RESULT_OK);
 }
 
-void WorldSession::HandleGroupAcceptOpcode(WorldPacket & /*recv_data*/)
+void WorldSession::HandleGroupAcceptOpcode(WorldPacket& recv_data)
 {
+    recv_data.read_skip<uint32>();
     Group *group = GetPlayer()->GetGroupInvite();
     if (!group) return;
 
@@ -278,10 +279,7 @@ void WorldSession::HandleGroupUninviteGuidOpcode(WorldPacket & recv_data)
 
     if (grp->IsMember(guid))
     {
-        if (grp->isLFGGroup())
-            sLFGMgr.InitBoot(grp, GUID_LOPART(GetPlayer()->GetGUID()), GUID_LOPART(guid), reason);
-        else
-            Player::RemoveFromGroup(grp, guid, GROUP_REMOVEMETHOD_KICK);
+        Player::RemoveFromGroup(grp, guid, GROUP_REMOVEMETHOD_KICK, GetPlayer()->GetGUID(), reason.c_str());
         return;
     }
 
@@ -323,10 +321,7 @@ void WorldSession::HandleGroupUninviteOpcode(WorldPacket & recv_data)
 
     if (uint64 guid = grp->GetMemberGUID(membername))
     {
-        if (grp->isLFGGroup())
-            sLFGMgr.InitBoot(grp, GUID_LOPART(GetPlayer()->GetGUID()), GUID_LOPART(guid), "");
-        else
-            Player::RemoveFromGroup(grp, guid, GROUP_REMOVEMETHOD_KICK);
+        Player::RemoveFromGroup(grp, guid, GROUP_REMOVEMETHOD_KICK, GetPlayer()->GetGUID());
         return;
     }
 

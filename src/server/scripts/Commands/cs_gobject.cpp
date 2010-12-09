@@ -555,7 +555,7 @@ public:
                 float x = fields[2].GetFloat();
                 float y = fields[3].GetFloat();
                 float z = fields[4].GetFloat();
-                int mapid = fields[5].GetUInt16();
+                uint16 mapid = fields[5].GetUInt16();
 
                 GameObjectInfo const * gInfo = sObjectMgr.GetGameObjectInfo(entry);
 
@@ -582,10 +582,12 @@ public:
         uint32 lootId = 0;
 
         if (!*args)
+        {
             if (WorldObject * obj = handler->getSelectedObject())
                 entry = obj->GetEntry();
             else
                 entry = atoi((char*)args);
+        }
 
         GameObjectInfo const* goinfo = sObjectMgr.GetGameObjectInfo(entry);
 

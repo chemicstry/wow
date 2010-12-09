@@ -121,6 +121,7 @@ UPDATE `item_template` SET `ScriptName`='item_disgusting_jar' WHERE `entry` IN(4
 UPDATE `item_template` SET `ScriptName`='item_harvesters_gift' WHERE `entry`=39253;
 UPDATE `item_template` SET `ScriptName`='item_petrov_cluster_bombs' WHERE `entry`=33098;
 UPDATE `item_template` SET `ScriptName`='item_Trident_of_Nazjan' WHERE `entry`=35850;
+UPDATE `item_template` SET `ScriptName`='item_captured_frog' WHERE `entry`=53510;
 
 /* NPC (usually creatures to be found in more than one specific zone) */
 UPDATE `creature_template` SET `ScriptName`='npc_air_force_bots' WHERE `entry` IN (2614,2615,21974,21993,21996,21997,21999,22001,22002,22003,22063,22065,22066,22068,22069,22070,22071,22078,22079,22080,22086,22087,22088,22090,22124,22125,22126);
@@ -447,7 +448,7 @@ UPDATE `creature_template` SET `ScriptName`='npc_valiance_keep_cannoneer' WHERE 
 UPDATE `creature_template` SET `ScriptName`='npc_warmage_coldarra' WHERE `entry` IN (27173,27904,27906);
 UPDATE `creature_template` SET `ScriptName`='npc_valiance_keep_cannoneer' WHERE `entry`=25306;
 UPDATE `creature_template` SET `ScriptName`= 'npc_seaforium_depth_charge' WHERE `entry`=25401;
-
+UPDATE `creature_template` SET `ScriptName`='npc_hidden_cultist' WHERE `entry` IN (25828,25248,25827);
 
 /* BURNING STEPPES */
 UPDATE `creature_template` SET `ScriptName`='npc_ragged_john' WHERE `entry`=9563;
@@ -820,6 +821,7 @@ UPDATE `creature_template` SET `ScriptName`='npc_rinji' WHERE `entry`=7780;
 UPDATE `creature_template` SET `ScriptName`='npc_plaguehound_tracker' WHERE `entry`=24156;
 UPDATE `creature_template` SET `ScriptName`='npc_razael_and_lyana' WHERE `entry` IN (23778,23998);
 UPDATE `creature_template` SET `ScriptName`='npc_apothecary_hanes' WHERE `entry`=23784;
+UPDATE `creature_template` SET `ScriptName`='npc_daegarn' WHERE `entry`=24151;
 
 /* ICECROWN */
 UPDATE `creature_template` SET `ScriptName`='npc_arete' WHERE `entry`=29344;
@@ -860,6 +862,7 @@ UPDATE `creature_template` SET `ScriptName`='npc_blood_queen_lana_thel' WHERE `e
 UPDATE `creature_template` SET `ScriptName`='npc_kinetic_bomb' WHERE `entry`=38454;
 UPDATE `creature_template` SET `ScriptName`='npc_dark_nucleus' WHERE `entry`=38369;
 UPDATE `creature_template` SET `ScriptName`='npc_ball_of_flame' WHERE `entry` IN (38332,38451);
+UPDATE `creature_template` SET `ScriptName`='boss_blood_queen_lana_thel' WHERE `entry`=37955;
 
 /* IRONFORGE */
 UPDATE `creature_template` SET `ScriptName`='npc_royal_historian_archesonus' WHERE `entry`=8879;
@@ -1750,7 +1753,7 @@ UPDATE `outdoorpvp_template` SET `ScriptName`='outdoorpvp_si' WHERE `TypeId`=5;
 UPDATE `outdoorpvp_template` SET `ScriptName`='outdoorpvp_ep' WHERE `TypeId`=6;
 
 /* ACHIEVEMENTS */
-DELETE FROM `achievement_criteria_data` WHERE `criteria_id` IN (3693,6641,6642,6643,6644,3804,3805,3806,3807,3808,3809,3810,3811,3812,3813,1234,1239,5605,5606,12778,13036,13035,13037,12977,12967,12986,12982) AND `type` IN (0,11);
+DELETE FROM `achievement_criteria_data` WHERE `criteria_id` IN (3693,6641,6642,6643,6644,3804,3805,3806,3807,3808,3809,3810,3811,3812,3813,1234,1239,5605,5606,12778,13036,13035,13037,12977,12967,12986,12982,12780,13012,13011,13013) AND `type` IN (0,11);
 INSERT INTO `achievement_criteria_data` (`criteria_id`,`type`,`value1`,`value2`,`ScriptName`) VALUES
 (3693,11,0,0, 'achievement_storm_glory'),
 (6641,11,0,0, 'achievement_school_of_hard_knocks'),
@@ -1778,6 +1781,10 @@ INSERT INTO `achievement_criteria_data` (`criteria_id`,`type`,`value1`,`value2`,
 (12977,11,0,0, 'achievement_flu_shot_shortage'),
 (12967,11,0,0, 'achievement_flu_shot_shortage'),
 (12986,11,0,0, 'achievement_flu_shot_shortage'),
-(12982,11,0,0, 'achievement_flu_shot_shortage');
+(12982,11,0,0, 'achievement_flu_shot_shortage'),
+(12780,11,0,0, 'achievement_once_bitten_twice_shy_n'),
+(13012,11,0,0, 'achievement_once_bitten_twice_shy_n'),
+(13011,11,0,0, 'achievement_once_bitten_twice_shy_v'),
+(13013,11,0,0, 'achievement_once_bitten_twice_shy_v');
 
 /* EOF */

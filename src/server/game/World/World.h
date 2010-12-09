@@ -162,6 +162,8 @@ enum WorldBoolConfigs
     CONFIG_DUNGEON_FINDER_ENABLE,
     CONFIG_AUTOBROADCAST,
     CONFIG_ALLOW_TICKETS,
+    CONFIG_DBC_ENFORCE_ITEM_ATTRIBUTES,
+    CONFIG_PRESERVE_CUSTOM_CHANNELS,
 	CONFIG_ANTICHEAT_ENABLE,
     CONFIG_OUTDOORPVP_WINTERGRASP_ENABLED,
     CONFIG_OUTDOORPVP_WINTERGRASP_CUSTOM_HONOR,
@@ -312,6 +314,7 @@ enum WorldIntConfigs
     CONFIG_AUTOBROADCAST_INTERVAL,
     CONFIG_MAX_RESULTS_LOOKUP_COMMANDS,
     CONFIG_DB_PING_INTERVAL,
+    CONFIG_PRESERVE_CUSTOM_CHANNEL_DURATION,
 	CONFIG_ANTICHEAT_MAX_DIFF_TIME,
 	CONFIG_ANTICHEAT_MIN_DIFF_TIME,
 	CONFIG_ANTICHEAT_REPORTS_FOR_GM_WARNING,
@@ -590,7 +593,6 @@ class World
         bool RemoveQueuedPlayer(WorldSession* session);
         int32 GetQueuePos(WorldSession*);
         bool HasRecentlyDisconnected(WorldSession*);
-        uint32 GetQueueSize() const { return m_QueuedPlayer.size(); }
 
         /// \todo Actions on m_allowMovement still to be implemented
         /// Is movement allowed?
@@ -755,8 +757,8 @@ class World
 
         //used World DB version
         void LoadDBVersion();
-        char const* GetDBVersion() { return m_DBVersion.c_str(); }
-        char const* GetCreatureEventAIVersion() { return m_CreatureEventAIVersion.c_str(); }
+        char const* GetDBVersion() const { return m_DBVersion.c_str(); }
+        char const* GetCreatureEventAIVersion() const { return m_CreatureEventAIVersion.c_str(); }
 
         void RecordTimeDiff(const char * text, ...);
 
@@ -766,7 +768,7 @@ class World
 
         void ProcessStartEvent();
         void ProcessStopEvent();
-        bool GetEventKill() { return isEventKillStart; }
+        bool GetEventKill() const { return isEventKillStart; }
 
         bool isEventKillStart;
     protected:

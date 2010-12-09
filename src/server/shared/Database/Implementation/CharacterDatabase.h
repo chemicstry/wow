@@ -26,7 +26,6 @@ class CharacterDatabaseConnection : public MySQLConnection
     public:
         //- Constructors for sync and async connections
         CharacterDatabaseConnection(MySQLConnectionInfo& connInfo) : MySQLConnection(connInfo) {}
-        CharacterDatabaseConnection(ACE_Activation_Queue* q, MySQLConnectionInfo& connInfo) : MySQLConnection(q, connInfo) {}
 
         //- Loads databasetype specific prepared statements
         bool Open();
@@ -180,7 +179,13 @@ enum CharacterDatabaseStatements
     CHAR_DEL_GAMEOBJECT_RESPAWN_TIMES,
     CHAR_DEL_CRESPAWNTIME,
     CHAR_ADD_CRESPAWNTIME,
-    
+
+    CHAR_LOAD_CHANNEL,
+    CHAR_ADD_CHANNEL,
+    CHAR_SET_CHANNEL,
+    CHAR_SET_CHANNEL_USAGE,
+    CHAR_CLEAN_CHANNEL,
+
     CHAR_ANTICHEAT_SET_CHEATERS,
     CHAR_ANTICHEAT_GET_CHEATERS,
     CHAR_ANTICHEAT_SET_CHEAT_FIRST_REPORT,

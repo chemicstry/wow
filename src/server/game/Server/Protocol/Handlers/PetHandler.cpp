@@ -29,6 +29,7 @@
 #include "Util.h"
 #include "Pet.h"
 #include "World.h"
+#include "Group.h"
 
 void WorldSession::HandleDismissCritter(WorldPacket &recv_data)
 {
@@ -412,9 +413,9 @@ void WorldSession::SendPetNameQuery(uint64 petguid, uint32 petnumber)
     Creature* pet = ObjectAccessor::GetCreatureOrPetOrVehicle(*_player, petguid);
     if (!pet)
     {
-        WorldPacket data(SMSG_PET_NAME_QUERY_RESPONSE, (4+4+7+1));
+        WorldPacket data(SMSG_PET_NAME_QUERY_RESPONSE, (4+1+4+1));
         data << uint32(petnumber);
-        data << "Unknown";
+        data << uint8(0);
         data << uint32(0);
         data << uint8(0);
         _player->GetSession()->SendPacket(&data);

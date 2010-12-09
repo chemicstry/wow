@@ -21,22 +21,75 @@
 #include <ace/Task.h>
 #include <ace/Activation_Queue.h>
 
+#include "DatabaseWorkerPool.h"
+#include "SQLOperation.h"
+#include "MySQLConnection.h"
+#include "MySQLThreading.h"
+
 class MySQLConnection;
 
+// Forward declare
+template <class T> class DatabaseWorkerPool;
+
+template <class T>
 class DatabaseWorker : public ACE_Task_Base
 {
     public:
-        DatabaseWorker(ACE_Activation_Queue* new_queue, MySQLConnection* con);
+        DatabaseWorker(ACE_Activation_Queue* new_queue, DatabaseWorkerPool<T>* pool) :
+        m_queue(new_queue),
+        m_pool(pool)
+        {
+            /// Assign thread to task
+            activate();
+        }
+
 
         ///- Inherited from ACE_Task_Base
-        int svc();
-        int activate();
+        int svc()
+        {
+            if (!m_queue)
+                return -1;
+
+            SQLOperation *request = NULL;
+            MySQLConnection* con = NULL;
+            while (1)
+            {
+                request = (SQLOperation*)(m_queue->dequeue());
+                if (!request)
+                    break;
+
+                con = m_pool->GetFreeConnection();
+                request->SetConnection(con);
+                request->call();
+                con->Unlock();
+
+                delete request;
+            }
+
+            return 0;
+        }
+
+        int activate()
+        {
+            /* THR_DETACHED:
+            Create an asynchronous thread. The exit status of the thread would not be available to any other threads.
+            The thread resources are reclaimed by the operating system whenever the thread is terminated. */
+
+            /* THR_NEW_LWP:
+            Create an explicit kernel-level thread (as opposed to a user-level thread). */
+
+            ACE_Task_Base::activate(THR_NEW_LWP | THR_DETACHED, 1);
+            return 0;                                          //^ - Spawn one thread to handle this task.
+                                                               // However more of these tasks may be activated
+                                                               // See DatabaseWorkerPool ctor.
+        }
+
         int wait() { return ACE_Task_Base::wait(); }
 
     private:
         DatabaseWorker() : ACE_Task_Base() {}
         ACE_Activation_Queue* m_queue;
-        MySQLConnection* m_conn;
+        DatabaseWorkerPool<T>* m_pool;  // Databasepool we operate on
 };
 
 #endif

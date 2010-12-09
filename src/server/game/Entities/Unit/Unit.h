@@ -989,8 +989,8 @@ struct CharmInfo
         void SetPetNumber(uint32 petnumber, bool statwindow);
 
         void SetCommandState(CommandStates st) { m_CommandState = st; }
-        CommandStates GetCommandState() { return m_CommandState; }
-        bool HasCommandState(CommandStates state) { return (m_CommandState == state); }
+        CommandStates GetCommandState() const { return m_CommandState; }
+        bool HasCommandState(CommandStates state) const { return (m_CommandState == state); }
         //void SetReactState(ReactStates st) { m_reactState = st; }
         //ReactStates GetReactState() { return m_reactState; }
         //bool HasReactState(ReactStates state) { return (m_reactState == state); }
@@ -1713,9 +1713,21 @@ class Unit : public WorldObject
         uint64 m_SummonSlot[MAX_SUMMON_SLOT];
         uint64 m_ObjectSlot[4];
 
-        uint32 m_ShapeShiftFormSpellId;
-        ShapeshiftForm m_form;
-        bool IsInFeralForm() const { return m_form == FORM_CAT || m_form == FORM_BEAR || m_form == FORM_DIREBEAR; }
+        ShapeshiftForm GetShapeshiftForm() const { return ShapeshiftForm(GetByteValue(UNIT_FIELD_BYTES_2, 3)); }
+        void SetShapeshiftForm(ShapeshiftForm form) { SetByteValue(UNIT_FIELD_BYTES_2, 3, form); }
+
+        inline bool IsInFeralForm() const
+        {
+            ShapeshiftForm form = GetShapeshiftForm();
+            return form == FORM_CAT || form == FORM_BEAR || form == FORM_DIREBEAR;
+        }
+
+        inline bool IsInDisallowedMountForm() const
+        {
+            ShapeshiftForm form = GetShapeshiftForm();
+            return form != FORM_NONE && form != FORM_BATTLESTANCE && form != FORM_BERSERKERSTANCE && form != FORM_DEFENSIVESTANCE &&
+                form != FORM_SHADOW;
+        }
 
         float m_modMeleeHitChance;
         float m_modRangedHitChance;

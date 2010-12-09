@@ -159,7 +159,7 @@ class WorldSession
 
         void SendPacket(WorldPacket const* packet);
         void SendNotification(const char *format,...) ATTR_PRINTF(2,3);
-        void SendNotification(int32 string_id,...);
+        void SendNotification(uint32 string_id,...);
         void SendPetNameInvalid(uint32 error, const std::string& name, DeclinedName *declinedName);
         void SendPartyResult(PartyOperation operation, const std::string& member, PartyResult res, uint32 val = 0);
         void SendAreaTriggerMessage(const char* Text, ...) ATTR_PRINTF(2,3);
@@ -718,7 +718,7 @@ class WorldSession
         void HandleHearthAndResurrect(WorldPacket& recv_data);
 
         // Looking for Dungeon/Raid
-        void HandleSetLfgCommentOpcode(WorldPacket & recv_data);
+        void HandleLfgSetCommentOpcode(WorldPacket & recv_data);
         void HandleLfgPlayerLockInfoRequestOpcode(WorldPacket& recv_data);
         void HandleLfgPartyLockInfoRequestOpcode(WorldPacket& recv_data);
         void HandleLfgJoinOpcode(WorldPacket &recv_data);
@@ -730,16 +730,16 @@ class WorldSession
         void HandleLfrSearchOpcode(WorldPacket &recv_data);
         void HandleLfrLeaveOpcode(WorldPacket &recv_data);
 
-        void SendLfgUpdatePlayer(uint8 updateType);
-        void SendLfgUpdateParty(uint8 updateType);
+        void SendLfgUpdatePlayer(uint8 updateType, std::set<uint32>* dungeons = NULL, std::string comment = "");
+        void SendLfgUpdateParty(uint8 updateType, std::set<uint32>* dungeons = NULL, std::string comment = "");
         void SendLfgRoleChosen(uint64 guid, uint8 roles);
         void SendLfgRoleCheckUpdate(LfgRoleCheck *pRoleCheck);
         void SendLfgUpdateSearch(bool update);
-        void SendLfgJoinResult(uint8 checkResult, uint8 checkValue = 0, std::map<uint32, std::set<LfgLockStatus*>*> *playersLockMap = NULL /* LfgLockStatusMap *playersLockMap = NULL */);
+        void SendLfgJoinResult(uint8 checkResult, uint8 checkValue = 0, std::map<uint32, std::set<LfgLockStatus*>*> *playersLockMap = NULL);
         void SendLfgQueueStatus(uint32 dungeon, int32 waitTime, int32 avgWaitTime, int32 waitTimeTanks, int32 waitTimeHealer, int32 waitTimeDps, uint32 queuedTime, uint8 tanks, uint8 healers, uint8 dps);
         void SendLfgPlayerReward(uint32 rdungeonEntry, uint32 sdungeonEntry, uint8 done, const LfgReward *reward, const Quest *qRew);
         void SendLfgBootPlayer(LfgPlayerBoot *pBoot);
-        void SendUpdateProposal(uint32 proposalId, LfgProposal *pProp);
+        void SendLfgUpdateProposal(uint32 proposalId, LfgProposal *pProp);
         void SendLfgDisabled();
         void SendLfgOfferContinue(uint32 dungeonEntry);
         void SendLfgTeleportError(uint8 err);

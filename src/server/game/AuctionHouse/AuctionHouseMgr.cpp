@@ -34,6 +34,11 @@
 #include "ProgressBar.h"
 #include <vector>
 
+enum eAuctionHouse
+{
+    AH_MINIMUM_DEPOSIT = 100,
+};
+
 using namespace std;
 
 AuctionHouseMgr::AuctionHouseMgr()
@@ -63,28 +68,26 @@ AuctionHouseObject * AuctionHouseMgr::GetAuctionsMap(uint32 factionTemplateId)
         return &mNeutralAuctions;
 }
 
-uint32 AuctionHouseMgr::GetAuctionDeposit(AuctionHouseEntry const* entry, uint32 time, Item *pItem)
+uint32 AuctionHouseMgr::GetAuctionDeposit(AuctionHouseEntry const* entry, uint32 time, Item *pItem, uint32 count)
 {
     uint32 MSV = pItem->GetProto()->SellPrice;
-    int32 deposit;
-    uint32 timeHr = (((time / 60) / 60) / 12);
 
-    if (MSV > 0)
-        deposit = (int32)floor((double)MSV * (((double)(entry->depositPercent * 3) / 100.0f * (double)sWorld.getRate(RATE_AUCTION_DEPOSIT) * (double)pItem->GetCount()))) * timeHr;
+    if (MSV <= 0)
+        return AH_MINIMUM_DEPOSIT;
+
+    uint32 timeHr = (((time / 60) / 60) /12);
+    float multiplier = (float)(entry->depositPercent * 3) / 100.0f;
+    uint32 deposit = ((uint32)((float)MSV * multiplier * (float)count)/3) * 3 * timeHr;
+
+    sLog.outDebug("MSV:        %u", MSV);
+    sLog.outDebug("Items:      %u", count);
+    sLog.outDebug("Multiplier: %f", multiplier);
+    sLog.outDebug("Deposit:    %u", deposit);
+
+    if (deposit < AH_MINIMUM_DEPOSIT)
+        return AH_MINIMUM_DEPOSIT;
     else
-        deposit = 0;
-
-    sLog.outDebug("Sellprice: %u / Depositpercent: %f / AT1: %u / AT2: %u / AT3: %u / Count: %u", MSV, ((double)entry->depositPercent / 100.0f), time, MIN_AUCTION_TIME, timeHr, pItem->GetCount() );
-    if (deposit > 0)
-    {
-        sLog.outDebug("Deposit: %u", deposit);
         return deposit;
-    }
-    else
-    {
-        sLog.outDebug("Deposit: 0");
-        return 0;
-    }
 }
 
 //does not clear ram
@@ -95,12 +98,12 @@ void AuctionHouseMgr::SendAuctionWonMail(AuctionEntry *auction, SQLTransaction& 
         return;
 
     uint32 bidder_accId = 0;
-    uint32 bidder_security = 0;
     uint64 bidder_guid = MAKE_NEW_GUID(auction->bidder, 0, HIGHGUID_PLAYER);
     Player *bidder = sObjectMgr.GetPlayer(bidder_guid);
     // data for gm.log
     if (sWorld.getBoolConfig(CONFIG_GM_LOG_TRADE))
     {
+        uint32 bidder_security = 0;
         std::string bidder_name;
         if (bidder)
         {

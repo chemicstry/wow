@@ -123,7 +123,6 @@ m_vehicleKit(NULL), m_unitTypeMask(UNIT_MASK_NONE), m_HostileRefManager(this)
     m_rootTimes = 0;
 
     m_state = 0;
-    m_form = FORM_NONE;
     m_deathState = ALIVE;
 
     for (uint8 i = 0; i < CURRENT_MAX_SPELL; ++i)
@@ -140,7 +139,6 @@ m_vehicleKit(NULL), m_unitTypeMask(UNIT_MASK_NONE), m_HostileRefManager(this)
 
     m_interruptMask = 0;
     m_transform = 0;
-    m_ShapeShiftFormSpellId = 0;
     m_canModifyStats = false;
 
     for (uint8 i = 0; i < MAX_SPELL_IMMUNITY; ++i)
@@ -1701,7 +1699,7 @@ void Unit::CalcAbsorbResist(Unit *pVictim, SpellSchoolMask schoolMask, DamageEff
                 if (spellProto->SpellIconID == 2253)
                 {
                     //reduces all damage taken while Stunned
-                    if (pVictim->m_form == FORM_CAT && (unitflag & UNIT_FLAG_STUNNED))
+                    if (pVictim->GetShapeshiftForm() == FORM_CAT && (unitflag & UNIT_FLAG_STUNNED))
                         RemainingDamage -= RemainingDamage * currentAbsorb / 100;
                     continue;
                 }
@@ -5744,8 +5742,34 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
                 // Shadow's Fate (Shadowmourne questline)
                 case 71169:
                 {
-                    triggered_spell_id = 71203;
                     target = triggeredByAura->GetCaster();
+                    Player* player = target->ToPlayer();
+                    if (!player)
+                        return false;
+                    // not checking Infusion auras because its in targetAuraSpell of credit spell
+                    if (player->GetQuestStatus(24749) == QUEST_STATUS_INCOMPLETE)       // Unholy Infusion
+                    {
+                        if (GetEntry() != 36678)                                        // Professor Putricide
+                            return false;
+                        CastSpell(target, 71518, true);                                 // Quest Credit
+                        return true;
+                    }
+                    else if (player->GetQuestStatus(24756) == QUEST_STATUS_INCOMPLETE)  // Blood Infusion
+                    {
+                        if (GetEntry() != 37955)                                        // Blood-Queen Lana'thel
+                            return false;
+                        CastSpell(target, 72934, true);                                 // Quest Credit
+                        return true;
+                    }
+                    else if (player->GetQuestStatus(24757) == QUEST_STATUS_INCOMPLETE)  // Frost Infusion
+                    {
+                        if (GetEntry() != 36853)                                        // Sindragosa
+                            return false;
+                        CastSpell(target, 72289, true);                                 // Quest Credit
+                        return true;
+                    }
+                    else if (player->GetQuestStatus(24547) == QUEST_STATUS_INCOMPLETE)  // A Feast of Souls
+                        triggered_spell_id = 71203;
                     break;
                 }
                 // Gaseous Bloat (Professor Putricide add)
@@ -5756,6 +5780,13 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
                 {
                     target = getVictim();
                     triggered_spell_id = 70701;
+                    break;
+                }
+                case 70871:
+                {
+                    target = this;
+                    triggered_spell_id = 70872;
+                    basepoints0 = int32(damage) * triggerAmount / 100;
                     break;
                 }
             }
@@ -5865,7 +5896,7 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
                 // Glyph of Icy Veins
                 case 56374:
                 {
-                    RemoveAurasByType(SPELL_AURA_MOD_HASTE, 0, 0, true, false);
+                    RemoveAurasByType(SPELL_AURA_MOD_MELEE_HASTE, 0, 0, true, false);
                     RemoveAurasByType(SPELL_AURA_MOD_DECREASE_SPEED);
                     return true;
                 }
@@ -6560,7 +6591,7 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
             {
                 // "refresh your Slice and Dice duration to its 5 combo point maximum"
                 // lookup Slice and Dice
-                if (AuraEffect const* aur = GetAuraEffect(SPELL_AURA_MOD_HASTE, SPELLFAMILY_ROGUE,0x40000, 0, 0))
+                if (AuraEffect const* aur = GetAuraEffect(SPELL_AURA_MOD_MELEE_HASTE, SPELLFAMILY_ROGUE, 0x40000, 0, 0))
                 {
                     aur->GetBase()->SetDuration(GetSpellMaxDuration(aur->GetSpellProto()), true);
                     return true;
@@ -8257,7 +8288,7 @@ bool Unit::HandleProcTriggerSpell(Unit *pVictim, uint32 damage, AuraEffect* trig
                 // Druid Forms Trinket
                 if (auraSpellInfo->Id == 37336)
                 {
-                    switch(m_form)
+                    switch (GetShapeshiftForm())
                     {
                         case FORM_NONE:     trigger_spell_id = 37344;break;
                         case FORM_CAT:      trigger_spell_id = 37341;break;
@@ -8272,7 +8303,7 @@ bool Unit::HandleProcTriggerSpell(Unit *pVictim, uint32 damage, AuraEffect* trig
                 // Druid T9 Feral Relic (Lacerate, Swipe, Mangle, and Shred)
                 else if (auraSpellInfo->Id == 67353)
                 {
-                    switch(m_form)
+                    switch (GetShapeshiftForm())
                     {
                         case FORM_CAT:      trigger_spell_id = 67355; break;
                         case FORM_BEAR:
@@ -8856,16 +8887,36 @@ bool Unit::HandleProcTriggerSpell(Unit *pVictim, uint32 damage, AuraEffect* trig
             break;
         // Shadow's Fate (Shadowmourne questline)
         case 71169:
+        {
             if (GetTypeId() != TYPEID_PLAYER)
                 return false;
-            if (ToPlayer()->GetQuestStatus(24547) != QUEST_STATUS_INCOMPLETE)   // A Feast of Souls
+
+            Player* player = this->ToPlayer();
+            if (player->GetQuestStatus(24749) == QUEST_STATUS_INCOMPLETE)       // Unholy Infusion
+            {
+                if (!player->HasAura(71516) || pVictim->GetEntry() != 36678)    // Shadow Infusion && Professor Putricide
+                    return false;
+            }
+            else if (player->GetQuestStatus(24756) == QUEST_STATUS_INCOMPLETE)  // Blood Infusion
+            {
+                if (!player->HasAura(72154) || pVictim->GetEntry() != 37955)    // Thirst Quenched && Blood-Queen Lana'thel
+                    return false;
+            }
+            else if (player->GetQuestStatus(24757) == QUEST_STATUS_INCOMPLETE)  // Frost Infusion
+            {
+                if (!player->HasAura(72290) || pVictim->GetEntry() != 36853)    // Frost-Imbued Blade && Sindragosa
+                    return false;
+            }
+            else if (player->GetQuestStatus(24547) != QUEST_STATUS_INCOMPLETE)  // A Feast of Souls
                 return false;
+
             if (pVictim->GetTypeId() != TYPEID_UNIT)
                 return false;
             // critters are not allowed
             if (pVictim->GetCreatureType() == CREATURE_TYPE_CRITTER)
                 return false;
             break;
+        }
     }
 
     if (cooldown && GetTypeId() == TYPEID_PLAYER && ToPlayer()->HasSpellCooldown(trigger_spell_id))
@@ -9389,7 +9440,7 @@ bool Unit::Attack(Unit *victim, bool meleeAttack)
     //if (GetTypeId() == TYPEID_UNIT)
     //    this->ToCreature()->SetCombatStartPosition(GetPositionX(), GetPositionY(), GetPositionZ());
 
-    if (GetTypeId() == TYPEID_UNIT)
+    if (GetTypeId() == TYPEID_UNIT && !this->ToCreature()->isPet())
     {
         // should not let player enter combat by right clicking target
         SetInCombatWith(victim);
@@ -12907,9 +12958,9 @@ void Unit::IncrDiminishing(DiminishingGroup group)
     m_Diminishing.push_back(DiminishingReturn(group,getMSTime(),DIMINISHING_LEVEL_2));
 }
 
-float Unit::ApplyDiminishingToDuration(DiminishingGroup group, int32 &duration,Unit* caster,DiminishingLevels Level, int32 limitduration)
+float Unit::ApplyDiminishingToDuration(DiminishingGroup group, int32 &duration, Unit *caster, DiminishingLevels Level, int32 limitduration)
 {
-    if (duration == -1 || group == DIMINISHING_NONE || caster->IsFriendlyTo(this))
+    if (duration == -1 || group == DIMINISHING_NONE)
         return 1.0f;
 
     // test pet/charm masters instead pets/charmeds
@@ -13038,7 +13089,8 @@ uint32 Unit::GetCreatureType() const
 {
     if (GetTypeId() == TYPEID_PLAYER)
     {
-        SpellShapeshiftEntry const* ssEntry = sSpellShapeshiftStore.LookupEntry(m_form);
+        ShapeshiftForm form = GetShapeshiftForm();
+        SpellShapeshiftEntry const* ssEntry = sSpellShapeshiftStore.LookupEntry(form);
         if (ssEntry && ssEntry->creatureType > 0)
             return ssEntry->creatureType;
         else
@@ -13872,7 +13924,7 @@ bool InitTriggerAuraData()
     isTriggerAura[SPELL_AURA_OVERRIDE_CLASS_SCRIPTS] = true;
     isTriggerAura[SPELL_AURA_MOD_MECHANIC_RESISTANCE] = true;
     isTriggerAura[SPELL_AURA_RANGED_ATTACK_POWER_ATTACKER_BONUS] = true;
-    isTriggerAura[SPELL_AURA_MOD_HASTE] = true;
+    isTriggerAura[SPELL_AURA_MOD_MELEE_HASTE] = true;
     isTriggerAura[SPELL_AURA_MOD_ATTACKER_MELEE_HIT_CHANCE]=true;
     isTriggerAura[SPELL_AURA_RAID_PROC_FROM_CHARGE] = true;
     isTriggerAura[SPELL_AURA_RAID_PROC_FROM_CHARGE_WITH_VALUE] = true;
@@ -14129,7 +14181,7 @@ void Unit::ProcDamageAndSpellFor(bool isVictim, Unit * pTarget, uint32 procFlag,
                     if (HandleModDamagePctTakenAuraProc(pTarget, damage, triggeredByAura, procSpell, procFlag, procExtra, cooldown))
                         takeCharges = true;
                     break;
-                case SPELL_AURA_MOD_HASTE:
+                case SPELL_AURA_MOD_MELEE_HASTE:
                 {
                     sLog.outDebug("ProcDamageAndSpell: casting spell id %u (triggered by %s haste aura of spell %u)", spellInfo->Id,(isVictim?"a victim's":"an attacker's"), triggeredByAura->GetId());
                     if (HandleHasteAuraProc(pTarget, damage, triggeredByAura, procSpell, procFlag, procExtra, cooldown))
@@ -15187,6 +15239,15 @@ void Unit::Kill(Unit *pVictim, bool durabilityLoss)
         // Call creature just died function
         if (creature->IsAIEnabled)
             creature->AI()->JustDied(this);
+		
+        if (creature->ToTempSummon())
+        {
+            if (Unit* pSummoner = creature->ToTempSummon()->GetSummoner())
+            {
+                if (pSummoner->ToCreature() && pSummoner->ToCreature()->IsAIEnabled)
+                    pSummoner->ToCreature()->AI()->SummonedCreatureDies(creature, this);
+            }
+        }
 
         // Dungeon specific stuff, only applies to players killing creatures
         if (creature->GetInstanceId())

@@ -33,6 +33,7 @@
 #include "Object.h"
 #include "Opcodes.h"
 #include "DisableMgr.h"
+#include "Group.h"
 
 #include "OutdoorPvPWG.h"
 #include "OutdoorPvPMgr.h"
@@ -102,15 +103,6 @@ void WorldSession::HandleBattlemasterJoinOpcode(WorldPacket & recv_data)
 
     sLog.outDebug("WORLD: Recvd CMSG_BATTLEMASTER_JOIN Message from (GUID: %u TypeId:%u)", GUID_LOPART(guid), GuidHigh2TypeId(GUID_HIPART(guid)));
 
-    // player is using dungeon finder or raid finder
-    if (GetPlayer()->isUsingLfg())
-    {
-        WorldPacket data;
-        sBattlegroundMgr.BuildGroupJoinedBattlegroundPacket(&data, ERR_LFG_CANT_USE_BATTLEGROUND);
-        GetPlayer()->GetSession()->SendPacket(&data);
-        return;
-    }
-
     // can do this, since it's battleground, not arena
     BattlegroundQueueTypeId bgQueueTypeId = BattlegroundMgr::BGQueueTypeId(bgTypeId, 0);
     BattlegroundQueueTypeId bgQueueTypeIdRandom = BattlegroundMgr::BGQueueTypeId(BATTLEGROUND_RB, 0);
@@ -139,6 +131,15 @@ void WorldSession::HandleBattlemasterJoinOpcode(WorldPacket & recv_data)
     // check queue conditions
     if (!joinAsGroup)
     {
+        if (GetPlayer()->isUsingLfg())
+        {
+            // player is using dungeon finder or raid finder
+            WorldPacket data;
+            sBattlegroundMgr.BuildGroupJoinedBattlegroundPacket(&data, ERR_LFG_CANT_USE_BATTLEGROUND);
+            GetPlayer()->GetSession()->SendPacket(&data);
+            return;
+        }
+
         // check Deserter debuff
         if (!_player->CanJoinToBattleground())
         {

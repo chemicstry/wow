@@ -48,8 +48,8 @@ enum ChatNotify
     CHAT_MODE_CHANGE_NOTICE           = 0x0C,           //?
     CHAT_ANNOUNCEMENTS_ON_NOTICE      = 0x0D,           //+ "[%s] Channel announcements enabled by %s.";
     CHAT_ANNOUNCEMENTS_OFF_NOTICE     = 0x0E,           //+ "[%s] Channel announcements disabled by %s.";
-    CHAT_MODERATION_ON_NOTICE         = 0x0F,           //+ "[%s] Channel moderation enabled by %s.";
-    CHAT_MODERATION_OFF_NOTICE        = 0x10,           //+ "[%s] Channel moderation disabled by %s.";
+    // CHAT_MODERATION_ON_NOTICE         = 0x0F,           //+ "[%s] Channel moderation enabled by %s.";
+    // CHAT_MODERATION_OFF_NOTICE        = 0x10,           //+ "[%s] Channel moderation disabled by %s.";
     CHAT_MUTED_NOTICE                 = 0x11,           //+ "[%s] You do not have permission to speak.";
     CHAT_PLAYER_KICKED_NOTICE         = 0x12,           //? "[%s] Player %s kicked by %s.";
     CHAT_BANNED_NOTICE                = 0x13,           //+ "[%s] You are banned from that channel.";
@@ -123,21 +123,21 @@ class Channel
         uint64 player;
         uint8 flags;
 
-        bool HasFlag(uint8 flag) { return flags & flag; }
+        bool HasFlag(uint8 flag) const { return flags & flag; }
         void SetFlag(uint8 flag) { if (!HasFlag(flag)) flags |= flag; }
-        bool IsOwner() { return flags & MEMBER_FLAG_OWNER; }
+        bool IsOwner() const { return flags & MEMBER_FLAG_OWNER; }
         void SetOwner(bool state)
         {
             if (state) flags |= MEMBER_FLAG_OWNER;
             else flags &= ~MEMBER_FLAG_OWNER;
         }
-        bool IsModerator() { return flags & MEMBER_FLAG_MODERATOR; }
+        bool IsModerator() const { return flags & MEMBER_FLAG_MODERATOR; }
         void SetModerator(bool state)
         {
             if (state) flags |= MEMBER_FLAG_MODERATOR;
             else flags &= ~MEMBER_FLAG_MODERATOR;
         }
-        bool IsMuted() { return flags & MEMBER_FLAG_MUTED; }
+        bool IsMuted() const { return flags & MEMBER_FLAG_MUTED; }
         void SetMuted(bool state)
         {
             if (state) flags |= MEMBER_FLAG_MUTED;
@@ -150,8 +150,7 @@ class Channel
     typedef     std::set<uint64> BannedList;
     BannedList  banned;
     bool        m_announce;
-    bool        m_moderate;
-    bool        m_public;
+    bool        m_ownership;
     std::string m_name;
     std::string m_password;
     uint8       m_flags;
@@ -178,8 +177,6 @@ class Channel
         void MakeModeChange(WorldPacket *data, uint64 guid, uint8 oldflags);    //+ 0x0C
         void MakeAnnouncementsOn(WorldPacket *data, uint64 guid);               //+ 0x0D
         void MakeAnnouncementsOff(WorldPacket *data, uint64 guid);              //+ 0x0E
-        void MakeModerationOn(WorldPacket *data, uint64 guid);                  //+ 0x0F
-        void MakeModerationOff(WorldPacket *data, uint64 guid);                 //+ 0x10
         void MakeMuted(WorldPacket *data);                                      //? 0x11
         void MakePlayerKicked(WorldPacket *data, uint64 bad, uint64 good);      //? 0x12
         void MakeBanned(WorldPacket *data);                                     //? 0x13
@@ -207,9 +204,8 @@ class Channel
         bool IsOn(uint64 who) const { return players.find(who) != players.end(); }
         bool IsBanned(uint64 guid) const { return banned.find(guid) != banned.end(); }
 
-        bool _UpdateStringInDB(const std::string& colName, const std::string& colValue) const;
-        bool _UpdateIntInDB(const std::string& colName, int colValue) const;
-        void _UpdateBanListInDB() const;
+        void UpdateChannelInDB() const;
+        void UpdateChannelUseageInDB() const;
 
         uint8 GetPlayerFlags(uint64 p) const
         {
@@ -259,7 +255,7 @@ class Channel
         void SetAnnounce(bool nannounce) { m_announce = nannounce; }
         uint32 GetNumPlayers() const { return players.size(); }
         uint8 GetFlags() const { return m_flags; }
-        bool HasFlag(uint8 flag) { return m_flags & flag; }
+        bool HasFlag(uint8 flag) const { return m_flags & flag; }
 
         void Join(uint64 p, const char *pass);
         void Leave(uint64 p, bool send = true);
@@ -278,13 +274,14 @@ class Channel
         void UnsetMute(uint64 p, const char *newname) { SetMode(p, newname, false, false); }
         void List(Player* p);
         void Announce(uint64 p);
-        void Moderate(uint64 p);
         void Say(uint64 p, const char *what, uint32 lang);
         void Invite(uint64 p, const char *newp);
         void Voice(uint64 guid1, uint64 guid2);
         void DeVoice(uint64 guid1, uint64 guid2);
         void JoinNotify(uint64 guid);                                           // invisible notify
         void LeaveNotify(uint64 guid);                                          // invisible notify
+        void SetOwnership(bool ownership) { m_ownership = ownership; };
+        static void CleanOldChannelsInDB();
 };
 #endif
 

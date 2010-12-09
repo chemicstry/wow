@@ -166,7 +166,7 @@ bool OPvPCapturePoint::DelCreature(uint32 type)
     //if (Map * map = sMapMgr.FindMap(cr->GetMapId()))
     //    map->Remove(cr,false);
     // delete respawn time for this creature
-    WorldDatabase.PExecute("DELETE FROM creature_respawn WHERE guid = '%u'", guid);
+    CharacterDatabase.PExecute("DELETE FROM creature_respawn WHERE guid = '%u'", guid);
     cr->AddObjectToRemoveList();
     sObjectMgr.DeleteCreatureData(guid);
     m_CreatureTypes[m_Creatures[type]] = 0;
@@ -590,11 +590,20 @@ void OutdoorPvP::TeamApplyBuff(TeamId team, uint32 spellId, uint32 spellId2)
     TeamCastSpell(OTHER_TEAM(team), spellId2 ? -(int32)spellId2 : -(int32)spellId);
 }
 
-void OutdoorPvP::OnGameObjectCreate(GameObject *go, bool add)
+void OutdoorPvP::OnGameObjectCreate(GameObject *go)
 {
     if (go->GetGoType() != GAMEOBJECT_TYPE_CAPTURE_POINT)
         return;
 
     if (OPvPCapturePoint *cp = GetCapturePoint(go->GetDBTableGUIDLow()))
-        cp->m_capturePoint = add ? go : NULL;
+        cp->m_capturePoint = go;
+}
+
+void OutdoorPvP::OnGameObjectRemove(GameObject *go)
+{
+    if (go->GetGoType() != GAMEOBJECT_TYPE_CAPTURE_POINT)
+        return;
+
+    if (OPvPCapturePoint *cp = GetCapturePoint(go->GetDBTableGUIDLow()))
+        cp->m_capturePoint = NULL;
 }
