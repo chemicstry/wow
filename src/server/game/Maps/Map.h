@@ -20,6 +20,9 @@
 #define TRINITY_MAP_H
 
 #include "Define.h"
+#include "DetourNavMesh.h"
+#include "DetourAlloc.h"
+
 #include <ace/RW_Thread_Mutex.h>
 #include <ace/Thread_Mutex.h>
 
@@ -33,6 +36,7 @@
 
 #include <bitset>
 #include <list>
+#include <set>
 
 class Unit;
 class WorldPacket;
@@ -64,7 +68,7 @@ struct ScriptAction
 // Map file format defines
 //******************************************
 #define MAP_MAGIC             'SPAM'
-#define MAP_VERSION_MAGIC     '1.1v'
+#define MAP_VERSION_MAGIC     '1.2v'
 #define MAP_AREA_MAGIC        'AERA'
 #define MAP_HEIGHT_MAGIC      'TGHM'
 #define MAP_LIQUID_MAGIC      'QILM'
@@ -80,6 +84,8 @@ struct map_fileheader
     uint32 heightMapSize;
     uint32 liquidMapOffset;
     uint32 liquidMapSize;
+    uint32 holesOffset;
+    uint32 holesSize;
 };
 
 #define MAP_AREA_NO_AREA      0x0001
@@ -307,7 +313,6 @@ class Map : public GridRefManager<NGridType>
 
         time_t GetGridExpiry(void) const { return i_gridExpiry; }
         uint32 GetId(void) const { return i_mapEntry->MapID; }
-
         static bool ExistMap(uint32 mapid, int gx, int gy);
         static bool ExistVMap(uint32 mapid, int gx, int gy);
 
@@ -331,6 +336,7 @@ class Map : public GridRefManager<NGridType>
         float GetWaterLevel(float x, float y) const;
         bool IsInWater(float x, float y, float z, LiquidData *data = 0) const;
         bool IsUnderWater(float x, float y, float z) const;
+        Position MoveToNextPositionOnPathLocation(const float startx, const float starty, const float startz, const float endx, const float endy, const float endz);
 
         static uint32 GetAreaIdByAreaFlag(uint16 areaflag,uint32 map_id);
         static uint32 GetZoneIdByAreaFlag(uint16 areaflag,uint32 map_id);
@@ -567,6 +573,17 @@ class Map : public GridRefManager<NGridType>
             else
                 m_activeNonPlayers.erase(obj);
         }
+    public:
+        dtNavMesh const* GetNavMesh() const;
+        static void preventPathfindingOnMaps(std::string ignoreMapIds); 
+        bool IsPathfindingEnabled() const; 
+
+    private:
+        void LoadNavMesh(int gx, int gy);
+        void UnloadNavMesh(int gx, int gy);
+        dtNavMesh* m_navMesh;
+        UNORDERED_MAP<uint32, dtTileRef> m_mmapLoadedTiles;    // maps [map grid coords] to [dtTile]
+        static std::set<uint32> s_mmapDisabledIds;      // stores list of mapids which do not use pathfinding
 };
 
 enum InstanceResetMethod

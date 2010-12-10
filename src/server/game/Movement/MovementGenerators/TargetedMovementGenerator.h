@@ -23,6 +23,7 @@
 #include "DestinationHolder.h"
 #include "Traveller.h"
 #include "FollowerReference.h"
+#include "PathInfo.h"
 
 class TargetedMovementGeneratorBase
 {
@@ -58,16 +59,23 @@ class TargetedMovementGenerator
             return true;
         }
 
-        void unitSpeedChanged() { i_recalculateTravel=true; }
-    private:
+        bool isReachable() const
+        {
+            return (i_path) ? (i_path->getPathType() & PATHFIND_NORMAL) : true;
+        }
 
+        void unitSpeedChanged() { i_recalculateTravel=true; }
+
+    protected:
         bool _setTargetLocation(T &);
 
         float i_offset;
         float i_angle;
         DestinationHolder< Traveller<T> > i_destinationHolder;
-        bool i_recalculateTravel;
         float i_targetX, i_targetY, i_targetZ;
+        bool i_recalculateTravel;
+        PathInfo* i_path;
+        uint32 m_pathPointsSent;
 };
 #endif
 

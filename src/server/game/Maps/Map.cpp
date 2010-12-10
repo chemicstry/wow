@@ -30,12 +30,20 @@
 #include "MapManager.h"
 #include "ObjectMgr.h"
 #include "Group.h"
+#include "DetourNavMesh.h"
+#include "DetourNavMeshQuery.h"
+#include "PathInfo.h"
+#include "TileVersion.h"
 
 #define DEFAULT_GRID_EXPIRY     300
 #define MAX_GRID_LOAD_TIME      50
 #define MAX_CREATURE_ATTACK_RADIUS  (45.0f * sWorld.getRate(RATE_CREATURE_AGGRO))
 
 GridState* si_GridStates[MAX_GRID_STATE];
+uint32 packTileID(int x, int y)
+{
+    return uint32(x << 16 | y);
+}
 
 Map::~Map()
 {
@@ -54,6 +62,12 @@ Map::~Map()
 
     if (!m_scriptSchedule.empty())
         sWorld.DecreaseScheduledScriptCount(m_scriptSchedule.size());
+
+    if (m_navMesh)
+    {
+        dtFreeNavMesh(m_navMesh);
+        m_navMesh = NULL;
+    }
 }
 
 bool Map::ExistMap(uint32 mapid,int gx,int gy)
@@ -170,7 +184,10 @@ void Map::LoadMapAndVMap(int gx,int gy)
 {
     LoadMap(gx,gy);
     if (i_InstanceId == 0)
+    {
         LoadVMap(gx, gy);                                   // Only load the data for the base map
+        LoadNavMesh(gx,gy);
+    }
 }
 
 void Map::InitStateMachine()
@@ -192,7 +209,7 @@ void Map::DeleteStateMachine()
 Map::Map(uint32 id, time_t expiry, uint32 InstanceId, uint8 SpawnMode, Map* _parent):
 i_mapEntry (sMapStore.LookupEntry(id)), i_spawnMode(SpawnMode), i_InstanceId(InstanceId),
 m_unloadTimer(0), m_VisibleDistance(DEFAULT_VISIBILITY_DISTANCE),
-m_VisibilityNotifyPeriod(DEFAULT_VISIBILITY_NOTIFY_PERIOD),
+m_VisibilityNotifyPeriod(DEFAULT_VISIBILITY_NOTIFY_PERIOD), m_navMesh(NULL)/*, m_navMeshQuery(NULL)*/,
 m_activeNonPlayersIter(m_activeNonPlayers.end()), i_gridExpiry(expiry), i_scriptLock(false)
 {
     m_parentMap = (_parent ? _parent : this);
@@ -968,6 +985,7 @@ bool Map::UnloadGrid(const uint32 &x, const uint32 &y, bool unloadAll)
             }
             // x and y are swapped
             VMAP::VMapFactory::createOrGetVMapManager()->unloadMap(GetId(), gx, gy);
+            UnloadNavMesh(gx, gy);
         }
         else
             ((MapInstanced*)m_parentMap)->RemoveGridMapReference(GridPair(gx, gy));
@@ -2641,4 +2659,220 @@ void Map::UpdateIteratorBack(Player *player)
 {
     if (m_mapRefIter == player->GetMapRef())
         m_mapRefIter = m_mapRefIter->nocheck_prev();
+}
+
+void Map::LoadNavMesh(int gx, int gy)
+{
+    // load the navmesh first
+    if (!m_navMesh)
+    {
+        uint32 pathLen = sWorld.GetDataPath().length() + strlen("mmaps/%03i.mmap")+1;
+        char *fileName = new char[pathLen];
+        snprintf(fileName, pathLen, (sWorld.GetDataPath()+"mmaps/%03i.mmap").c_str(), GetId());
+
+        FILE* file = fopen(fileName, "rb");
+        if (!file)
+        {
+            sLog.outDebug("MMAP: Error: Could not open mmap file '%s'", fileName);
+            delete [] fileName;
+            return;
+        }
+
+        dtNavMeshParams params;
+        fread(&params, sizeof(dtNavMeshParams), 1, file);
+        fclose(file);
+
+        m_navMesh = dtAllocNavMesh();
+        if (!m_navMesh->init(&params))
+        {
+            dtFreeNavMesh(m_navMesh);
+            m_navMesh = NULL;
+            sLog.outError("MMAP: Failed to initialize mmap %03u from file %s", GetId(), fileName);
+            delete [] fileName;
+            return;
+        }
+
+        delete [] fileName;
+    }
+
+    // check if we already have this tile loaded
+    uint32 packedGridPos = packTileID(gx, gy);
+    if (m_mmapLoadedTiles.find(packedGridPos) != m_mmapLoadedTiles.end())
+    {
+        sLog.outError("MMAP: Asked to load already loaded navmesh tile. %03u%02i%02i.mmtile", GetId(), gx, gy);
+        return;
+    }
+
+    // mmaps/0000000.mmtile
+    uint32 pathLen = sWorld.GetDataPath().length() + strlen("mmaps/%03i%02i%02i.mmtile")+1;
+    char *fileName = new char[pathLen];
+    snprintf(fileName, pathLen, (sWorld.GetDataPath()+"mmaps/%03i%02i%02i.mmtile").c_str(), GetId(), gx, gy);
+
+    FILE *file = fopen(fileName, "rb");
+    if (!file)
+    {
+        sLog.outDebug("MMAP: Could not open mmtile file '%s'", fileName);
+        delete [] fileName;
+        return;
+    }
+    delete [] fileName;
+
+    // read header
+    MmapTileHeader fileHeader;
+    fread(&fileHeader, sizeof(MmapTileHeader), 1, file);
+
+    if (fileHeader.mmapMagic != MMAP_MAGIC)
+    {
+        sLog.outError("MMAP: Bad header in mmap %03u%02i%02i.mmtile", GetId(), gx, gy);
+        return;
+    }
+
+    if (fileHeader.mmapVersion != MMAP_VERSION)
+    {
+        sLog.outError("MMAP: %03u%02i%02i.mmtile was built with generator v%i, expected v%i",
+                                            GetId(), gx, gy, fileHeader.mmapVersion, MMAP_VERSION);
+        return;
+    }
+
+    unsigned char* data = (unsigned char*)dtAlloc(fileHeader.size, DT_ALLOC_PERM);
+    ASSERT(data);
+
+    size_t result = fread(data, fileHeader.size, 1, file);
+    if(!result)
+    {
+        sLog.outError("MMAP: Bad header or data in mmap %03u%02i%02i.mmtile", GetId(), gx, gy);
+        fclose(file);
+        return;
+    }
+
+    fclose(file);
+
+    dtMeshHeader* header = (dtMeshHeader*)data;
+    dtTileRef tileRef = 0;
+
+    // memory allocated for data is now managed by detour, and will be deallocated when the tile is removed
+    dtStatus dtResult = m_navMesh->addTile(data, fileHeader.size, DT_TILE_FREE_DATA, 0, &tileRef);
+    switch(dtResult)
+    {
+        case DT_SUCCESS:
+        {
+            m_mmapLoadedTiles.insert(std::pair<uint32, dtTileRef>(packedGridPos, tileRef));
+            sLog.outDetail("MMAP: Loaded mmtile %03i[%02i,%02i] into %03i[%02i,%02i]", GetId(), gx, gy, GetId(), header->x, header->y);
+        }
+        break;
+        case DT_FAILURE_DATA_MAGIC:     // those are kept and checked in our mmtile file headers
+        case DT_FAILURE_DATA_VERSION:
+        case DT_FAILURE_OUT_OF_MEMORY:
+        case DT_FAILURE:
+        default:
+        {
+            sLog.outError("MMAP: Could not load %03u%02i%02i.mmtile into navmesh", GetId(), gx, gy);
+            dtFree(data);
+        }
+        break;
+    }
+}
+
+void Map::UnloadNavMesh(int gx, int gy)
+{
+    // navMesh was not loaded for this map
+    if (!m_navMesh)
+        return;
+
+    uint32 packedGridPos = packTileID(gx, gy);
+    if (m_mmapLoadedTiles.find(packedGridPos) == m_mmapLoadedTiles.end())
+    {
+        // file may not exist, therefore not loaded
+        sLog.outDebug("MMAP: Asked to unload not loaded navmesh tile. %03u%02i%02i.mmtile", GetId(), gx, gy);
+        return;
+    }
+
+    dtTileRef tileRef = m_mmapLoadedTiles[packedGridPos];
+
+    // unload, and mark as non loaded
+    if(DT_SUCCESS != m_navMesh->removeTile(tileRef, NULL, NULL))
+    {
+        // if the grid is later reloaded, dtNavMesh::addTile will return error but no extra memory is used
+        // we cannot recover from this error - assert out
+        sLog.outError("MMAP: Could not unload %03u%02i%02i.mmtile from navmesh", GetId(), gx, gy);
+        ASSERT(false);
+    }
+    else
+    {
+        m_mmapLoadedTiles.erase(packedGridPos);
+        sLog.outDetail("MMAP: Unloaded mmtile %03i[%02i,%02i] from %03i", GetId(), gx, gy, GetId());
+    }
+}
+
+dtNavMesh const* Map::GetNavMesh() const
+{
+    return m_navMesh;
+}
+
+std::set<uint32> Map::s_mmapDisabledIds = std::set<uint32>();
+
+void Map::preventPathfindingOnMaps(std::string ignoreMapIds)
+{
+    s_mmapDisabledIds.clear();
+
+    char* mapList = new char[ignoreMapIds.length()+1];
+    strcpy(mapList, ignoreMapIds.c_str());
+
+    char* idstr = strtok(mapList, ",");
+
+    while (idstr)
+    {
+        s_mmapDisabledIds.insert(uint32(atoi(idstr)));
+        idstr = strtok(NULL, ",");
+    }
+
+    delete[] mapList;
+}
+
+Position Map::MoveToNextPositionOnPathLocation(const float startx, const float starty, const float startz, const float endx, const float endy, const float endz)
+{
+    //convert to nav coords.
+    float startPos[3]               = { starty, startz, startx };
+    float endPos[3]                 = { endy, endz, endx };
+    float mPolyPickingExtents[3]    = { 2.00f, 4.00f, 2.00f };
+    dtQueryFilter* mPathFilter = new dtQueryFilter();
+    int gx = 32 - (startx/533.333333f);
+    int gy = 32 - (starty/533.333333f);
+    Position pos = Position();
+    pos.m_positionX = endx;
+    pos.m_positionY = endy;
+    pos.m_positionZ = endz;
+    dtNavMesh* NavMesh = m_navMesh;
+    dtNavMeshQuery* m_navMeshQuery = dtAllocNavMeshQuery();
+    if (NavMesh)
+    {
+        //dtStatus mStartRef =  m_navMeshQuery->findNearestPoly(startPos,mPolyPickingExtents,mPathFilter,0,0); 
+        //dtStatus mEndRef   = m_navMeshQuery->findNearestPoly(endPos,mPolyPickingExtents,mPathFilter,0,0);
+        //if (mStartRef != 0 && mEndRef != 0)
+        //{
+        //    dtPolyRef mPathResults[50];
+
+        //    int mNumPathResults = DT_SUCCESS == m_navMeshQuery->findPath(mStartRef, mEndRef,startPos, endPos, mPathFilter ,mPathResults,50,50);//TODO: CHANGE ME
+        //    if (mNumPathResults <= 0)
+        //    {
+        //        return pos;
+        //    }
+        //    float actualpath[3*20];
+        //    unsigned char* flags = 0;
+        //    dtPolyRef* polyrefs = 0;
+        //    int mNumPathPoints = DT_SUCCESS == m_navMeshQuery->findStraightPath(startPos, endPos,mPathResults, mNumPathResults, actualpath, flags, polyrefs,20,20);
+        //    if (mNumPathPoints < 3)
+        //        return pos;
+        //    pos.m_positionX = actualpath[5]; //0 3 6
+        //    pos.m_positionY = actualpath[3]; //1 4 7
+        //    pos.m_positionZ = actualpath[4]; //2 5 8
+        //    return pos;
+        //}
+    }
+    return pos;
+}
+
+bool Map::IsPathfindingEnabled() const
+{ 
+    return sWorld.getBoolConfig(CONFIG_PATHFINDING_ENABLED) && s_mmapDisabledIds.find(GetId()) == s_mmapDisabledIds.end();
 }

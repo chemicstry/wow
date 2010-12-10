@@ -672,6 +672,15 @@ class WorldObject : public Object, public WorldLocation
             float d = GetExactDist2d(obj) - GetObjectSize() - obj->GetObjectSize();
             return d > 0.0f ? d : 0.0f;
         }
+        float GetDistanceSqr(float x, float y, float z) const
+        {
+            float dx = GetPositionX() - x;
+            float dy = GetPositionY() - y;
+            float dz = GetPositionZ() - z;
+            float sizefactor = GetObjectSize();
+            float dist = dx*dx+dy*dy+dz*dz-sizefactor;
+            return (dist > 0 ? dist : 0);
+        }
         float GetDistance2d(float x, float y) const
         {
             float d = GetExactDist2d(x, y) - GetObjectSize();
@@ -714,6 +723,7 @@ class WorldObject : public Object, public WorldLocation
         bool isInBack(WorldObject const* target, float distance, float arc = M_PI) const;
 
         bool IsInBetween(const WorldObject *obj1, const WorldObject *obj2, float size = 0) const;
+        bool HasInArc( const float arcangle, const float x, const float y) const;
 
         virtual void CleanupsBeforeDelete(bool finalCleanup = true);  // used in destructor or explicitly before mass creature delete to remove cross-references to already deleted units
 

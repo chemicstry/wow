@@ -73,6 +73,7 @@
 #include "CreatureTextMgr.h"
 #include "SmartAI.h"
 #include "Channel.h"
+#include "MemoryManagement.h"
 #include "AuctionHouseBot.h"
 
 volatile bool World::m_stopEvent = false;
@@ -1130,6 +1131,9 @@ void World::LoadConfigSettings(bool reload)
     bool enableHeight = sConfig.GetBoolDefault("vmap.enableHeight", true);
     bool enablePetLOS = sConfig.GetBoolDefault("vmap.petLOS", true);
     std::string ignoreSpellIds = sConfig.GetStringDefault("vmap.ignoreSpellIds", "");
+    m_bool_configs[CONFIG_PATHFINDING_ENABLED] = sConfig.GetBoolDefault("mMaps.Enabled", true);
+    std::string ignoreMapIds = sConfig.GetStringDefault("mMaps.ignoreMapIds", "");
+    Map::preventPathfindingOnMaps(ignoreMapIds);
 
     if (!enableHeight)
         sLog.outError("VMap height checking disabled! Creatures movements and other various things WILL be broken! Expect no support.");
@@ -1139,6 +1143,7 @@ void World::LoadConfigSettings(bool reload)
     VMAP::VMapFactory::preventSpellsFromBeingTestedForLoS(ignoreSpellIds.c_str());
     sLog.outString("WORLD: VMap support included. LineOfSight:%i, getHeight:%i, indoorCheck:%i PetLOS:%i", enableLOS, enableHeight, enableIndoor, enablePetLOS);
     sLog.outString("WORLD: VMap data directory is: %svmaps",m_dataPath.c_str());
+    sLog.outString("WORLD: Pathfinding %sabled", getBoolConfig(CONFIG_PATHFINDING_ENABLED) ? "en" : "dis");
 
     m_int_configs[CONFIG_MAX_WHO] = sConfig.GetIntDefault("MaxWhoListReturns", 49);
     m_bool_configs[CONFIG_PET_LOS] = sConfig.GetBoolDefault("vmap.petLOS", true);
@@ -1220,6 +1225,9 @@ void World::SetInitialWorldSettings()
 {
     ///- Initialize the random number generator
     srand((unsigned int)time(NULL));
+
+    ///- Initialize detour memory management
+    dtAllocSetCustom(dtCustomAlloc, dtCustomFree);
 
     ///- Initialize config settings
     LoadConfigSettings();

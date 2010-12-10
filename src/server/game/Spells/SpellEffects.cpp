@@ -6086,7 +6086,7 @@ void Spell::EffectCharge(SpellEffIndex /*effIndex*/)
 
     float x, y, z;
     target->GetContactPoint(m_caster, x, y, z);
-    m_caster->GetMotionMaster()->MoveCharge(x, y, z);
+    m_caster->MonsterMoveByPath(x, y, z, 25, false);
 
     // not all charge effects used in negative spells
     if (!IsPositiveSpell(m_spellInfo->Id) && m_caster->GetTypeId() == TYPEID_PLAYER)
@@ -6099,7 +6099,7 @@ void Spell::EffectChargeDest(SpellEffIndex /*effIndex*/)
     {
         float x, y, z;
         m_targets.m_dstPos.GetPosition(x, y, z);
-        m_caster->GetMotionMaster()->MoveCharge(x, y, z);
+        m_caster->MonsterMoveByPath(x, y, z, 25, false);
     }
 }
 

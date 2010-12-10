@@ -1520,6 +1520,30 @@ bool Position::HasInArc(float arc, const Position *obj) const
     return ((angle >= lborder) && (angle <= rborder));
 }
 
+bool WorldObject::HasInArc(const float arcangle, const float x, const float y) const
+{
+    // always have self in arc
+    if (x == m_positionX && y == m_positionY)
+        return true;
+
+    float arc = arcangle;
+
+    // move arc to range 0.. 2*pi
+    arc = MapManager::NormalizeOrientation(arc);
+
+    float angle = GetAngle(x, y);
+    angle -= m_orientation;
+
+    // move angle to range -pi ... +pi
+    angle = MapManager::NormalizeOrientation(angle);
+    if (angle > M_PI)
+        angle -= 2.0f*M_PI;
+
+    float lborder =  -1 * (arc/2.0f);                       // in range -pi..0
+    float rborder = (arc/2.0f);                             // in range 0..pi
+    return (( angle >= lborder ) && ( angle <= rborder ));
+}
+
 bool WorldObject::IsInBetween(const WorldObject *obj1, const WorldObject *obj2, float size) const
 {
     if (GetPositionX() > std::max(obj1->GetPositionX(), obj2->GetPositionX())
@@ -1537,12 +1561,12 @@ bool WorldObject::IsInBetween(const WorldObject *obj1, const WorldObject *obj2, 
 
 bool WorldObject::isInFront(WorldObject const* target, float distance,  float arc) const
 {
-    return IsWithinDist(target, distance) && HasInArc(arc, target);
+    return IsWithinDist(target, distance) && HasInArc(arc, target->GetPositionX(), target->GetPositionY());
 }
 
 bool WorldObject::isInBack(WorldObject const* target, float distance, float arc) const
 {
-    return IsWithinDist(target, distance) && !HasInArc(2 * M_PI - arc, target);
+    return IsWithinDist(target, distance) && !HasInArc(2 * M_PI - arc, target->GetPositionX(), target->GetPositionY());
 }
 
 void WorldObject::GetRandomPoint(const Position &pos, float distance, float &rand_x, float &rand_y, float &rand_z) const
@@ -1807,7 +1831,7 @@ bool WorldObject::canDetectStealthOf(WorldObject const* obj) const
     if (distance < combatReach)
         return true;
 
-    if (!HasInArc(M_PI, obj))
+    if (!HasInArc(M_PI, obj->GetPositionX(), obj->GetPositionY()))
         return false;
 
     for (uint32 i = 0; i < TOTAL_STEALTH_TYPES; ++i)

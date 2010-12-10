@@ -45,6 +45,9 @@ class MovementGenerator
         virtual void unitSpeedChanged() { }
 
         virtual bool GetDestination(float& /*x*/, float& /*y*/, float& /*z*/) const { return false; }
+
+        // given destination unreachable? due to pathfinsing or other
+        virtual bool isReachable() const { return true; }
 };
 
 template<class T, class D>

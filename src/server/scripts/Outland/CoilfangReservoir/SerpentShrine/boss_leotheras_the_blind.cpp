@@ -262,7 +262,7 @@ public:
                 if (me->IsWithinDistInMap(who, attackRadius))
                 {
                     // Check first that object is in an angle in front of this one before LoS check
-                    if (me->HasInArc(M_PI/2.0f, who) && me->IsWithinLOSInMap(who))
+                    if (me->HasInArc(M_PI/2.0f, who->GetPositionX(), who->GetPositionY()) && me->IsWithinLOSInMap(who))
                     {
                         AttackStart(who);
                     }

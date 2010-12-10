@@ -275,11 +275,11 @@ void ReadLiquidTypeTableDBC()
 //
 
 // Map file format data
-static char const* MAP_MAGIC         = "MAPS";
-static char const* MAP_VERSION_MAGIC = "v1.1";
-static char const* MAP_AREA_MAGIC    = "AREA";
-static char const* MAP_HEIGHT_MAGIC  = "MHGT";
-static char const* MAP_LIQUID_MAGIC  = "MLIQ";
+#define MAP_MAGIC             'SPAM'
+#define MAP_VERSION_MAGIC     '1.2v'
+#define MAP_AREA_MAGIC        'AERA'
+#define MAP_HEIGHT_MAGIC      'TGHM'
+#define MAP_LIQUID_MAGIC      'QILM'
 
 struct map_fileheader
 {
@@ -292,6 +292,8 @@ struct map_fileheader
     uint32 heightMapSize;
     uint32 liquidMapOffset;
     uint32 liquidMapSize;
+    uint32 holesOffset; 
+    uint32 holesSize; 
 };
 
 #define MAP_AREA_NO_AREA      0x0001
@@ -382,8 +384,8 @@ bool ConvertADT(char *filename, char *filename2, int cell_y, int cell_x, uint32 
 
     // Prepare map header
     map_fileheader map;
-    map.mapMagic = *(uint32 const*)MAP_MAGIC;
-    map.versionMagic = *(uint32 const*)MAP_VERSION_MAGIC;
+    map.mapMagic = uint32(MAP_MAGIC);
+    map.versionMagic = uint32(MAP_VERSION_MAGIC);
     map.buildMagic = build;
 
     // Get area flags data
@@ -426,7 +428,7 @@ bool ConvertADT(char *filename, char *filename2, int cell_y, int cell_x, uint32 
     map.areaMapSize   = sizeof(map_areaHeader);
 
     map_areaHeader areaHeader;
-    areaHeader.fourcc = *(uint32 const*)MAP_AREA_MAGIC;
+    areaHeader.fourcc = uint32(MAP_AREA_MAGIC);
     areaHeader.flags = 0;
     if (fullAreaData)
     {
@@ -555,7 +557,7 @@ bool ConvertADT(char *filename, char *filename2, int cell_y, int cell_x, uint32 
     map.heightMapSize = sizeof(map_heightHeader);
 
     map_heightHeader heightHeader;
-    heightHeader.fourcc = *(uint32 const*)MAP_HEIGHT_MAGIC;
+    heightHeader.fourcc = uint32(MAP_HEIGHT_MAGIC);
     heightHeader.flags = 0;
     heightHeader.gridHeight    = minHeight;
     heightHeader.gridMaxHeight = maxHeight;
@@ -790,7 +792,7 @@ bool ConvertADT(char *filename, char *filename2, int cell_y, int cell_x, uint32 
         }
         map.liquidMapOffset = map.heightMapOffset + map.heightMapSize;
         map.liquidMapSize = sizeof(map_liquidHeader);
-        liquidHeader.fourcc = *(uint32 const*)MAP_LIQUID_MAGIC;
+        liquidHeader.fourcc = uint32(MAP_LIQUID_MAGIC);
         liquidHeader.flags = 0;
         liquidHeader.liquidType = 0;
         liquidHeader.offsetX = minX;
@@ -817,6 +819,25 @@ bool ConvertADT(char *filename, char *filename2, int cell_y, int cell_x, uint32 
         if (!(liquidHeader.flags & MAP_LIQUID_NO_HEIGHT))
             map.liquidMapSize += sizeof(float)*liquidHeader.width*liquidHeader.height;
     }
+
+    // map hole info 
+    uint16 holes[ADT_CELLS_PER_GRID][ADT_CELLS_PER_GRID]; 
+    if(map.liquidMapOffset) 
+        map.holesOffset = map.liquidMapOffset + map.liquidMapSize; 
+    else 
+        map.holesOffset = map.heightMapOffset + map.heightMapSize; 
+    map.holesSize = sizeof(holes); 
+    memset(holes, 0, map.holesSize); 
+    for(int i = 0; i < ADT_CELLS_PER_GRID; ++i) 
+    { 
+        for(int j = 0; j < ADT_CELLS_PER_GRID; ++j) 
+        { 
+            adt_MCNK * cell = cells->getMCNK(i,j); 
+            if(!cell) 
+                continue; 
+            holes[i][j] = cell->holes; 
+        } 
+    } 
 
     // Ok all data prepared - store it
     FILE *output=fopen(filename2, "wb");
@@ -864,6 +885,10 @@ bool ConvertADT(char *filename, char *filename2, int cell_y, int cell_x, uint32 
                 fwrite(&liquid_height[y+liquidHeader.offsetY][liquidHeader.offsetX], sizeof(float), liquidHeader.width, output);
         }
     }
+ 
+    // store hole data
+    fwrite(holes, map.holesSize, 1, output);
+
     fclose(output);
 
     return true;

@@ -24,8 +24,8 @@
 #include "SharedDefines.h"
 #include "Object.h"
 
-class MovementGenerator;
 class Unit;
+class MovementGenerator;
 
 // Creature Entry ID used for waypoints show, visible only for GMs
 #define VISUAL_WAYPOINT 1
@@ -86,7 +86,6 @@ class MotionMaster //: private std::stack<MovementGenerator *>
         typedef std::vector<_Ty> ExpireList;
         int i_top;
 
-        bool empty() const { return (i_top < 0); }
         void pop() { Impl[i_top] = NULL; --i_top; }
         void push(_Ty _Val) { ++i_top; Impl[i_top] = _Val; }
 
@@ -94,6 +93,7 @@ class MotionMaster //: private std::stack<MovementGenerator *>
         void InitTop();
     public:
 
+        bool empty() const { return (i_top < 0); }
         explicit MotionMaster(Unit *unit) : i_top(-1), i_owner(unit), m_expList(NULL), m_cleanFlag(MMCF_NONE)
         {
             for (uint8 i = 0; i < MAX_MOTION_SLOT; ++i)
@@ -152,7 +152,7 @@ class MotionMaster //: private std::stack<MovementGenerator *>
         void MovePoint(uint32 id, const Position &pos)
             { MovePoint(id, pos.m_positionX, pos.m_positionY, pos.m_positionZ); }
         void MovePoint(uint32 id, float x,float y,float z);
-        void MoveCharge(float x, float y, float z, float speed = SPEED_CHARGE, uint32 id = EVENT_CHARGE);
+        void MoveCharge(float x, float y, float z, float speed = SPEED_CHARGE, uint32 id = EVENT_CHARGE, bool usePathfinding = true);
         void MoveFall(float z, uint32 id = 0);
         void MoveKnockbackFrom(float srcX, float srcY, float speedXY, float speedZ);
         void MoveJumpTo(float angle, float speedXY, float speedZ);
@@ -163,6 +163,9 @@ class MotionMaster //: private std::stack<MovementGenerator *>
         void MoveDistract(uint32 time);
         void MovePath(uint32 path_id, bool repeatable);
         void MoveRotate(uint32 time, RotateDirection direction);
+
+        // given destination unreachable? due to pathfinding or other
+        virtual bool isReachable() const { return true; }
 
         MovementGeneratorType GetCurrentMovementGeneratorType() const;
         MovementGeneratorType GetMotionSlotType(int slot) const;

@@ -1594,7 +1594,7 @@ void Player::Update(uint32 p_time)
                     }
                 }
                 //120 degrees of radiant range
-                else if (!HasInArc(2*M_PI/3, pVictim))
+                else if (!HasInArc(2*M_PI/3, pVictim->GetPositionX(), pVictim->GetPositionY()))
                 {
                     setAttackTimer(BASE_ATTACK,100);
                     if (m_swingErrorMsg != 2)               // send single time (client auto repeat)
@@ -1622,7 +1622,7 @@ void Player::Update(uint32 p_time)
             {
                 if (!IsWithinMeleeRange(pVictim))
                     setAttackTimer(OFF_ATTACK,100);
-                else if (!HasInArc(2*M_PI/3, pVictim))
+                else if (!HasInArc(2*M_PI/3, pVictim->GetPositionX(), pVictim->GetPositionY()))
                     setAttackTimer(OFF_ATTACK,100);
                 else
                 {
