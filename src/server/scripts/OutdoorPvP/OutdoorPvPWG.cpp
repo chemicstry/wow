@@ -1,21 +1,20 @@
 /*
- * Copyright (C) 2008-2010 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008 - 2010 Trinity <http://www.trinitycore.org/>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * Copyright (C) 2010 Myth Project <http://bitbucket.org/sun/myth-core/>
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
  *
- * Patch supported by ChaosUA & TCRU community http://trinity-core.ru/
+ * You should have received a copy of the GNU General Public License along
+ * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "OutdoorPvPWG.h"
@@ -27,6 +26,7 @@
 #include "MapManager.h"
 #include "ScriptedCreature.h"
 #include "ScriptPCH.h"
+#include "Group.h"
 
 Creature* FortressSpirit;
 uint32 entry;
@@ -745,7 +745,7 @@ OutdoorPvPWGCreType OutdoorPvPWG::GetCreatureType(uint32 entry) const
     }
 }
 
-void OutdoorPvPWG::OnCreatureCreate(Creature *creature, bool add)
+void OutdoorPvPWG::OnCreatureCreate(Creature *creature)
 {
     uint32 entry = creature->GetEntry();
     switch(GetCreatureType(entry))
@@ -756,30 +756,27 @@ void OutdoorPvPWG::OnCreatureCreate(Creature *creature, bool add)
                 return;
 
             TeamId team;
-            if (add)
-            {
-                if (creature->getFaction() == WintergraspFaction[TEAM_ALLIANCE])
-                    team = TEAM_ALLIANCE;
-                else if (creature->getFaction() == WintergraspFaction[TEAM_HORDE])
-                    team = TEAM_HORDE;
-                else
-                    return;
+            if (creature->getFaction() == WintergraspFaction[TEAM_ALLIANCE])
+                team = TEAM_ALLIANCE;
+            else if (creature->getFaction() == WintergraspFaction[TEAM_HORDE])
+                team = TEAM_HORDE;
+            else
+                return;
 
-                if (uint32 engLowguid = GUID_LOPART(((TempSummon*)creature)->GetSummonerGUID()))
+            if (uint32 engLowguid = GUID_LOPART(((TempSummon*)creature)->GetSummonerGUID()))
+            {
+                if (OPvPCapturePointWG *workshop = GetWorkshopByEngGuid(engLowguid))
                 {
-                    if (OPvPCapturePointWG *workshop = GetWorkshopByEngGuid(engLowguid))
+                    if (CanBuildVehicle(workshop))
                     {
-                        if (CanBuildVehicle(workshop))
-                        {
-                            m_vehicles[team].insert(creature);
-                            //workshop->m_vehicles.insert(creature);
-                        }
-                        else
-                        {
-                            creature->setDeathState(DEAD);
-                            creature->SetRespawnTime(DAY);
-                            return;
-                        }
+                        m_vehicles[team].insert(creature);
+                        //workshop->m_vehicles.insert(creature);
+                    }
+                    else
+                    {
+                        creature->setDeathState(DEAD);
+                        creature->SetRespawnTime(DAY);
+                        return;
                     }
                 }
 
@@ -788,24 +785,11 @@ void OutdoorPvPWG::OnCreatureCreate(Creature *creature, bool add)
                 else if (m_tenacityStack < 0 && team == TEAM_HORDE)
                     creature->SetAuraStack(SPELL_TENACITY_VEHICLE, creature, -m_tenacityStack);
             }
-            else // the faction may be changed in uncharm
-            {
-                // TODO: now you have to wait until the corpse of vehicle disappear to build a new one
-                if (m_vehicles[TEAM_ALLIANCE].erase(creature))
-                    team = TEAM_ALLIANCE;
-                else if (m_vehicles[TEAM_HORDE].erase(creature))
-                    team = TEAM_HORDE;
-                else
-                    return;
-            }
             SendUpdateWorldState(VehNumWorldState[team], m_vehicles[team].size());
             break;
         }
         case CREATURE_QUESTGIVER:
-            if (add)
-                m_questgivers[creature->GetDBTableGUIDLow()] = creature;
-            else
-                m_questgivers.erase(creature->GetDBTableGUIDLow());
+            m_questgivers[creature->GetDBTableGUIDLow()] = creature;
             break;
         case CREATURE_ENGINEER:
             for (OutdoorPvP::OPvPCapturePointMap::iterator itr = m_capturePoints.begin(); itr != m_capturePoints.end(); ++itr)
@@ -813,7 +797,7 @@ void OutdoorPvPWG::OnCreatureCreate(Creature *creature, bool add)
                 if (OPvPCapturePointWG *workshop = dynamic_cast<OPvPCapturePointWG*>(itr->second))
                     if (workshop->m_engGuid == creature->GetDBTableGUIDLow())
                     {
-                        workshop->m_engineer = add ? creature : NULL;
+                        workshop->m_engineer = creature;
                         break;
                     }
             }
@@ -824,7 +808,7 @@ void OutdoorPvPWG::OnCreatureCreate(Creature *creature, bool add)
                 if (OPvPCapturePointWG *workshop = dynamic_cast<OPvPCapturePointWG*>(itr->second))
                     if (workshop->m_spiGuid == creature->GetDBTableGUIDLow())
                     {
-                        workshop->m_spiritguide = add ? creature : NULL;
+                        workshop->m_spiritguide = creature;
                         break;
                     }
             }
@@ -832,36 +816,62 @@ void OutdoorPvPWG::OnCreatureCreate(Creature *creature, bool add)
         case CREATURE_SPIRIT_HEALER:
         case CREATURE_TURRET:
         case CREATURE_OTHER:
-            if (add)
-                UpdateCreatureInfo(creature);
+            UpdateCreatureInfo(creature);
         default:
-            if (add)
-                m_creatures.insert(creature);
-            else
-                m_creatures.erase(creature);
+            m_creatures.insert(creature);
             break;
     }
 }
 
-void OutdoorPvPWG::OnGameObjectCreate(GameObject *go, bool add)
+void OutdoorPvPWG::OnCreatureRemove(Creature *creature)
 {
-    OutdoorPvP::OnGameObjectCreate(go, add);
+    uint32 entry = creature->GetEntry();
+    switch(GetCreatureType(entry))
+    {
+        case CREATURE_SIEGE_VEHICLE:
+        {
+            if (!creature->isSummon())
+                return;
+
+            TeamId team;
+            // the faction may be changed in uncharm
+            // TODO: now you have to wait until the corpse of vehicle disappear to build a new one
+            if (m_vehicles[TEAM_ALLIANCE].erase(creature))
+                team = TEAM_ALLIANCE;
+            else if (m_vehicles[TEAM_HORDE].erase(creature))
+                team = TEAM_HORDE;
+            else
+                return;
+
+            SendUpdateWorldState(VehNumWorldState[team], m_vehicles[team].size());
+            break;
+        }
+        case CREATURE_QUESTGIVER:
+            m_questgivers.erase(creature->GetDBTableGUIDLow());
+            break;
+        default:
+            m_creatures.erase(creature);
+            break;
+    }
+}
+
+void OutdoorPvPWG::OnGameObjectCreate(GameObject *go)
+{
+    OutdoorPvP::OnGameObjectCreate(go);
 
     if (UpdateGameObjectInfo(go))
-    {
-        if (add) m_gobjects.insert(go);
-        else m_gobjects.erase(go);
-    }
+        m_gobjects.insert(go);
+
     //do we need to store building?
     else if (go->GetGoType() == GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING)
     {
         BuildingStateMap::const_iterator itr = m_buildingStates.find(go->GetDBTableGUIDLow());
         if (itr != m_buildingStates.end())
         {
-            itr->second->building = add ? go : NULL;
+            itr->second->building = go;
             if (go->GetGOInfo()->displayId == 7878 || go->GetGOInfo()->displayId == 7900)
                 itr->second->type = BUILDING_TOWER;
-            if (!add || itr->second->damageState == DAMAGE_INTACT && !itr->second->health)
+            if (itr->second->damageState == DAMAGE_INTACT && !itr->second->health)
             {
                 itr->second->health = go->GetGOValue()->building.health;
                 go->RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_DESTROYED);
@@ -874,6 +884,27 @@ void OutdoorPvPWG::OnGameObjectCreate(GameObject *go, bool add)
                 else if (itr->second->damageState == DAMAGE_DESTROYED)
                     go->SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_DESTROYED);
             }
+        }
+    }
+}
+
+void OutdoorPvPWG::OnGameObjectRemove(GameObject *go)
+{
+    OutdoorPvP::OnGameObjectRemove(go);
+
+    if (UpdateGameObjectInfo(go))
+    {
+        m_gobjects.erase(go);
+    }
+    //do we need to store building?
+    else if (go->GetGoType() == GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING)
+    {
+        BuildingStateMap::const_iterator itr = m_buildingStates.find(go->GetDBTableGUIDLow());
+        if (itr != m_buildingStates.end())
+        {
+            itr->second->building = go;
+            itr->second->health = go->GetGOValue()->building.health;
+            go->RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_DESTROYED);
         }
     }
 }
@@ -1383,7 +1414,10 @@ void OutdoorPvPWG::UpdateClock()
 //Announce in all world, comment it if you don't like/need it
 	 // Announce 30 minutes left
  	 if ((m_timer>1800000) && (m_timer<1802000) && (m_wartime==false)) 
+ 	 {
         sWorld.SendWorldText(LANG_BG_WG_WORLD_ANNOUNCE_30);
+ 	    UpdateAllWorldObject();
+ 	 }
  
  	 // Announce 10 minutes left
 	 if ((m_timer>600000) && (m_timer<602000) && (m_wartime==false)) 
@@ -1428,41 +1462,41 @@ bool OutdoorPvPWG::Update(uint32 diff)
                                 }
                                 else
                                 {
-								Unit* Driver = Old->GetVehicleKit()->GetPassenger(0);
-								Unit* Passenger1 = Old->GetVehicleKit()->GetPassenger(1);
-								Unit* Passenger2 = Old->GetVehicleKit()->GetPassenger(2);
-								Unit* Passenger3 = Old->GetVehicleKit()->GetPassenger(3);
-								if (Driver && Driver->isAlive())
-								{
-                                Creature* New = i->getSource()->SummonCreature(Old->GetEntry(), 5141.191406f, 2841.045410f, 408.703217f, 3.163321f, TEMPSUMMON_MANUAL_DESPAWN);
-                                New->SetPower(POWER_MANA, Old->GetPower(POWER_MANA));
-                                New->SetPower(POWER_RAGE, Old->GetPower(POWER_RAGE));
-                                New->SetPower(POWER_FOCUS, Old->GetPower(POWER_FOCUS));
-                                New->SetPower(POWER_ENERGY, Old->GetPower(POWER_ENERGY));
-                                New->SetHealth(Old->GetHealth());
-                                New->SetRespawnTime(Old->GetRespawnTime());
-                                Old->GetVehicleKit()->Uninstall();
-                                Old->SetVisible(true);
-                                Old->ForcedDespawn();
-                                Vehicle *vehicle = New->GetVehicleKit();
-								Driver->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-								Driver->EnterVehicle(vehicle, 0);
-								if (Passenger1 && Passenger1->isAlive())
-								{
-								Passenger1->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-								//Passenger1->EnterVehicle(vehicle, 1); Seatid doesn't work :S
-								}
-								if (Passenger2 && Passenger2->isAlive())
-								{
-								Passenger2->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-								//Passenger2->EnterVehicle(vehicle, 2); Seatid doesn't work :S
-								}
-								if (Passenger3 && Passenger3->isAlive())
-								{
-								Passenger3->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-								//Passenger3->EnterVehicle(vehicle, 3); Seatid doesn't work :S
-								}
-								}
+                                    Unit* Driver = Old->GetVehicleKit()->GetPassenger(0);
+                                    Unit* Passenger1 = Old->GetVehicleKit()->GetPassenger(1);
+                                    Unit* Passenger2 = Old->GetVehicleKit()->GetPassenger(2);
+                                    Unit* Passenger3 = Old->GetVehicleKit()->GetPassenger(3);
+                                    if (Driver && Driver->isAlive())
+                                    {
+                                        Creature* New = i->getSource()->SummonCreature(Old->GetEntry(), 5141.191406f, 2841.045410f, 408.703217f, 3.163321f, TEMPSUMMON_MANUAL_DESPAWN);
+                                        New->SetPower(POWER_MANA, Old->GetPower(POWER_MANA));
+                                        New->SetPower(POWER_RAGE, Old->GetPower(POWER_RAGE));
+                                        New->SetPower(POWER_FOCUS, Old->GetPower(POWER_FOCUS));
+                                        New->SetPower(POWER_ENERGY, Old->GetPower(POWER_ENERGY));
+                                        New->SetHealth(Old->GetHealth());
+                                        New->SetRespawnTime(Old->GetRespawnTime());
+                                        Old->GetVehicleKit()->Uninstall();
+                                        Old->SetVisible(true);
+                                        Old->ForcedDespawn();
+                                        Vehicle *vehicle = New->GetVehicleKit();
+                                        Driver->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
+                                        Driver->EnterVehicle(vehicle, 0);
+                                        if (Passenger1 && Passenger1->isAlive())
+                                        {
+                                            Passenger1->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
+                                            //Passenger1->EnterVehicle(vehicle, 1); Seatid doesn't work :S
+                                        }
+                                        if (Passenger2 && Passenger2->isAlive())
+                                        {
+                                            Passenger2->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
+                                            //Passenger2->EnterVehicle(vehicle, 2); Seatid doesn't work :S
+                                        }
+                                        if (Passenger3 && Passenger3->isAlive())
+                                        {
+                                            Passenger3->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
+                                            //Passenger3->EnterVehicle(vehicle, 3); Seatid doesn't work :S
+                                        }
+                                    }
                                 }
                             }
                             if (i->getSource()->GetDistance2d(5316.25f, 2977.04f) <= 5 && i->getSource()->IsOnVehicle(i->getSource()->GetVehicleCreatureBase()))
@@ -1477,41 +1511,41 @@ bool OutdoorPvPWG::Update(uint32 diff)
                                 }
                                 else
                                 {
-							Unit* Driver = Old->GetVehicleKit()->GetPassenger(0);
-							Unit* Passenger1 = Old->GetVehicleKit()->GetPassenger(1);
-							Unit* Passenger2 = Old->GetVehicleKit()->GetPassenger(2);
-							Unit* Passenger3 = Old->GetVehicleKit()->GetPassenger(3);
-							        if (Driver && Driver->isAlive())
+                                    Unit* Driver = Old->GetVehicleKit()->GetPassenger(0);
+                                    Unit* Passenger1 = Old->GetVehicleKit()->GetPassenger(1);
+                                    Unit* Passenger2 = Old->GetVehicleKit()->GetPassenger(2);
+                                    Unit* Passenger3 = Old->GetVehicleKit()->GetPassenger(3);
+                                    if (Driver && Driver->isAlive())
 							        {
-                                Creature* New = i->getSource()->SummonCreature(Old->GetEntry(), 5141.191406f, 2841.045410f, 408.703217f, 3.163321f, TEMPSUMMON_MANUAL_DESPAWN);
-                                New->SetPower(POWER_MANA, Old->GetPower(POWER_MANA));
-                                New->SetPower(POWER_RAGE, Old->GetPower(POWER_RAGE));
-                                New->SetPower(POWER_FOCUS, Old->GetPower(POWER_FOCUS));
-                                New->SetPower(POWER_ENERGY, Old->GetPower(POWER_ENERGY));
-                                New->SetHealth(Old->GetHealth());
-                                New->SetRespawnTime(Old->GetRespawnTime());
-                                Old->GetVehicleKit()->Uninstall();
-                                Old->SetVisible(true);
-                                Old->ForcedDespawn();
-                                Vehicle *vehicle = New->GetVehicleKit();
-								Driver->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-								Driver->EnterVehicle(vehicle, 0);
-								if (Passenger1 && Passenger1->isAlive())
-								{
-								Passenger1->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-								//Passenger1->EnterVehicle(vehicle, 1); Seatid doesn't work :S
-								}
-								if (Passenger2 && Passenger2->isAlive())
-								{
-								Passenger2->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-								//Passenger2->EnterVehicle(vehicle, 2); Seatid doesn't work :S
-								}
-								if (Passenger3 && Passenger3->isAlive())
-								{
-								Passenger3->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-								//Passenger3->EnterVehicle(vehicle, 3); Seatid doesn't work :S
-								}
-						        }
+                                        Creature* New = i->getSource()->SummonCreature(Old->GetEntry(), 5141.191406f, 2841.045410f, 408.703217f, 3.163321f, TEMPSUMMON_MANUAL_DESPAWN);
+                                        New->SetPower(POWER_MANA, Old->GetPower(POWER_MANA));
+                                        New->SetPower(POWER_RAGE, Old->GetPower(POWER_RAGE));
+                                        New->SetPower(POWER_FOCUS, Old->GetPower(POWER_FOCUS));
+                                        New->SetPower(POWER_ENERGY, Old->GetPower(POWER_ENERGY));
+                                        New->SetHealth(Old->GetHealth());
+                                        New->SetRespawnTime(Old->GetRespawnTime());
+                                        Old->GetVehicleKit()->Uninstall();
+                                        Old->SetVisible(true);
+                                        Old->ForcedDespawn();
+                                        Vehicle *vehicle = New->GetVehicleKit();
+                                        Driver->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
+                                        Driver->EnterVehicle(vehicle, 0);
+                                        if (Passenger1 && Passenger1->isAlive())
+                                        {
+                                            Passenger1->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
+                                            //Passenger1->EnterVehicle(vehicle, 1); Seatid doesn't work :S
+                                        }
+                                        if (Passenger2 && Passenger2->isAlive())
+                                        {
+                                            Passenger2->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
+                                            //Passenger2->EnterVehicle(vehicle, 2); Seatid doesn't work :S
+                                        }
+                                        if (Passenger3 && Passenger3->isAlive())
+                                        {
+                                            Passenger3->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
+                                            //Passenger3->EnterVehicle(vehicle, 3); Seatid doesn't work :S
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1532,41 +1566,41 @@ bool OutdoorPvPWG::Update(uint32 diff)
                                 }
                                 else
                                 {
-								Unit* Driver = Old->GetVehicleKit()->GetPassenger(0);
-								Unit* Passenger1 = Old->GetVehicleKit()->GetPassenger(1);
-								Unit* Passenger2 = Old->GetVehicleKit()->GetPassenger(2);
-								Unit* Passenger3 = Old->GetVehicleKit()->GetPassenger(3);
-								if (Driver && Driver->isAlive())
-								{
-                                Creature* New = i->getSource()->SummonCreature(Old->GetEntry(), 5141.191406f, 2841.045410f, 408.703217f, 3.163321f, TEMPSUMMON_MANUAL_DESPAWN);
-                                New->SetPower(POWER_MANA, Old->GetPower(POWER_MANA));
-                                New->SetPower(POWER_RAGE, Old->GetPower(POWER_RAGE));
-                                New->SetPower(POWER_FOCUS, Old->GetPower(POWER_FOCUS));
-                                New->SetPower(POWER_ENERGY, Old->GetPower(POWER_ENERGY));
-                                New->SetHealth(Old->GetHealth());
-                                New->SetRespawnTime(Old->GetRespawnTime());
-                                Old->GetVehicleKit()->Uninstall();
-                                Old->SetVisible(true);
-                                Old->ForcedDespawn();
-                                Vehicle *vehicle = New->GetVehicleKit();
-								Driver->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-							    Driver->EnterVehicle(vehicle, 0);
-								if (Passenger1 && Passenger1->isAlive())
-								{
-								Passenger1->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-								//Passenger1->EnterVehicle(vehicle, 1); Seatid doesn't work :S
-								}
-								if (Passenger2 && Passenger2->isAlive())
-								{
-								Passenger2->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-								//Passenger2->EnterVehicle(vehicle, 2); Seatid doesn't work :S
-								}
-								if (Passenger3 && Passenger3->isAlive())
-								{
-								Passenger3->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-								//Passenger3->EnterVehicle(vehicle, 3); Seatid doesn't work :S
-								}
-								}
+                                    Unit* Driver = Old->GetVehicleKit()->GetPassenger(0);
+                                    Unit* Passenger1 = Old->GetVehicleKit()->GetPassenger(1);
+                                    Unit* Passenger2 = Old->GetVehicleKit()->GetPassenger(2);
+                                    Unit* Passenger3 = Old->GetVehicleKit()->GetPassenger(3);
+                                    if (Driver && Driver->isAlive())
+                                    {
+                                        Creature* New = i->getSource()->SummonCreature(Old->GetEntry(), 5141.191406f, 2841.045410f, 408.703217f, 3.163321f, TEMPSUMMON_MANUAL_DESPAWN);
+                                        New->SetPower(POWER_MANA, Old->GetPower(POWER_MANA));
+                                        New->SetPower(POWER_RAGE, Old->GetPower(POWER_RAGE));
+                                        New->SetPower(POWER_FOCUS, Old->GetPower(POWER_FOCUS));
+                                        New->SetPower(POWER_ENERGY, Old->GetPower(POWER_ENERGY));
+                                        New->SetHealth(Old->GetHealth());
+                                        New->SetRespawnTime(Old->GetRespawnTime());
+                                        Old->GetVehicleKit()->Uninstall();
+                                        Old->SetVisible(true);
+                                        Old->ForcedDespawn();
+                                        Vehicle *vehicle = New->GetVehicleKit();
+                                        Driver->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
+                                        Driver->EnterVehicle(vehicle, 0);
+                                        if (Passenger1 && Passenger1->isAlive())
+                                        {
+                                            Passenger1->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
+                                            //Passenger1->EnterVehicle(vehicle, 1); Seatid doesn't work :S
+                                        }
+                                        if (Passenger2 && Passenger2->isAlive())
+                                        {
+                                            Passenger2->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
+                                            //Passenger2->EnterVehicle(vehicle, 2); Seatid doesn't work :S
+                                        }
+                                        if (Passenger3 && Passenger3->isAlive())
+                                        {
+                                            Passenger3->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
+                                            //Passenger3->EnterVehicle(vehicle, 3); Seatid doesn't work :S
+                                        }
+                                    }
                                 }
                             }
                             if (i->getSource()->GetDistance2d(5316.25f, 2977.04f) <= 5 && i->getSource()->IsOnVehicle(i->getSource()->GetVehicleCreatureBase()))
@@ -1581,41 +1615,41 @@ bool OutdoorPvPWG::Update(uint32 diff)
                                 }
                                 else
                                 {
-								Unit* Driver = Old->GetVehicleKit()->GetPassenger(0);
-								Unit* Passenger1 = Old->GetVehicleKit()->GetPassenger(1);
-								Unit* Passenger2 = Old->GetVehicleKit()->GetPassenger(2);
-								Unit* Passenger3 = Old->GetVehicleKit()->GetPassenger(3);
-								if (Driver && Driver->isAlive())
-								{
-                                Creature* New = i->getSource()->SummonCreature(Old->GetEntry(), 5141.191406f, 2841.045410f, 408.703217f, 3.163321f, TEMPSUMMON_MANUAL_DESPAWN);
-                                New->SetPower(POWER_MANA, Old->GetPower(POWER_MANA));
-                                New->SetPower(POWER_RAGE, Old->GetPower(POWER_RAGE));
-                                New->SetPower(POWER_FOCUS, Old->GetPower(POWER_FOCUS));
-                                New->SetPower(POWER_ENERGY, Old->GetPower(POWER_ENERGY));
-                                New->SetHealth(Old->GetHealth());
-                                New->SetRespawnTime(Old->GetRespawnTime());
-                                Old->GetVehicleKit()->Uninstall();
-                                Old->SetVisible(true);
-                                Old->ForcedDespawn();
-                                Vehicle *vehicle = New->GetVehicleKit();
-								Driver->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-								Driver->EnterVehicle(vehicle, 0);
-								if (Passenger1 && Passenger1->isAlive())
-								{
-								Passenger1->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-								//Passenger1->EnterVehicle(vehicle, 1); Seatid doesn't work :S
-								}
-								if (Passenger2 && Passenger2->isAlive())
-								{
-								Passenger2->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-								//Passenger2->EnterVehicle(vehicle, 2); Seatid doesn't work :S
-								}
-								if (Passenger3 && Passenger3->isAlive())
-								{
-								Passenger3->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-								//Passenger3->EnterVehicle(vehicle, 3); Seatid doesn't work :S
-								}
-								}
+                                    Unit* Driver = Old->GetVehicleKit()->GetPassenger(0);
+                                    Unit* Passenger1 = Old->GetVehicleKit()->GetPassenger(1);
+                                    Unit* Passenger2 = Old->GetVehicleKit()->GetPassenger(2);
+                                    Unit* Passenger3 = Old->GetVehicleKit()->GetPassenger(3);
+                                    if (Driver && Driver->isAlive())
+                                    {
+                                        Creature* New = i->getSource()->SummonCreature(Old->GetEntry(), 5141.191406f, 2841.045410f, 408.703217f, 3.163321f, TEMPSUMMON_MANUAL_DESPAWN);
+                                        New->SetPower(POWER_MANA, Old->GetPower(POWER_MANA));
+                                        New->SetPower(POWER_RAGE, Old->GetPower(POWER_RAGE));
+                                        New->SetPower(POWER_FOCUS, Old->GetPower(POWER_FOCUS));
+                                        New->SetPower(POWER_ENERGY, Old->GetPower(POWER_ENERGY));
+                                        New->SetHealth(Old->GetHealth());
+                                        New->SetRespawnTime(Old->GetRespawnTime());
+                                        Old->GetVehicleKit()->Uninstall();
+                                        Old->SetVisible(true);
+                                        Old->ForcedDespawn();
+                                        Vehicle *vehicle = New->GetVehicleKit();
+                                        Driver->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
+                                        Driver->EnterVehicle(vehicle, 0);
+                                        if (Passenger1 && Passenger1->isAlive())
+                                        {
+                                            Passenger1->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
+                                            //Passenger1->EnterVehicle(vehicle, 1); Seatid doesn't work :S
+                                        }
+                                        if (Passenger2 && Passenger2->isAlive())
+                                        {
+                                            Passenger2->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
+                                            //Passenger2->EnterVehicle(vehicle, 2); Seatid doesn't work :S
+                                        }
+                                        if (Passenger3 && Passenger3->isAlive())
+                                        {
+                                            Passenger3->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
+                                            //Passenger3->EnterVehicle(vehicle, 3); Seatid doesn't work :S
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1713,7 +1747,7 @@ bool OutdoorPvPWG::Update(uint32 diff)
             StartBattle();
         }
 
-        UpdateAllWorldObject();
+        //UpdateAllWorldObject();
         UpdateClock();
 
         SendInitWorldStatesTo();
@@ -1775,21 +1809,22 @@ void OutdoorPvPWG::StartBattle()
 	uint32 CountDef=0;
 	uint32 CountAtk=0;
     m_wartime = true;
+    UpdateAllWorldObject();
     m_timer = sWorld.getIntConfig(CONFIG_OUTDOORPVP_WINTERGRASP_BATTLE_TIME) * MINUTE * IN_MILLISECONDS;
 
     for (PlayerSet::iterator itr = m_players[getDefenderTeam()].begin(); itr != m_players[getDefenderTeam()].end(); ++itr)
     {
-       if ((*itr)->getLevel() < 75)
+        if ((*itr)->getLevel() < 75)
         {
-          (*itr)->CastSpell((*itr), SPELL_TELEPORT_DALARAN, true);
+            (*itr)->CastSpell((*itr), SPELL_TELEPORT_DALARAN, true);
         }
-       else
+        else
         {
-          CountDef++;
-          (*itr)->RemoveAurasByType(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED);
-          (*itr)->RemoveAurasByType(SPELL_AURA_FLY);
-          (*itr)->CastSpell((*itr), 45472, true); //prevent die if fall
-          (*itr)->PlayDirectSound(OutdoorPvP_WG_SOUND_START_BATTLE); // START Battle
+            CountDef++;
+            (*itr)->RemoveAurasByType(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED);
+            (*itr)->RemoveAurasByType(SPELL_AURA_FLY);
+            (*itr)->CastSpell((*itr), 45472, true); //prevent die if fall
+            (*itr)->PlayDirectSound(OutdoorPvP_WG_SOUND_START_BATTLE); // START Battle
         }
     }
 
@@ -1797,33 +1832,33 @@ void OutdoorPvPWG::StartBattle()
     {
         if ((*itr)->getLevel() < 75)
         {
-          (*itr)->CastSpell((*itr), SPELL_TELEPORT_DALARAN, true);
+            (*itr)->CastSpell((*itr), SPELL_TELEPORT_DALARAN, true);
         }
         else
         {
-          CountAtk++;
-          (*itr)->RemoveAurasByType(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED);
-          (*itr)->RemoveAurasByType(SPELL_AURA_FLY);
-          (*itr)->CastSpell((*itr), 45472, true); //prevent die if fall
-          (*itr)->PlayDirectSound(OutdoorPvP_WG_SOUND_START_BATTLE); // START Battle
+            CountAtk++;
+            (*itr)->RemoveAurasByType(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED);
+            (*itr)->RemoveAurasByType(SPELL_AURA_FLY);
+            (*itr)->CastSpell((*itr), 45472, true); //prevent die if fall
+            (*itr)->PlayDirectSound(OutdoorPvP_WG_SOUND_START_BATTLE); // START Battle
         }
     }
 
-if (sWorld.getBoolConfig(CONFIG_CONFIG_OUTDOORPVP_WINTERGRASP_ANTIFARM_ENABLE))
- {
- if ((CountAtk < sWorld.getIntConfig(CONFIG_CONFIG_OUTDOORPVP_WINTERGRASP_ANTIFARM_ATK)) || (CountDef < sWorld.getIntConfig(CONFIG_CONFIG_OUTDOORPVP_WINTERGRASP_ANTIFARM_DEF)))
-  {
-   if (CountAtk<=CountDef)
-	   sWorld.SendWorldText(LANG_BG_WG_WORLD_NO_ATK);
-   if (CountDef<CountAtk)
-     {  
-	 sWorld.SendWorldText(LANG_BG_WG_WORLD_NO_DEF);
-	 m_changeDefender=true;
-     }
-   forceStopBattle();
-   return;
-  }
- }
+    if (sWorld.getBoolConfig(CONFIG_CONFIG_OUTDOORPVP_WINTERGRASP_ANTIFARM_ENABLE))
+    {
+        if ((CountAtk < sWorld.getIntConfig(CONFIG_CONFIG_OUTDOORPVP_WINTERGRASP_ANTIFARM_ATK)) || (CountDef < sWorld.getIntConfig(CONFIG_CONFIG_OUTDOORPVP_WINTERGRASP_ANTIFARM_DEF)))
+        {
+            if (CountAtk<=CountDef)
+                sWorld.SendWorldText(LANG_BG_WG_WORLD_NO_ATK);
+            if (CountDef<CountAtk)
+            {  
+                sWorld.SendWorldText(LANG_BG_WG_WORLD_NO_DEF);
+                m_changeDefender=true;
+            }
+            forceStopBattle();
+        return;
+        }
+    }
 
 //    TeamCastSpell(getDefenderTeam(), SPELL_TELEPORT_FORTRESS);
 
@@ -1878,20 +1913,19 @@ void OutdoorPvPWG::EndBattle()
     // Cast Essence of Wintergrasp to all players (CheckCast will determine who to cast)
     sWorld.setWorldState(WORLDSTATE_WINTERGRASP_CONTROLING_FACTION, getDefenderTeam());
     sWorld.UpdateAreaDependentAuras();
-//Sound on End Battle
-for (PlayerSet::iterator itr = m_players[getDefenderTeam()].begin(); itr != m_players[getDefenderTeam()].end(); ++itr)
-{
-	if (getDefenderTeam()==TEAM_ALLIANCE)
-	{
-    TeamIDsound=OutdoorPvP_WG_SOUND_ALLIANCE_WINS; //Allience Win
-	}
-    else TeamIDsound=OutdoorPvP_WG_SOUND_HORDE_WINS;  //Horde Win
-	(*itr)->PlayDirectSound(TeamIDsound) ; // SoundOnEndWin
-}
-for (PlayerSet::iterator itr = m_players[getAttackerTeam()].begin(); itr != m_players[getAttackerTeam()].end(); ++itr)
-{
-   (*itr)->PlayDirectSound(OutdoorPvP_WG_SOUND_NEAR_VICTORY) ; // SoundOnEndLoose
-}
+    //Sound on End Battle
+    for (PlayerSet::iterator itr = m_players[getDefenderTeam()].begin(); itr != m_players[getDefenderTeam()].end(); ++itr)
+    {
+        if (getDefenderTeam()==TEAM_ALLIANCE)
+            TeamIDsound=OutdoorPvP_WG_SOUND_ALLIANCE_WINS; //Allience Win
+
+        else TeamIDsound=OutdoorPvP_WG_SOUND_HORDE_WINS;  //Horde Win
+           (*itr)->PlayDirectSound(TeamIDsound) ; // SoundOnEndWin
+    }
+    for (PlayerSet::iterator itr = m_players[getAttackerTeam()].begin(); itr != m_players[getAttackerTeam()].end(); ++itr)
+    {
+       (*itr)->PlayDirectSound(OutdoorPvP_WG_SOUND_NEAR_VICTORY) ; // SoundOnEndLoose
+    }
 
     for (uint32 team = 0; team < 2; ++team)
     {
@@ -2245,9 +2279,7 @@ void OutdoorPvPWG::RelocateHordeDeadPlayers(Creature *cr)
 OPvPCapturePointWG::OPvPCapturePointWG(OutdoorPvPWG *opvp, BuildingState *state)
 : OPvPCapturePoint(opvp), m_buildingState(state), m_wintergrasp(opvp)
 , m_engineer(NULL), m_engGuid(0), m_spiritguide(NULL)
-, m_spiritguide_horde(NULL), m_spiritguide_alliance(NULL), m_spiGuid(0)
-{
-}
+, m_spiritguide_horde(NULL), m_spiritguide_alliance(NULL), m_spiGuid(0){}
 
 void OPvPCapturePointWG::SetTeamByBuildingState()
 {
@@ -2315,22 +2347,22 @@ void OPvPCapturePointWG::ChangeTeam(TeamId oldTeam)
         }
         if (m_spiGuid)
         {
-         if (m_wintergrasp->getAttackerTeam() == TEAM_ALLIANCE)
-         {
-            *m_spiEntry = guide_entry;
-            _RespawnCreatureIfNeeded(m_spiritguide_horde, guide_entry_fortress_horde);
-            m_wintergrasp->RelocateHordeDeadPlayers(m_spiritguide_horde); // Horde
-            _RespawnCreatureIfNeeded(m_spiritguide, guide_entry);
-            m_wintergrasp->RelocateAllianceDeadPlayers(m_spiritguide); // Alliance
-         }
-         else
-         {
-            *m_spiEntry = guide_entry;
-            _RespawnCreatureIfNeeded(m_spiritguide_alliance, guide_entry_fortress_alliance);
-            m_wintergrasp->RelocateAllianceDeadPlayers(m_spiritguide_alliance); // Alliance
-            _RespawnCreatureIfNeeded(m_spiritguide, guide_entry);
-            m_wintergrasp->RelocateHordeDeadPlayers(m_spiritguide); // Horde
-         }
+            if (m_wintergrasp->getAttackerTeam() == TEAM_ALLIANCE)
+            {
+                *m_spiEntry = guide_entry;
+                _RespawnCreatureIfNeeded(m_spiritguide_horde, guide_entry_fortress_horde);
+                m_wintergrasp->RelocateHordeDeadPlayers(m_spiritguide_horde); // Horde
+                _RespawnCreatureIfNeeded(m_spiritguide, guide_entry);
+                m_wintergrasp->RelocateAllianceDeadPlayers(m_spiritguide); // Alliance
+            }
+            else
+            {
+                *m_spiEntry = guide_entry;
+                _RespawnCreatureIfNeeded(m_spiritguide_alliance, guide_entry_fortress_alliance);
+                m_wintergrasp->RelocateAllianceDeadPlayers(m_spiritguide_alliance); // Alliance
+                _RespawnCreatureIfNeeded(m_spiritguide, guide_entry);
+                m_wintergrasp->RelocateHordeDeadPlayers(m_spiritguide); // Horde
+            }
         }
     }
     else if (m_engineer)
@@ -2342,7 +2374,6 @@ void OPvPCapturePointWG::ChangeTeam(TeamId oldTeam)
 class OutdoorPvP_wintergrasp : public OutdoorPvPScript
 {
     public:
-
         OutdoorPvP_wintergrasp()
             : OutdoorPvPScript("outdoorpvp_wg")
         {

@@ -421,7 +421,7 @@ void AuctionHouseBot::addNewAuctions(Player *AHBplayer, AHBConfig *config)
             }
             item->SetCount(stackCount);
 
-            uint32 dep =  sAuctionMgr.GetAuctionDeposit(ahEntry, etime, item);
+            uint32 dep =  sAuctionMgr.GetAuctionDeposit(ahEntry, etime, item, stackCount);
 
             SQLTransaction trans = CharacterDatabase.BeginTransaction();
             AuctionEntry* auctionEntry = new AuctionEntry;
