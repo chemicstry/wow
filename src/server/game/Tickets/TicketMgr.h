@@ -137,7 +137,7 @@ public:
 
     void Initialize()
     {
-        SetStatus(sWorld.getBoolConfig(CONFIG_ALLOW_TICKETS));
+        SetStatus(sWorld->getBoolConfig(CONFIG_ALLOW_TICKETS));
     }
 
     GM_Ticket *GetOldestOpenGMTicket()
@@ -163,6 +163,6 @@ protected:
     time_t lastChange;
 };
 
-#define sTicketMgr (*ACE_Singleton<TicketMgr, ACE_Null_Mutex>::instance())
+#define sTicketMgr ACE_Singleton<TicketMgr, ACE_Null_Mutex>::instance()
 
 #endif // _TICKETMGR_H

@@ -102,7 +102,7 @@ void CombatAI::UpdateAI(const uint32 diff)
 
     events.Update(diff);
 
-    if (me->hasUnitState(UNIT_STAT_CASTING))
+    if (me->HasUnitState(UNIT_STAT_CASTING))
         return;
 
     if (uint32 spellId = events.ExecuteEvent())
@@ -161,7 +161,7 @@ void CasterAI::UpdateAI(const uint32 diff)
 
     events.Update(diff);
 
-    if (me->hasUnitState(UNIT_STAT_CASTING))
+    if (me->HasUnitState(UNIT_STAT_CASTING))
         return;
 
     if (uint32 spellId = events.ExecuteEvent())
@@ -179,7 +179,7 @@ void CasterAI::UpdateAI(const uint32 diff)
 ArchorAI::ArchorAI(Creature *c) : CreatureAI(c)
 {
     if (!me->m_spells[0])
-        sLog.outError("ArchorAI set for creature (entry = %u) with spell1=0. AI will do nothing", me->GetEntry());
+        sLog->outError("ArchorAI set for creature (entry = %u) with spell1=0. AI will do nothing", me->GetEntry());
 
     m_minRange = GetSpellMinRange(me->m_spells[0], false);
     if (!m_minRange)
@@ -226,7 +226,7 @@ void ArchorAI::UpdateAI(const uint32 /*diff*/)
 TurretAI::TurretAI(Creature *c) : CreatureAI(c)
 {
     if (!me->m_spells[0])
-        sLog.outError("TurretAI set for creature (entry = %u) with spell1=0. AI will do nothing", me->GetEntry());
+        sLog->outError("TurretAI set for creature (entry = %u) with spell1=0. AI will do nothing", me->GetEntry());
 
     m_minRange = GetSpellMinRange(me->m_spells[0], false);
     me->m_CombatDistance = GetSpellMaxRange(me->m_spells[0], false);
@@ -263,7 +263,7 @@ void TurretAI::UpdateAI(const uint32 /*diff*/)
 AOEAI::AOEAI(Creature *c) : CreatureAI(c)
 {
     if (!me->m_spells[0])
-        sLog.outError("AOEAI set for creature (entry = %u) with spell1=0. AI will do nothing", me->GetEntry());
+        sLog->outError("AOEAI set for creature (entry = %u) with spell1=0. AI will do nothing", me->GetEntry());
 
     me->SetVisible(true);//visible to see all spell anims
     me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);//can't be targeted
@@ -337,10 +337,10 @@ void VehicleAI::OnCharmed(bool apply)
 
 void VehicleAI::LoadConditions()
 {
-    conditions = sConditionMgr.GetConditionsForNotGroupedEntry(CONDITION_SOURCE_TYPE_CREATURE_TEMPLATE_VEHICLE, me->GetEntry());
+    conditions = sConditionMgr->GetConditionsForNotGroupedEntry(CONDITION_SOURCE_TYPE_CREATURE_TEMPLATE_VEHICLE, me->GetEntry());
     if (!conditions.empty())
     {
-        sLog.outDebug("VehicleAI::LoadConditions: loaded %u conditions", uint32(conditions.size()));
+        sLog->outDebug("VehicleAI::LoadConditions: loaded %u conditions", uint32(conditions.size()));
     }
 }
 
@@ -355,7 +355,7 @@ void VehicleAI::CheckConditions(const uint32 diff)
                 {
                     if (Player* plr = passenger->ToPlayer())
                     {
-                        if (!sConditionMgr.IsPlayerMeetToConditions(plr, conditions))
+                        if (!sConditionMgr->IsPlayerMeetToConditions(plr, conditions))
                         {
                             plr->ExitVehicle();
                             return;//check other pessanger in next tick

@@ -35,7 +35,7 @@ class Transaction
         void Append(const char* sql);
         void PAppend(const char* sql, ...);
 
-        size_t GetSize() { return m_queries.size(); }
+        size_t GetSize() const { return m_queries.size(); }
 
     protected:
         void Cleanup();
@@ -48,7 +48,7 @@ typedef ACE_Refcounted_Auto_Ptr<Transaction, ACE_Null_Mutex> SQLTransaction;
 class TransactionTask : public SQLOperation
 {
     template <class T> friend class DatabaseWorkerPool;
-    template <class T> friend class DatabaseWorker;
+    friend class DatabaseWorker;
 
     public:
         TransactionTask(SQLTransaction trans) : m_trans(trans) {} ;

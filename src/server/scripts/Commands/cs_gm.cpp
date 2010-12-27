@@ -116,11 +116,11 @@ public:
         bool footer = false;
 
         ACE_GUARD_RETURN(ACE_Thread_Mutex, guard, *HashMapHolder<Player>::GetLock(), true);
-        HashMapHolder<Player>::MapType &m = sObjectAccessor.GetPlayers();
+        HashMapHolder<Player>::MapType &m = sObjectAccessor->GetPlayers();
         for (HashMapHolder<Player>::MapType::const_iterator itr = m.begin(); itr != m.end(); ++itr)
         {
             AccountTypes itr_sec = itr->second->GetSession()->GetSecurity();
-            if ((itr->second->isGameMaster() || (itr_sec > SEC_PLAYER && itr_sec <= AccountTypes(sWorld.getIntConfig(CONFIG_GM_LEVEL_IN_GM_LIST)))) &&
+            if ((itr->second->isGameMaster() || (itr_sec > SEC_PLAYER && itr_sec <= AccountTypes(sWorld->getIntConfig(CONFIG_GM_LEVEL_IN_GM_LIST)))) &&
                 (!handler->GetSession() || itr->second->IsVisibleGloballyFor(handler->GetSession()->GetPlayer())))
             {
                 if (first)
@@ -296,7 +296,7 @@ public:
             strCommand = command;
             normalizePlayerName(strCommand);
 
-            pTarget = sObjectMgr.GetPlayer(strCommand.c_str()); //get player by name
+            pTarget = sObjectMgr->GetPlayer(strCommand.c_str()); //get player by name
         }else 
             pTarget = handler->getSelectedPlayer();
 
@@ -331,7 +331,7 @@ public:
             strCommand = command;
             normalizePlayerName(strCommand);
 
-            pTarget = sObjectMgr.GetPlayer(strCommand.c_str()); //get player by name
+            pTarget = sObjectMgr->GetPlayer(strCommand.c_str()); //get player by name
         }else 
             pTarget = handler->getSelectedPlayer();
 
@@ -387,7 +387,7 @@ public:
         } else
         {
             normalizePlayerName(strCommand);
-            Player* pPlayer = sObjectMgr.GetPlayer(strCommand.c_str()); //get player by name
+            Player* pPlayer = sObjectMgr->GetPlayer(strCommand.c_str()); //get player by name
 
             if (!pPlayer)
                 handler->PSendSysMessage("Player doesn't exist");
@@ -422,7 +422,7 @@ public:
 
             normalizePlayerName(strCommand);
 
-            pPlayer = sObjectMgr.GetPlayer(strCommand.c_str()); //get player by name
+            pPlayer = sObjectMgr->GetPlayer(strCommand.c_str()); //get player by name
 
             if (pPlayer)
                 uiGUID = pPlayer->GetGUIDLow();
@@ -518,12 +518,12 @@ public:
 
         if (strCommand.compare("on") == 0)
         {
-            sWorld.setBoolConfig(CONFIG_ANTICHEAT_ENABLE,true);
+            sWorld->setBoolConfig(CONFIG_ANTICHEAT_ENABLE,true);
             handler->SendSysMessage("The AntiCheat-System is now: Enabled!");
         }
         else if (strCommand.compare("off") == 0)
         {
-            sWorld.setBoolConfig(CONFIG_ANTICHEAT_ENABLE,false);
+            sWorld->setBoolConfig(CONFIG_ANTICHEAT_ENABLE,false);
             handler->SendSysMessage("The AntiCheat-System is now: Disabled!");
         }
 

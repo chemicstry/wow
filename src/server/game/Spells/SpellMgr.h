@@ -21,6 +21,7 @@
 
 // For static or at-server-startup loaded spell data
 // For more high level function for sSpellStore data
+#include <ace/Singleton.h>
 
 #include "SharedDefines.h"
 #include "SpellAuraDefines.h"
@@ -309,17 +310,17 @@ inline bool IsPassiveSpellStackableWithRanks(SpellEntry const* spellProto)
 
 inline bool IsDeathPersistentSpell(SpellEntry const *spellInfo)
 {
-    return spellInfo->AttributesEx3 & SPELL_ATTR_EX3_DEATH_PERSISTENT;
+    return spellInfo->AttributesEx3 & SPELL_ATTR3_DEATH_PERSISTENT;
 }
 
 inline bool IsRequiringDeadTargetSpell(SpellEntry const *spellInfo)
 {
-    return spellInfo->AttributesEx3 & SPELL_ATTR_EX3_REQUIRE_DEAD_TARGET;
+    return spellInfo->AttributesEx3 & SPELL_ATTR3_REQUIRE_DEAD_TARGET;
 }
 
 inline bool IsAllowingDeadTargetSpell(SpellEntry const *spellInfo)
 {
-    return spellInfo->AttributesEx2 & SPELL_ATTR_EX2_ALLOW_DEAD_TARGET;
+    return spellInfo->AttributesEx2 & SPELL_ATTR2_ALLOW_DEAD_TARGET;
 }
 
 inline bool IsDeadTargetSpell(SpellEntry const *spellInfo)
@@ -329,7 +330,7 @@ inline bool IsDeadTargetSpell(SpellEntry const *spellInfo)
 
 inline bool IsNonCombatSpell(SpellEntry const *spellInfo)
 {
-    return (spellInfo->Attributes & SPELL_ATTR_CANT_USED_IN_COMBAT) != 0;
+    return (spellInfo->Attributes & SPELL_ATTR0_CANT_USED_IN_COMBAT) != 0;
 }
 
 bool IsPositiveSpell(uint32 spellId);
@@ -468,12 +469,12 @@ inline bool IsDispelSpell(SpellEntry const *spellInfo)
 
 inline bool isSpellBreakStealth(SpellEntry const* spellInfo)
 {
-    return !(spellInfo->AttributesEx & SPELL_ATTR_EX_NOT_BREAK_STEALTH);
+    return !(spellInfo->AttributesEx & SPELL_ATTR1_NOT_BREAK_STEALTH);
 }
 
 inline bool IsAutoRepeatRangedSpell(SpellEntry const* spellInfo)
 {
-    return spellInfo->AttributesEx2 & SPELL_ATTR_EX2_AUTOREPEAT_FLAG;
+    return spellInfo->AttributesEx2 & SPELL_ATTR2_AUTOREPEAT_FLAG;
 }
 
 inline bool IsRangedWeaponSpell(SpellEntry const* spellInfo)
@@ -487,12 +488,12 @@ SpellCastResult GetErrorAtShapeshiftedCast (SpellEntry const *spellInfo, uint32 
 
 inline bool IsChanneledSpell(SpellEntry const* spellInfo)
 {
-    return (spellInfo->AttributesEx & (SPELL_ATTR_EX_CHANNELED_1 | SPELL_ATTR_EX_CHANNELED_2));
+    return (spellInfo->AttributesEx & (SPELL_ATTR1_CHANNELED_1 | SPELL_ATTR1_CHANNELED_2));
 }
 
 inline bool NeedsComboPoints(SpellEntry const* spellInfo)
 {
-    return (spellInfo->AttributesEx & (SPELL_ATTR_EX_REQ_COMBO_POINTS1 | SPELL_ATTR_EX_REQ_COMBO_POINTS2));
+    return (spellInfo->AttributesEx & (SPELL_ATTR1_REQ_COMBO_POINTS1 | SPELL_ATTR1_REQ_COMBO_POINTS2));
 }
 
 inline SpellSchoolMask GetSpellSchoolMask(SpellEntry const* spellInfo)
@@ -568,22 +569,22 @@ enum ProcFlags
 
    PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_POS   = 0x00000400,    // 10 Done positive spell that has dmg class none
    PROC_FLAG_TAKEN_SPELL_NONE_DMG_CLASS_POS  = 0x00000800,    // 11 Taken positive spell that has dmg class none
- 
+
    PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_NEG   = 0x00001000,    // 12 Done negative spell that has dmg class none
    PROC_FLAG_TAKEN_SPELL_NONE_DMG_CLASS_NEG  = 0x00002000,    // 13 Taken negative spell that has dmg class none
- 
+
    PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS  = 0x00004000,    // 14 Done positive spell that has dmg class magic
    PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_POS = 0x00008000,    // 15 Taken positive spell that has dmg class magic
- 
+
    PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG  = 0x00010000,    // 16 Done negative spell that has dmg class magic
    PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG = 0x00020000,    // 17 Taken negative spell that has dmg class magic
- 
+
    PROC_FLAG_DONE_PERIODIC                   = 0x00040000,    // 18 Successful do periodic (damage / healing)
    PROC_FLAG_TAKEN_PERIODIC                  = 0x00080000,    // 19 Taken spell periodic (damage / healing)
- 
+
    PROC_FLAG_TAKEN_DAMAGE                    = 0x00100000,    // 20 Taken any damage
    PROC_FLAG_DONE_TRAP_ACTIVATION            = 0x00200000,    // 21 On trap activation (possibly needs name change to ON_GAMEOBJECT_CAST or USE)
- 
+
    PROC_FLAG_DONE_MAINHAND_ATTACK            = 0x00400000,    // 22 Done main-hand melee attacks (spell and autoattack)
    PROC_FLAG_DONE_OFFHAND_ATTACK             = 0x00800000,    // 23 Done off-hand melee attacks (spell and autoattack)
 
@@ -876,23 +877,31 @@ inline bool IsProfessionSkill(uint32 skill)
     return  IsPrimaryProfessionSkill(skill) || skill == SKILL_FISHING || skill == SKILL_COOKING || skill == SKILL_FIRST_AID;
 }
 
-#define SPELL_ATTR_CU_CONE_BACK         0x00000002
-#define SPELL_ATTR_CU_CONE_LINE         0x00000004
-#define SPELL_ATTR_CU_SHARE_DAMAGE      0x00000008
-#define SPELL_ATTR_CU_AURA_CC           0x00000040
-#define SPELL_ATTR_CU_DIRECT_DAMAGE     0x00000100
-#define SPELL_ATTR_CU_CHARGE            0x00000200
-#define SPELL_ATTR_CU_LINK_CAST         0x00000400
-#define SPELL_ATTR_CU_LINK_HIT          0x00000800
-#define SPELL_ATTR_CU_LINK_AURA         0x00001000
-#define SPELL_ATTR_CU_LINK_REMOVE       0x00002000
-#define SPELL_ATTR_CU_PICKPOCKET        0x00004000
-#define SPELL_ATTR_CU_EXCLUDE_SELF      0x00008000
-#define SPELL_ATTR_CU_NEGATIVE_EFF0     0x00010000
-#define SPELL_ATTR_CU_NEGATIVE_EFF1     0x00020000
-#define SPELL_ATTR_CU_NEGATIVE_EFF2     0x00040000
-#define SPELL_ATTR_CU_NEGATIVE          0x00070000
-#define SPELL_ATTR_CU_IGNORE_ARMOR      0x00080000
+enum SpellCustomAttributes
+{
+    SPELL_ATTR0_CU_ENCHANT_PROC     = 0x00000001,
+    SPELL_ATTR0_CU_CONE_BACK        = 0x00000002,
+    SPELL_ATTR0_CU_CONE_LINE        = 0x00000004,
+    SPELL_ATTR0_CU_SHARE_DAMAGE     = 0x00000008,
+    SPELL_ATTR0_CU_NONE1            = 0x00000010,   // UNUSED
+    SPELL_ATTR0_CU_NONE2            = 0x00000020,   // UNUSED
+    SPELL_ATTR0_CU_AURA_CC          = 0x00000040,
+    SPELL_ATTR0_CU_DIRECT_DAMAGE    = 0x00000100,
+    SPELL_ATTR0_CU_CHARGE           = 0x00000200,
+    SPELL_ATTR0_CU_LINK_CAST        = 0x00000400,
+    SPELL_ATTR0_CU_LINK_HIT         = 0x00000800,
+    SPELL_ATTR0_CU_LINK_AURA        = 0x00001000,
+    SPELL_ATTR0_CU_LINK_REMOVE      = 0x00002000,
+    SPELL_ATTR0_CU_PICKPOCKET       = 0x00004000,
+    SPELL_ATTR0_CU_EXCLUDE_SELF     = 0x00008000,
+    SPELL_ATTR0_CU_NEGATIVE_EFF0    = 0x00010000,
+    SPELL_ATTR0_CU_NEGATIVE_EFF1    = 0x00020000,
+    SPELL_ATTR0_CU_NEGATIVE_EFF2    = 0x00040000,
+    SPELL_ATTR0_CU_IGNORE_ARMOR     = 0x00080000,
+
+    SPELL_ATTR0_CU_NEGATIVE         = SPELL_ATTR0_CU_NEGATIVE_EFF0 | SPELL_ATTR0_CU_NEGATIVE_EFF1 | SPELL_ATTR0_CU_NEGATIVE_EFF2,
+};
+
 
 typedef std::vector<uint32> SpellCustomAttribute;
 typedef std::vector<bool> EnchantCustomAttribute;
@@ -906,8 +915,7 @@ inline bool IsProfessionOrRidingSkill(uint32 skill)
 
 class SpellMgr
 {
-    // Constructors
-    public:
+        friend class ACE_Singleton<SpellMgr, ACE_Null_Mutex>;
         SpellMgr();
         ~SpellMgr();
 
@@ -1062,7 +1070,7 @@ class SpellMgr
             uint32 mode = uint32(Caster->GetMap()->GetSpawnMode());
             if (mode >= MAX_DIFFICULTY)
             {
-                sLog.outError("GetSpellForDifficultyFromSpell: Incorrect Difficulty for spell %u.", spell->Id);
+                sLog->outError("GetSpellForDifficultyFromSpell: Incorrect Difficulty for spell %u.", spell->Id);
                 return spell;//return source spell
             }
             uint32 SpellDiffId = GetSpellDifficultyId(spell->Id);
@@ -1072,27 +1080,27 @@ class SpellMgr
             SpellDifficultyEntry const *SpellDiff = sSpellDifficultyStore.LookupEntry(SpellDiffId);
             if (!SpellDiff)
             {
-                sLog.outDebug("GetSpellForDifficultyFromSpell: SpellDifficultyEntry not found for spell %u. This Should never happen.", spell->Id);
+                sLog->outDebug("GetSpellForDifficultyFromSpell: SpellDifficultyEntry not found for spell %u. This Should never happen.", spell->Id);
                 return spell;//return source spell
             }
             if (SpellDiff->SpellID[mode] <= 0 && mode > DUNGEON_DIFFICULTY_HEROIC)
             {
                 uint8 baseMode = mode;
                 mode -= 2;
-                sLog.outDebug("GetSpellForDifficultyFromSpell: spell %u mode %u spell is NULL, using mode %u", spell->Id, baseMode, mode);
+                sLog->outDebug("GetSpellForDifficultyFromSpell: spell %u mode %u spell is NULL, using mode %u", spell->Id, baseMode, mode);
             }
             if (SpellDiff->SpellID[mode] <= 0)
             {
-                sLog.outErrorDb("GetSpellForDifficultyFromSpell: spell %u mode %u spell is 0. Check spelldifficulty_dbc!", spell->Id, mode);
+                sLog->outErrorDb("GetSpellForDifficultyFromSpell: spell %u mode %u spell is 0. Check spelldifficulty_dbc!", spell->Id, mode);
                 return spell;
             }
             SpellEntry const*  newSpell = sSpellStore.LookupEntry(SpellDiff->SpellID[mode]);
             if (!newSpell)
             {
-                sLog.outDebug("GetSpellForDifficultyFromSpell: spell %u not found in SpellStore. Check spelldifficulty_dbc!", SpellDiff->SpellID[mode]);
+                sLog->outDebug("GetSpellForDifficultyFromSpell: spell %u not found in SpellStore. Check spelldifficulty_dbc!", SpellDiff->SpellID[mode]);
                 return spell;
             }
-            sLog.outDebug("GetSpellForDifficultyFromSpell: spellid for spell %u in mode %u is %u ", spell->Id, mode, newSpell->Id);
+            sLog->outDebug("GetSpellForDifficultyFromSpell: spellid for spell %u in mode %u is %u ", spell->Id, mode, newSpell->Id);
             return newSpell;
         }
 
@@ -1208,7 +1216,7 @@ class SpellMgr
 
         bool IsRankSpellDueToSpell(SpellEntry const *spellInfo_1,uint32 spellId_2) const;
         static bool canStackSpellRanks(SpellEntry const *spellInfo);
-        bool CanAurasStack(SpellEntry const *spellInfo_1, SpellEntry const *spellInfo_2, bool sameCaster) const;
+        bool CanAurasStack(Aura const *aura1, Aura const *aura2, bool sameCaster) const;
 
         SpellEntry const* SelectAuraRankForPlayerLevel(SpellEntry const* spellInfo, uint32 playerLevel) const;
 
@@ -1379,7 +1387,6 @@ class SpellMgr
 
     // Modifiers
     public:
-        static SpellMgr& Instance();
 
         // Loading data at server startup
         void LoadSpellRanks();
@@ -1435,5 +1442,6 @@ class SpellMgr
         SpellDifficultySearcherMap mSpellDifficultySearcherMap;
 };
 
-#define sSpellMgr SpellMgr::Instance()
+#define sSpellMgr ACE_Singleton<SpellMgr, ACE_Null_Mutex>::instance()
+
 #endif

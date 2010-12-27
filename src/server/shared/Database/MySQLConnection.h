@@ -16,16 +16,23 @@
  */
 
 #include <ace/Activation_Queue.h>
+
 #include "DatabaseWorkerPool.h"
 #include "Util.h"
 
 #ifndef _MYSQLCONNECTION_H
 #define _MYSQLCONNECTION_H
 
-template <class T> class DatabaseWorker;
+class DatabaseWorker;
 class PreparedStatement;
 class MySQLPreparedStatement;
 class PingOperation;
+
+enum ConnectionFlags
+{
+    CONNECTION_ASYNC = 0x1,
+    CONNECTION_SYNCH = 0x2,
+};
 
 struct MySQLConnectionInfo
 {
@@ -56,11 +63,11 @@ struct MySQLConnectionInfo
 class MySQLConnection
 {
     template <class T> friend class DatabaseWorkerPool;
-    template <class T> friend class DatabaseWorker;
     friend class PingOperation;
 
     public:
-        MySQLConnection(MySQLConnectionInfo& connInfo);
+        MySQLConnection(MySQLConnectionInfo& connInfo);                               //! Constructor for synchroneous connections.
+        MySQLConnection(ACE_Activation_Queue* queue, MySQLConnectionInfo& connInfo);  //! Constructor for asynchroneous connections.
         ~MySQLConnection();
 
         virtual bool Open();
@@ -82,11 +89,6 @@ class MySQLConnection
         void Ping() { mysql_ping(m_Mysql); }
 
     protected:
-        MYSQL* GetHandle()  { return m_Mysql; }
-        MySQLPreparedStatement* GetPreparedStatement(uint32 index);
-        void PrepareStatement(uint32 index, const char* sql);
-        std::vector<MySQLPreparedStatement*> m_stmts;       //! PreparedStatements storage
-
         bool LockIfReady()
         {
             /// Tries to acquire lock. If lock is acquired by another thread
@@ -100,10 +102,23 @@ class MySQLConnection
             m_Mutex.release();
         }
 
+        MYSQL* GetHandle()  { return m_Mysql; }
+        MySQLPreparedStatement* GetPreparedStatement(uint32 index);
+        void PrepareStatement(uint32 index, const char* sql, bool async = false);
+
+    protected:
+        std::vector<MySQLPreparedStatement*> m_stmts;       //! PreparedStatements storage
+        bool                  m_reconnecting;               //! Are we reconnecting?
+        
+    private:
+        bool _HandleMySQLErrno(uint32 errNo);
+
     private:
         ACE_Activation_Queue* m_queue;                      //! Queue shared with other asynchroneous connections.
+        DatabaseWorker*       m_worker;                     //! Core worker task.
         MYSQL *               m_Mysql;                      //! MySQL Handle.
-        MySQLConnectionInfo& m_connectionInfo;        //! Connection info (used for logging)
+        MySQLConnectionInfo&  m_connectionInfo;             //! Connection info (used for logging)
+        ConnectionFlags       m_connectionFlags;            //! Connection flags (for preparing relevant statements)
         ACE_Thread_Mutex      m_Mutex;
 };
 

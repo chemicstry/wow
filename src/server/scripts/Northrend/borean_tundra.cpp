@@ -1328,7 +1328,7 @@ public:
             if (uiType != POINT_MOTION_TYPE)
                 return;
 
-            me->addUnitState(UNIT_STAT_STUNNED);
+            me->AddUnitState(UNIT_STAT_STUNNED);
             me->CastSpell(me, SPELL_STUN, true);
             if (me->isSummon())
                 if (Unit* pSummoner = CAST_SUM(me)->GetSummoner())
@@ -1445,7 +1445,7 @@ public:
             DoScriptText(SAY_LERYSSA_1, pLeryssa);
             pArlos->Kill(pArlos, false);
             pLeryssa->RemoveAura(SPELL_STUN);
-            pLeryssa->clearUnitState(UNIT_STAT_STUNNED);
+            pLeryssa->ClearUnitState(UNIT_STAT_STUNNED);
             pLeryssa->RemoveUnitMovementFlag(MOVEMENTFLAG_WALKING);
             pLeryssa->GetMotionMaster()->MovePoint(0,3722.114502f, 3564.201660f, 477.441437f);
 
@@ -1495,7 +1495,7 @@ public:
                 if (Creature* pTalbot = me->FindNearestCreature(NPC_PRINCE_VALANAR, 50.0f, true))
                     CAST_AI(npc_counselor_talbot::npc_counselor_talbotAI, pTalbot->AI())->bCheck = true;
 
-                me->addUnitState(UNIT_STAT_STUNNED);
+                me->AddUnitState(UNIT_STAT_STUNNED);
                 me->CastSpell(me, SPELL_STUN, true);
 
                 if (me->isSummon())
@@ -2130,7 +2130,7 @@ public:
                 (me->HasAura(SPELL_AURA_NOTSOBIG_1) || me->HasAura(SPELL_AURA_NOTSOBIG_2) ||
                 me->HasAura(SPELL_AURA_NOTSOBIG_3) || me->HasAura(SPELL_AURA_NOTSOBIG_4)))
             {
-                Quest const* qInfo = sObjectMgr.GetQuestTemplate(QUEST_YOU_RE_NOT_SO_BIG_NOW);
+                Quest const* qInfo = sObjectMgr->GetQuestTemplate(QUEST_YOU_RE_NOT_SO_BIG_NOW);
                 if (qInfo)
                     CAST_PLR(pKiller)->KilledMonsterCredit(qInfo->ReqCreatureOrGOId[0],0);
             }
@@ -2375,9 +2375,9 @@ enum eHiddenCultist
     SAY_HIDDEN_CULTIST_4                        = -1571047
 };
 
-#define GOSSIP_ITEM_TOM_HEGGER "What do you know about the Cult of the Damned?"
-#define GOSSIP_ITEM_GUARD_MITCHELLS "How long have you worked for the Cult of the Damned?"
-#define GOSSIP_ITEM_SALTY_JOHN_THORPE "I have a reason to believe you're involved in the cultist activity"
+const char* GOSSIP_ITEM_TOM_HEGGER = "What do you know about the Cult of the Damned?";
+const char* GOSSIP_ITEM_GUARD_MITCHELLS = "How long have you worked for the Cult of the Damned?";
+const char* GOSSIP_ITEM_SALTY_JOHN_THORPE = "I have a reason to believe you're involved in the cultist activity";
 
 class npc_hidden_cultist : public CreatureScript
 {
@@ -2418,11 +2418,11 @@ public:
             me->RestoreFaction();
         }
 
-        void DoAction(const int32 iParam)
+        void DoAction(const int32 /*iParam*/)
         {
             me->StopMoving();
-            me->SetUInt32Value(UNIT_NPC_FLAGS,0);
-            if (Player* pPlayer = me->GetPlayer(*me,uiPlayerGUID))
+            me->SetUInt32Value(UNIT_NPC_FLAGS, 0);
+            if (Player* pPlayer = me->GetPlayer(*me, uiPlayerGUID))
             {
                 me->SetInFront(pPlayer);
                 me->SendMovementFlagUpdate();
@@ -2431,7 +2431,7 @@ public:
             uiEventPhase = 1;
         }
 
-        void SetGUID(const uint64 &uiGuid, int32 iId)
+        void SetGUID(const uint64 &uiGuid, int32 /*iId*/)
         {
             uiPlayerGUID = uiGuid;
         }
@@ -2497,7 +2497,7 @@ public:
                             uiEventPhase = 0;
                         }
                         break;
-                }                       
+                }
             }else uiEventTimer -= uiDiff;
 
             if (!UpdateVictim())
@@ -2515,7 +2515,7 @@ public:
     bool OnGossipHello(Player* pPlayer, Creature* pCreature)
     {
         uint32 uiGossipText = 0;
-        char* charGossipItem = "";
+        const char* charGossipItem;
 
         switch(pCreature->GetEntry())
         {
@@ -2532,6 +2532,7 @@ public:
                 charGossipItem = GOSSIP_ITEM_GUARD_MITCHELLS;
                 break;
             default:
+                charGossipItem = "";
                 return false;
         }
 
@@ -2546,7 +2547,7 @@ public:
         return true;
     }
 
-    bool OnGossipSelect(Player* pPlayer, Creature* pCreature, uint32 uiSender, uint32 uiAction)
+    bool OnGossipSelect(Player* pPlayer, Creature* pCreature, uint32 /*uiSender*/, uint32 uiAction)
     {
         pPlayer->PlayerTalkClass->ClearMenus();
 
@@ -2559,12 +2560,12 @@ public:
 
         if (uiAction == GOSSIP_ACTION_TRADE)
             pPlayer->SEND_VENDORLIST(pCreature->GetGUID());
-    
+
         return true;
     }
 
 };
-    
+
 void AddSC_borean_tundra()
 {
     new npc_sinkhole_kill_credit;

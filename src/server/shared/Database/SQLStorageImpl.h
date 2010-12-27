@@ -16,7 +16,6 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ProgressBar.h"
 #include "Log.h"
 #include "DBCFileLoader.h"
 
@@ -125,7 +124,7 @@ void SQLStorageLoaderBase<T>::Load(SQLStorage &store)
     QueryResult result  = WorldDatabase.PQuery("SELECT MAX(%s) FROM %s", store.entry_field, store.table);
     if(!result)
     {
-        sLog.outError("Error loading %s table (not exist?)\n", store.table);
+        sLog->outError("Error loading %s table (not exist?)\n", store.table);
         exit(1);                                            // Stop server at loading non exited table or not accessable table
     }
 
@@ -144,7 +143,7 @@ void SQLStorageLoaderBase<T>::Load(SQLStorage &store)
 
     if(!result)
     {
-        sLog.outError("%s table is empty!\n", store.table);
+        sLog->outError("%s table is empty!\n", store.table);
         store.RecordCount = 0;
         return;
     }
@@ -155,7 +154,7 @@ void SQLStorageLoaderBase<T>::Load(SQLStorage &store)
     if(store.iNumFields != result->GetFieldCount())
     {
         store.RecordCount = 0;
-        sLog.outError("Error in %s table, probably sql file format was updated (there should be %d fields in sql).\n", store.table, store.iNumFields);
+        sLog->outError("Error in %s table, probably sql file format was updated (there should be %d fields in sql).\n", store.table, store.iNumFields);
         exit(1);                                            // Stop server at loading broken or non-compatible table.
     }
 
@@ -177,11 +176,9 @@ void SQLStorageLoaderBase<T>::Load(SQLStorage &store)
 
     char * _data= new char[store.RecordCount *recordsize];
     uint32 count=0;
-    barGoLink bar( store.RecordCount );
     do
     {
         fields = result->Fetch();
-        bar.step();
         char *p=(char*)&_data[recordsize*count];
         newIndex[fields[0].GetUInt32()]=p;
 

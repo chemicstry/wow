@@ -22,7 +22,6 @@
 
 #include "WeatherMgr.h"
 #include "Log.h"
-#include "ProgressBar.h"
 #include "ObjectMgr.h"
 
 WeatherMgr::~WeatherMgr()
@@ -76,6 +75,8 @@ Weather* WeatherMgr::AddWeather(uint32 zone_id)
 
 void WeatherMgr::LoadWeatherData()
 {
+    uint32 oldMSTime = getMSTime();
+
     uint32 count = 0;
 
     //                                                0     1                   2                   3                    4                   5                   6                    7                 8                 9                  10                  11                  12                                13
@@ -83,21 +84,15 @@ void WeatherMgr::LoadWeatherData()
 
     if (!result)
     {
-        barGoLink bar(1);
-
-        bar.step();
-
-        sLog.outString();
-        sLog.outErrorDb(">> Loaded 0 weather definitions. DB table `game_weather` is empty.");
+        sLog->outErrorDb(">> Loaded 0 weather definitions. DB table `game_weather` is empty.");
+        sLog->outString();
         return;
     }
 
-    barGoLink bar(result->GetRowCount());
 
     do
     {
         Field *fields = result->Fetch();
-        bar.step();
 
         uint32 zone_id = fields[0].GetUInt32();
 
@@ -112,30 +107,30 @@ void WeatherMgr::LoadWeatherData()
             if (wzc.data[season].rainChance > 100)
             {
                 wzc.data[season].rainChance = 25;
-                sLog.outErrorDb("Weather for zone %u season %u has wrong rain chance > 100%%",zone_id,season);
+                sLog->outErrorDb("Weather for zone %u season %u has wrong rain chance > 100%%",zone_id,season);
             }
 
             if (wzc.data[season].snowChance > 100)
             {
                 wzc.data[season].snowChance = 25;
-                sLog.outErrorDb("Weather for zone %u season %u has wrong snow chance > 100%%",zone_id,season);
+                sLog->outErrorDb("Weather for zone %u season %u has wrong snow chance > 100%%",zone_id,season);
             }
 
             if (wzc.data[season].stormChance > 100)
             {
                 wzc.data[season].stormChance = 25;
-                sLog.outErrorDb("Weather for zone %u season %u has wrong storm chance > 100%%",zone_id,season);
+                sLog->outErrorDb("Weather for zone %u season %u has wrong storm chance > 100%%",zone_id,season);
             }
         }
 
-        wzc.ScriptId = sObjectMgr.GetScriptId(fields[13].GetCString());
+        wzc.ScriptId = sObjectMgr->GetScriptId(fields[13].GetCString());
 
         ++count;
     }
     while (result->NextRow());
 
-    sLog.outString();
-    sLog.outString(">> Loaded %u weather definitions", count);
+    sLog->outString(">> Loaded %u weather definitions in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
+    sLog->outString();
 }
 
 void WeatherMgr::Update(uint32 diff)

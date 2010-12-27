@@ -90,7 +90,7 @@ void WaypointMovementGenerator<Creature>::InitTraveller(Creature &unit, const Wa
     if (unit.canFly())
         unit.SetByteFlag(UNIT_FIELD_BYTES_1, 3, 0x02);
 
-    unit.addUnitState(UNIT_STAT_ROAMING);
+    unit.AddUnitState(UNIT_STAT_ROAMING);
 }
 
 template<>
@@ -143,7 +143,7 @@ WaypointMovementGenerator<Creature>::Update(Creature &unit, const uint32 &diff)
 
     // Waypoint movement can be switched on/off
     // This is quite handy for escort quests and other stuff
-    if (unit.hasUnitState(UNIT_STAT_ROOT | UNIT_STAT_STUNNED | UNIT_STAT_DISTRACTED))
+    if (unit.HasUnitState(UNIT_STAT_ROOT | UNIT_STAT_STUNNED | UNIT_STAT_DISTRACTED))
         return true;
 
     // Clear the generator if the path doesn't exist
@@ -205,7 +205,7 @@ WaypointMovementGenerator<Creature>::Update(Creature &unit, const uint32 &diff)
             i_destinationHolder.ResetTravelTime();
             MovementInform(unit);
             unit.UpdateWaypointID(i_currentNode);
-            unit.clearUnitState(UNIT_STAT_ROAMING);
+            unit.ClearUnitState(UNIT_STAT_ROAMING);
             unit.Relocate(node->x, node->y, node->z);
         }
     }
@@ -248,7 +248,7 @@ uint32 FlightPathMovementGenerator::GetPathAtMapEnd() const
 void FlightPathMovementGenerator::Initialize(Player &player)
 {
     player.getHostileRefManager().setOnlineOfflineState(false);
-    player.addUnitState(UNIT_STAT_IN_FLIGHT);
+    player.AddUnitState(UNIT_STAT_IN_FLIGHT);
     player.SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_TAXI_FLIGHT);
     Traveller<Player> traveller(player);
     // do not send movement, it was sent already
@@ -260,7 +260,7 @@ void FlightPathMovementGenerator::Initialize(Player &player)
 
 void FlightPathMovementGenerator::Finalize(Player & player)
 {
-    player.clearUnitState(UNIT_STAT_IN_FLIGHT);
+    player.ClearUnitState(UNIT_STAT_IN_FLIGHT);
 
     float x = 0;
     float y = 0;
@@ -288,7 +288,7 @@ bool FlightPathMovementGenerator::Update(Player &player, const uint32 &diff)
                 {
                     DoEventIfAny(player,(*i_path)[i_currentNode], true);
 
-                    sLog.outStaticDebug("loading node %u for player %s", i_currentNode, player.GetName());
+                    sLog->outStaticDebug("loading node %u for player %s", i_currentNode, player.GetName());
                     if ((*i_path)[i_currentNode].mapid == curMap)
                     {
                         // do not send movement, it was sent already
@@ -345,23 +345,23 @@ void FlightPathMovementGenerator::InitEndGridInfo()
 void FlightPathMovementGenerator::PreloadEndGrid()
 {
     // used to preload the final grid where the flightmaster is
-    Map *endMap = sMapMgr.FindMap(m_endMapId);
+    Map *endMap = sMapMgr->FindMap(m_endMapId);
 
     // Load the grid
     if (endMap)
     {
-        sLog.outDetail("Preloading flightmaster at grid (%f, %f) for map %u", m_endGridX, m_endGridY, m_endMapId);
+        sLog->outDetail("Preloading flightmaster at grid (%f, %f) for map %u", m_endGridX, m_endGridY, m_endMapId);
         endMap->LoadGrid(m_endGridX, m_endGridY);
     }
     else
-        sLog.outDetail("Unable to determine map to preload flightmaster grid");
+        sLog->outDetail("Unable to determine map to preload flightmaster grid");
 }
 
 void FlightPathMovementGenerator::DoEventIfAny(Player& player, TaxiPathNodeEntry const& node, bool departure)
 {
     if (uint32 eventid = departure ? node.departureEventID : node.arrivalEventID)
     {
-        sLog.outDebug("Taxi %s event %u of node %u of path %u for player %s", departure ? "departure" : "arrival", eventid, node.index, node.path, player.GetName());
+        sLog->outDebug("Taxi %s event %u of node %u of path %u for player %s", departure ? "departure" : "arrival", eventid, node.index, node.path, player.GetName());
         player.GetMap()->ScriptsStart(sEventScripts, eventid, &player, &player);
     }
 }

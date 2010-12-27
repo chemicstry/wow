@@ -20,6 +20,7 @@
 #define _THREATMANAGER
 
 #include "Common.h"
+#include "Util.h"
 #include "SharedDefines.h"
 #include "LinkedReference/Reference.h"
 #include "UnitEvents.h"
@@ -58,8 +59,8 @@ class HostileReference : public Reference<Unit, ThreatManager>
         void addThreatPercent(int32 pPercent)
         {
             float tmpThreat = iThreat;
-            tmpThreat = tmpThreat * (pPercent+100.0f) / 100.0f;
-            addThreat(tmpThreat-iThreat);
+            AddPctN(tmpThreat, pPercent);
+            addThreat(tmpThreat - iThreat);
         }
 
         float getThreat() const { return iThreat; }

@@ -42,13 +42,54 @@
 #include "ScriptMgr.h"
 #include "Transport.h"
 
+bool MapSessionFilter::Process(WorldPacket * packet)
+{
+    OpcodeHandler const& opHandle = opcodeTable[packet->GetOpcode()];
+    //let's check if our opcode can be really processed in Map::Update()
+    if(opHandle.packetProcessing == PROCESS_INPLACE)
+        return true;
+
+    //we do not process thread-unsafe packets
+    if(opHandle.packetProcessing == PROCESS_THREADUNSAFE)
+        return false;
+
+    Player * plr = m_pSession->GetPlayer();
+    if(!plr)
+        return false;
+
+    //in Map::Update() we do not process packets where player is not in world!
+    return plr->IsInWorld();
+}
+
+//we should process ALL packets when player is not in world/logged in
+//OR packet handler is not thread-safe!
+bool WorldSessionFilter::Process(WorldPacket* packet)
+{
+    OpcodeHandler const& opHandle = opcodeTable[packet->GetOpcode()];
+    //check if packet handler is supposed to be safe
+    if(opHandle.packetProcessing == PROCESS_INPLACE)
+        return true;
+
+    //thread-unsafe packets should be processed in World::UpdateSessions()
+    if(opHandle.packetProcessing == PROCESS_THREADUNSAFE)
+        return true;
+
+    //no player attached? -> our client! ^^
+    Player * plr = m_pSession->GetPlayer();
+    if(!plr)
+        return true;
+
+    //lets process all packets for non-in-the-world player
+    return (plr->IsInWorld() == false);
+}
+
 /// WorldSession constructor
 WorldSession::WorldSession(uint32 id, WorldSocket *sock, AccountTypes sec, uint8 expansion, time_t mute_time, LocaleConstant locale, uint32 recruiter):
 m_muteTime(mute_time), m_timeOutTime(0), _player(NULL), m_Socket(sock),
 _security(sec), _accountId(id), m_expansion(expansion), _logoutTime(0),
 m_inQueue(false), m_playerLoading(false), m_playerLogout(false),
 m_playerRecentlyLogout(false), m_playerSave(false),
-m_sessionDbcLocale(sWorld.GetAvailableDbcLocale(locale)),
+m_sessionDbcLocale(sWorld->GetAvailableDbcLocale(locale)),
 m_sessionDbLocaleIndex(locale),
 m_latency(0), m_TutorialsChanged(false), recruiterId(recruiter)
 {
@@ -86,7 +127,7 @@ WorldSession::~WorldSession()
 
 void WorldSession::SizeError(WorldPacket const& packet, uint32 size) const
 {
-    sLog.outError("Client (account %u) send packet %s (%u) with size " SIZEFMTD " but expected %u (attempt crash server?), skipped",
+    sLog->outError("Client (account %u) send packet %s (%u) with size " SIZEFMTD " but expected %u (attempt crash server?), skipped",
         GetAccountId(),LookupOpcodeName(packet.GetOpcode()),packet.GetOpcode(),packet.size(),size);
 }
 
@@ -128,8 +169,8 @@ void WorldSession::SendPacket(WorldPacket const* packet)
     {
         uint64 minTime = uint64(cur_time - lastTime);
         uint64 fullTime = uint64(lastTime - firstTime);
-        sLog.outDetail("Send all time packets count: " UI64FMTD " bytes: " UI64FMTD " avr.count/sec: %f avr.bytes/sec: %f time: %u",sendPacketCount,sendPacketBytes,float(sendPacketCount)/fullTime,float(sendPacketBytes)/fullTime,uint32(fullTime));
-        sLog.outDetail("Send last min packets count: " UI64FMTD " bytes: " UI64FMTD " avr.count/sec: %f avr.bytes/sec: %f",sendLastPacketCount,sendLastPacketBytes,float(sendLastPacketCount)/minTime,float(sendLastPacketBytes)/minTime);
+        sLog->outDetail("Send all time packets count: " UI64FMTD " bytes: " UI64FMTD " avr.count/sec: %f avr.bytes/sec: %f time: %u",sendPacketCount,sendPacketBytes,float(sendPacketCount)/fullTime,float(sendPacketBytes)/fullTime,uint32(fullTime));
+        sLog->outDetail("Send last min packets count: " UI64FMTD " bytes: " UI64FMTD " avr.count/sec: %f avr.bytes/sec: %f",sendLastPacketCount,sendLastPacketBytes,float(sendLastPacketCount)/minTime,float(sendLastPacketBytes)/minTime);
 
         lastTime = cur_time;
         sendLastPacketCount = 1;
@@ -151,7 +192,7 @@ void WorldSession::QueuePacket(WorldPacket* new_packet)
 /// Logging helper for unexpected opcodes
 void WorldSession::LogUnexpectedOpcode(WorldPacket* packet, const char *reason)
 {
-    sLog.outError("SESSION: received unexpected opcode %s (0x%.4X) %s",
+    sLog->outError("SESSION: received unexpected opcode %s (0x%.4X) %s",
         LookupOpcodeName(packet->GetOpcode()),
         packet->GetOpcode(),
         reason);
@@ -160,7 +201,7 @@ void WorldSession::LogUnexpectedOpcode(WorldPacket* packet, const char *reason)
 /// Logging helper for unexpected opcodes
 void WorldSession::LogUnprocessedTail(WorldPacket *packet)
 {
-    sLog.outError("SESSION: opcode %s (0x%.4X) have unprocessed tail data (read stop at %u from %u)",
+    sLog->outError("SESSION: opcode %s (0x%.4X) have unprocessed tail data (read stop at %u from %u)",
         LookupOpcodeName(packet->GetOpcode()),
         packet->GetOpcode(),
         uint32(packet->rpos()), uint32(packet->wpos()));
@@ -169,7 +210,7 @@ void WorldSession::LogUnprocessedTail(WorldPacket *packet)
 }
 
 /// Update the WorldSession (triggered by World update)
-bool WorldSession::Update(uint32 diff)
+bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 {
     /// Update Timeout timer.
     UpdateTimeOutTime(diff);
@@ -180,23 +221,23 @@ bool WorldSession::Update(uint32 diff)
         m_Socket->CloseSocket();
 
     ///- Retrieve packets from the receive queue and call the appropriate handlers
-    /// not proccess packets if socket already closed
-    WorldPacket* packet;
-    while (m_Socket && !m_Socket->IsClosed() && _recvQueue.next(packet))
+    /// not process packets if socket already closed
+    WorldPacket* packet = NULL;
+    while (m_Socket && !m_Socket->IsClosed() && _recvQueue.next(packet, updater))
     {
         /*#if 1
-        sLog.outError("MOEP: %s (0x%.4X)",
+        sLog->outError("MOEP: %s (0x%.4X)",
                         LookupOpcodeName(packet->GetOpcode()),
                         packet->GetOpcode());
         #endif*/
 
         if (packet->GetOpcode() >= NUM_MSG_TYPES)
         {
-            sLog.outError("SESSION: received non-existed opcode %s (0x%.4X)",
+            sLog->outError("SESSION: received non-existed opcode %s (0x%.4X)",
                 LookupOpcodeName(packet->GetOpcode()),
                 packet->GetOpcode());
 
-            sScriptMgr.OnUnknownPacketReceive(m_Socket, WorldPacket(*packet));
+            sScriptMgr->OnUnknownPacketReceive(m_Socket, WorldPacket(*packet));
         }
         else
         {
@@ -214,9 +255,9 @@ bool WorldSession::Update(uint32 diff)
                         }
                         else if (_player->IsInWorld())
                         {
-                            sScriptMgr.OnPacketReceive(m_Socket, WorldPacket(*packet));
+                            sScriptMgr->OnPacketReceive(m_Socket, WorldPacket(*packet));
                             (this->*opHandle.handler)(*packet);
-                            if (sLog.IsOutDebug() && packet->rpos() < packet->wpos())
+                            if (sLog->IsOutDebug() && packet->rpos() < packet->wpos())
                                 LogUnprocessedTail(packet);
                         }
                         // lag can cause STATUS_LOGGEDIN opcodes to arrive after the player started a transfer
@@ -227,9 +268,9 @@ bool WorldSession::Update(uint32 diff)
                         else
                         {
                             // not expected _player or must checked in packet hanlder
-                            sScriptMgr.OnPacketReceive(m_Socket, WorldPacket(*packet));
+                            sScriptMgr->OnPacketReceive(m_Socket, WorldPacket(*packet));
                             (this->*opHandle.handler)(*packet);
-                            if (sLog.IsOutDebug() && packet->rpos() < packet->wpos())
+                            if (sLog->IsOutDebug() && packet->rpos() < packet->wpos())
                                 LogUnprocessedTail(packet);
                         }
                         break;
@@ -240,9 +281,9 @@ bool WorldSession::Update(uint32 diff)
                             LogUnexpectedOpcode(packet, "the player is still in world");
                         else
                         {
-                            sScriptMgr.OnPacketReceive(m_Socket, WorldPacket(*packet));
+                            sScriptMgr->OnPacketReceive(m_Socket, WorldPacket(*packet));
                             (this->*opHandle.handler)(*packet);
-                            if (sLog.IsOutDebug() && packet->rpos() < packet->wpos())
+                            if (sLog->IsOutDebug() && packet->rpos() < packet->wpos())
                                 LogUnprocessedTail(packet);
                         }
                         break;
@@ -259,18 +300,18 @@ bool WorldSession::Update(uint32 diff)
                         if (packet->GetOpcode() != CMSG_SET_ACTIVE_VOICE_CHANNEL)
                             m_playerRecentlyLogout = false;
 
-                        sScriptMgr.OnPacketReceive(m_Socket, WorldPacket(*packet));
+                        sScriptMgr->OnPacketReceive(m_Socket, WorldPacket(*packet));
                         (this->*opHandle.handler)(*packet);
-                        if (sLog.IsOutDebug() && packet->rpos() < packet->wpos())
+                        if (sLog->IsOutDebug() && packet->rpos() < packet->wpos())
                             LogUnprocessedTail(packet);
                         break;
                     case STATUS_NEVER:
-                        sLog.outError("SESSION: received not allowed opcode %s (0x%.4X)",
+                        sLog->outError("SESSION: received not allowed opcode %s (0x%.4X)",
                             LookupOpcodeName(packet->GetOpcode()),
                             packet->GetOpcode());
                         break;
                     case STATUS_UNHANDLED:
-                        sLog.outDebug("SESSION: received not handled opcode %s (0x%.4X)",
+                        sLog->outDebug("SESSION: received not handled opcode %s (0x%.4X)",
                             LookupOpcodeName(packet->GetOpcode()),
                             packet->GetOpcode());
                         break;
@@ -278,11 +319,11 @@ bool WorldSession::Update(uint32 diff)
             }
             catch(ByteBufferException &)
             {
-                sLog.outError("WorldSession::Update ByteBufferException occured while parsing a packet (opcode: %u) from client %s, accountid=%i. Skipped packet.",
+                sLog->outError("WorldSession::Update ByteBufferException occured while parsing a packet (opcode: %u) from client %s, accountid=%i. Skipped packet.",
                         packet->GetOpcode(), GetRemoteAddress().c_str(), GetAccountId());
-                if (sLog.IsOutDebug())
+                if (sLog->IsOutDebug())
                 {
-                    sLog.outDebug("Dumping error causing packet:");
+                    sLog->outDebug("Dumping error causing packet:");
                     packet->hexlike();
                 }
             }
@@ -293,6 +334,10 @@ bool WorldSession::Update(uint32 diff)
 
     ProcessQueryCallbacks();
 
+    //check if we are safe to proceed with logout
+    //logout procedure should happen only in World::UpdateSessions() method!!!
+    if(updater.ProcessLogout())
+    {
     time_t currTime = time(NULL);
     ///- If necessary, log the player out
     if (ShouldLogOut(currTime) && !m_playerLoading)
@@ -307,7 +352,7 @@ bool WorldSession::Update(uint32 diff)
 
     if (!m_Socket)
         return false;                                       //Will remove this session from the world session map
-
+    }
     return true;
 }
 
@@ -387,14 +432,14 @@ void WorldSession::LogoutPlayer(bool Save)
         if (!_player->m_InstanceValid && !_player->isGameMaster())
             _player->TeleportTo(_player->m_homebindMapId, _player->m_homebindX, _player->m_homebindY, _player->m_homebindZ, _player->GetOrientation());
 
-        sOutdoorPvPMgr.HandlePlayerLeaveZone(_player,_player->GetZoneId());
+        sOutdoorPvPMgr->HandlePlayerLeaveZone(_player,_player->GetZoneId());
 
         for (int i=0; i < PLAYER_MAX_BATTLEGROUND_QUEUES; ++i)
         {
             if (BattlegroundQueueTypeId bgQueueTypeId = _player->GetBattlegroundQueueTypeId(i))
             {
                 _player->RemoveBattlegroundQueueId(bgQueueTypeId);
-                sBattlegroundMgr.m_BattlegroundQueues[ bgQueueTypeId ].RemovePlayer(_player->GetGUID(), true);
+                sBattlegroundMgr->m_BattlegroundQueues[ bgQueueTypeId ].RemovePlayer(_player->GetGUID(), true);
             }
         }
 
@@ -404,7 +449,7 @@ void WorldSession::LogoutPlayer(bool Save)
             HandleMoveWorldportAckOpcode();
 
         ///- If the player is in a guild, update the guild roster and broadcast a logout message to other guild members
-        if (Guild *pGuild = sObjectMgr.GetGuildById(_player->GetGuildId()))
+        if (Guild *pGuild = sObjectMgr->GetGuildById(_player->GetGuildId()))
             pGuild->HandleMemberLogout(this);
 
         ///- Remove pet
@@ -444,18 +489,18 @@ void WorldSession::LogoutPlayer(bool Save)
         }
 
         ///- Broadcast a logout message to the player's friends
-        sSocialMgr.SendFriendStatus(_player, FRIEND_OFFLINE, _player->GetGUIDLow(), true);
-        sSocialMgr.RemovePlayerSocial (_player->GetGUIDLow ());
+        sSocialMgr->SendFriendStatus(_player, FRIEND_OFFLINE, _player->GetGUIDLow(), true);
+        sSocialMgr->RemovePlayerSocial (_player->GetGUIDLow ());
 
         // Call script hook before deletion
-        sScriptMgr.OnPlayerLogout(GetPlayer());
+        sScriptMgr->OnPlayerLogout(GetPlayer());
 
         ///- Remove the player from the world
         // the player may not be in the world when logging out
         // e.g if he got disconnected during a transfer to another map
         // calls to GetMap in this case may cause crashes
         _player->CleanupsBeforeDelete();
-        sLog.outChar("Account: %d (IP: %s) Logout Character:[%s] (GUID: %u)", GetAccountId(), GetRemoteAddress().c_str(), _player->GetName() ,_player->GetGUIDLow());
+        sLog->outChar("Account: %d (IP: %s) Logout Character:[%s] (GUID: %u)", GetAccountId(), GetRemoteAddress().c_str(), _player->GetName() ,_player->GetGUIDLow());
         Map* _map = _player->GetMap();
         _map->Remove(_player, true);
         SetPlayer(NULL);                                    // deleted in Remove call
@@ -468,7 +513,7 @@ void WorldSession::LogoutPlayer(bool Save)
         //No SQL injection as AccountId is uint32
         CharacterDatabase.PExecute("UPDATE characters SET online = 0 WHERE account = '%u'",
             GetAccountId());
-        sLog.outDebug("SESSION: Sent SMSG_LOGOUT_COMPLETE Message");
+        sLog->outDebug("SESSION: Sent SMSG_LOGOUT_COMPLETE Message");
     }
 
     m_playerLogout = false;
@@ -521,33 +566,33 @@ void WorldSession::SendNotification(uint32 string_id,...)
 
 const char * WorldSession::GetTrinityString(int32 entry) const
 {
-    return sObjectMgr.GetTrinityString(entry, GetSessionDbLocaleIndex());
+    return sObjectMgr->GetTrinityString(entry, GetSessionDbLocaleIndex());
 }
 
 void WorldSession::Handle_NULL(WorldPacket& recvPacket)
 {
-    sLog.outError("SESSION: received unhandled opcode %s (0x%.4X)",
+    sLog->outError("SESSION: received unhandled opcode %s (0x%.4X)",
         LookupOpcodeName(recvPacket.GetOpcode()),
         recvPacket.GetOpcode());
 }
 
 void WorldSession::Handle_EarlyProccess(WorldPacket& recvPacket)
 {
-    sLog.outError("SESSION: received opcode %s (0x%.4X) that must be processed in WorldSocket::OnRead",
+    sLog->outError("SESSION: received opcode %s (0x%.4X) that must be processed in WorldSocket::OnRead",
         LookupOpcodeName(recvPacket.GetOpcode()),
         recvPacket.GetOpcode());
 }
 
 void WorldSession::Handle_ServerSide(WorldPacket& recvPacket)
 {
-    sLog.outError("SESSION: received server-side opcode %s (0x%.4X)",
+    sLog->outError("SESSION: received server-side opcode %s (0x%.4X)",
         LookupOpcodeName(recvPacket.GetOpcode()),
         recvPacket.GetOpcode());
 }
 
 void WorldSession::Handle_Deprecated(WorldPacket& recvPacket)
 {
-    sLog.outError("SESSION: received deprecated opcode %s (0x%.4X)",
+    sLog->outError("SESSION: received deprecated opcode %s (0x%.4X)",
         LookupOpcodeName(recvPacket.GetOpcode()),
         recvPacket.GetOpcode());
 }
@@ -592,14 +637,14 @@ void WorldSession::LoadAccountData(PreparedQueryResult result, uint32 mask)
         uint32 type = fields[0].GetUInt32();
         if (type >= NUM_ACCOUNT_DATA_TYPES)
         {
-            sLog.outError("Table `%s` have invalid account data type (%u), ignore.",
+            sLog->outError("Table `%s` have invalid account data type (%u), ignore.",
                 mask == GLOBAL_CACHE_MASK ? "account_data" : "character_account_data", type);
             continue;
         }
 
         if ((mask & (1 << type)) == 0)
         {
-            sLog.outError("Table `%s` have non appropriate for table  account data type (%u), ignore.",
+            sLog->outError("Table `%s` have non appropriate for table  account data type (%u), ignore.",
                 mask == GLOBAL_CACHE_MASK ? "account_data" : "character_account_data", type);
             continue;
         }
@@ -798,7 +843,7 @@ void WorldSession::ReadAddonsInfo(WorldPacket &data)
 
     if (size > 0xFFFFF)
     {
-        sLog.outError("WorldSession::ReadAddonsInfo addon info too big, size %u", size);
+        sLog->outError("WorldSession::ReadAddonsInfo addon info too big, size %u", size);
         return;
     }
 
@@ -828,11 +873,11 @@ void WorldSession::ReadAddonsInfo(WorldPacket &data)
 
             addonInfo >> enabled >> crc >> unk1;
 
-            sLog.outDetail("ADDON: Name: %s, Enabled: 0x%x, CRC: 0x%x, Unknown2: 0x%x", addonName.c_str(), enabled, crc, unk1);
+            sLog->outDetail("ADDON: Name: %s, Enabled: 0x%x, CRC: 0x%x, Unknown2: 0x%x", addonName.c_str(), enabled, crc, unk1);
 
             AddonInfo addon(addonName, enabled, crc, 2, true);
 
-            SavedAddon const* savedAddon = sAddonMgr.GetAddonInfo(addonName);
+            SavedAddon const* savedAddon = sAddonMgr->GetAddonInfo(addonName);
             if (savedAddon)
             {
                 bool match = true;
@@ -841,15 +886,15 @@ void WorldSession::ReadAddonsInfo(WorldPacket &data)
                     match = false;
 
                 if (!match)
-                    sLog.outDetail("ADDON: %s was known, but didn't match known CRC (0x%x)!", addon.Name.c_str(), savedAddon->CRC);
+                    sLog->outDetail("ADDON: %s was known, but didn't match known CRC (0x%x)!", addon.Name.c_str(), savedAddon->CRC);
                 else
-                    sLog.outDetail("ADDON: %s was known, CRC is correct (0x%x)", addon.Name.c_str(), savedAddon->CRC);
+                    sLog->outDetail("ADDON: %s was known, CRC is correct (0x%x)", addon.Name.c_str(), savedAddon->CRC);
             }
             else
             {
-                sAddonMgr.SaveAddon(addon);
+                sAddonMgr->SaveAddon(addon);
 
-                sLog.outDetail("ADDON: %s (0x%x) was not known, saving...", addon.Name.c_str(), addon.CRC);
+                sLog->outDetail("ADDON: %s (0x%x) was not known, saving...", addon.Name.c_str(), addon.CRC);
             }
 
             // TODO: Find out when to not use CRC/pubkey, and other possible states.
@@ -858,13 +903,13 @@ void WorldSession::ReadAddonsInfo(WorldPacket &data)
 
         uint32 currentTime;
         addonInfo >> currentTime;
-        sLog.outDebug("ADDON: CurrentTime: %u", currentTime);
+        sLog->outDebug("ADDON: CurrentTime: %u", currentTime);
 
         if (addonInfo.rpos() != addonInfo.size())
-            sLog.outDebug("packet under-read!");
+            sLog->outDebug("packet under-read!");
     }
     else
-        sLog.outError("Addon packet uncompress error!");
+        sLog->outError("Addon packet uncompress error!");
 }
 
 void WorldSession::SendAddonsInfo()
@@ -903,7 +948,7 @@ void WorldSession::SendAddonsInfo()
             data << uint8(usepk);
             if (usepk)                                      // if CRC is wrong, add public key (client need it)
             {
-                sLog.outDetail("ADDON: CRC (0x%x) for addon %s is wrong (does not match expected 0x%x), sending pubkey",
+                sLog->outDetail("ADDON: CRC (0x%x) for addon %s is wrong (does not match expected 0x%x), sending pubkey",
                     itr->CRC, itr->Name.c_str(), STANDARD_ADDON_CRC);
 
                 data.append(addonPublicKey, sizeof(addonPublicKey));
@@ -958,8 +1003,12 @@ void WorldSession::ProcessQueryCallbacks()
         if (m_nameQueryCallbacks.next_readable(lResult, &timeout) != 1)
            break;
 
-        lResult.get(result);
-        SendNameQueryOpcodeFromDBCallBack(result);
+        if (lResult.ready()) 
+        {
+            lResult.get(result);
+            SendNameQueryOpcodeFromDBCallBack(result);
+            lResult.cancel();
+        }
     }
 
     //! HandleCharEnumOpcode

@@ -94,11 +94,11 @@ class ObjectWorldLoader
         uint32 i_corpses;
 };
 
-template<class T> void addUnitState(T* /*obj*/, CellPair const& /*cell_pair*/)
+template<class T> void AddUnitState(T* /*obj*/, CellPair const& /*cell_pair*/)
 {
 }
 
-template<> void addUnitState(Creature *obj, CellPair const& cell_pair)
+template<> void AddUnitState(Creature *obj, CellPair const& cell_pair)
 {
     Cell cell(cell_pair);
 
@@ -109,7 +109,7 @@ template <class T>
 void AddObjectHelper(CellPair &cell, GridRefManager<T> &m, uint32 &count, Map* map, T *obj)
 {
     obj->GetGridRef().link(&m, obj);
-    addUnitState(obj,cell);
+    AddUnitState(obj,cell);
     obj->AddToWorld();
     if (obj->isActiveObject())
         map->AddToActive(obj);
@@ -124,7 +124,7 @@ void LoadHelper(CellGuidSet const& guid_set, CellPair &cell, GridRefManager<T> &
     {
         T* obj = new T;
         uint32 guid = *i_guid;
-        //sLog.outString("DEBUG: LoadHelper from table: %s for (guid: %u) Loading",table,guid);
+        //sLog->outString("DEBUG: LoadHelper from table: %s for (guid: %u) Loading",table,guid);
         if (!obj->LoadFromDB(guid, map))
         {
             delete obj;
@@ -147,7 +147,7 @@ void LoadHelper(CellCorpseSet const& cell_corpses, CellPair &cell, CorpseMapType
 
         uint32 player_guid = itr->first;
 
-        Corpse *obj = sObjectAccessor.GetCorpseForPlayerGUID(player_guid);
+        Corpse *obj = sObjectAccessor->GetCorpseForPlayerGUID(player_guid);
         if (!obj)
             continue;
 
@@ -169,7 +169,7 @@ ObjectGridLoader::Visit(GameObjectMapType &m)
     CellPair cell_pair(x,y);
     uint32 cell_id = (cell_pair.y_coord*TOTAL_NUMBER_OF_CELLS_PER_MAP) + cell_pair.x_coord;
 
-    CellObjectGuids const& cell_guids = sObjectMgr.GetCellObjectGuids(i_map->GetId(), i_map->GetSpawnMode(), cell_id);
+    CellObjectGuids const& cell_guids = sObjectMgr->GetCellObjectGuids(i_map->GetId(), i_map->GetSpawnMode(), cell_id);
 
     LoadHelper(cell_guids.gameobjects, cell_pair, m, i_gameObjects, i_map);
 }
@@ -182,7 +182,7 @@ ObjectGridLoader::Visit(CreatureMapType &m)
     CellPair cell_pair(x,y);
     uint32 cell_id = (cell_pair.y_coord*TOTAL_NUMBER_OF_CELLS_PER_MAP) + cell_pair.x_coord;
 
-    CellObjectGuids const& cell_guids = sObjectMgr.GetCellObjectGuids(i_map->GetId(), i_map->GetSpawnMode(), cell_id);
+    CellObjectGuids const& cell_guids = sObjectMgr->GetCellObjectGuids(i_map->GetId(), i_map->GetSpawnMode(), cell_id);
 
     LoadHelper(cell_guids.creatures, cell_pair, m, i_creatures, i_map);
 }
@@ -196,7 +196,7 @@ ObjectWorldLoader::Visit(CorpseMapType &m)
     uint32 cell_id = (cell_pair.y_coord*TOTAL_NUMBER_OF_CELLS_PER_MAP) + cell_pair.x_coord;
 
     // corpses are always added to spawn mode 0 and they are spawned by their instance id
-    CellObjectGuids const& cell_guids = sObjectMgr.GetCellObjectGuids(i_map->GetId(), 0, cell_id);
+    CellObjectGuids const& cell_guids = sObjectMgr->GetCellObjectGuids(i_map->GetId(), 0, cell_id);
     LoadHelper(cell_guids.corpses, cell_pair, m, i_corpses, i_map);
 }
 
@@ -230,7 +230,7 @@ void ObjectGridLoader::LoadN(void)
             loader.Load(i_grid(x, y), *this);
         }
     }
-    sLog.outDebug("%u GameObjects, %u Creatures, and %u Corpses/Bones loaded for grid %u on map %u", i_gameObjects, i_creatures, i_corpses,i_grid.GetGridId(), i_map->GetId());
+    sLog->outDebug("%u GameObjects, %u Creatures, and %u Corpses/Bones loaded for grid %u on map %u", i_gameObjects, i_creatures, i_corpses,i_grid.GetGridId(), i_map->GetId());
 }
 
 void ObjectGridUnloader::MoveToRespawnN()
@@ -260,7 +260,7 @@ ObjectGridUnloader::Visit(GridRefManager<T> &m)
     {
         T *obj = m.getFirst()->getSource();
         // if option set then object already saved at this moment
-        if (!sWorld.getBoolConfig(CONFIG_SAVE_RESPAWN_TIME_IMMEDIATELY))
+        if (!sWorld->getBoolConfig(CONFIG_SAVE_RESPAWN_TIME_IMMEDIATELY))
             obj->SaveRespawnTime();
         ///- object will get delinked from the manager when deleted
         delete obj;

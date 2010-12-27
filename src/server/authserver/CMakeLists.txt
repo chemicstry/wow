@@ -71,11 +71,11 @@ add_executable(authserver
 add_dependencies(authserver revision.h)
 
 if( NOT WIN32 )
-  add_definitions(-D_TRINITY_REALM_CONFIG="${CONF_DIR}/authserver.conf")
+  add_definitions(-D_TRINITY_REALM_CONFIG='"${CONF_DIR}/authserver.conf"')
 endif()
 
 if( UNIX )
-  set(authserver_LINK_FLAGS "-pthread ${authserver_LINK_FLAGS}")
+  set(authserver_LINK_FLAGS "-pthread -lcrypto ${authserver_LINK_FLAGS}")
 endif()
 
 if( CMAKE_SYSTEM_NAME MATCHES "Darwin" )

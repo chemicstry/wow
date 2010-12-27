@@ -41,7 +41,7 @@ enum SpellDisableTypes
     SPELL_DISABLE_DEPRECATED_SPELL  = 0x8,
     SPELL_DISABLE_MAP               = 0x10,
     SPELL_DISABLE_AREA              = 0x20,
-    MAX_SPELL_DISABLE_TYPE = (  SPELL_DISABLE_PLAYER | SPELL_DISABLE_CREATURE | SPELL_DISABLE_PET | 
+    MAX_SPELL_DISABLE_TYPE = (  SPELL_DISABLE_PLAYER | SPELL_DISABLE_CREATURE | SPELL_DISABLE_PET |
                                 SPELL_DISABLE_DEPRECATED_SPELL | SPELL_DISABLE_MAP | SPELL_DISABLE_AREA),
 };
 
@@ -73,6 +73,6 @@ class DisableMgr
         DisableMap m_DisableMap;
 };
 
-#define sDisableMgr (*ACE_Singleton<DisableMgr, ACE_Null_Mutex>::instance())
+#define sDisableMgr ACE_Singleton<DisableMgr, ACE_Null_Mutex>::instance()
 
 #endif //TRINITY_DISABLEMGR_H

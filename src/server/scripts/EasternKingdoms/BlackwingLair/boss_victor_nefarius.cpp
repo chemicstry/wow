@@ -230,9 +230,9 @@ public:
 
             //Trinity::Singleton<MapManager>::Instance().GetMap(me->GetMapId(), me)->GetPlayers().begin();
             /*
-            list <Player*>::const_iterator i = sMapMgr.GetMap(me->GetMapId(), me)->GetPlayers().begin();
+            list <Player*>::const_iterator i = sMapMgr->GetMap(me->GetMapId(), me)->GetPlayers().begin();
 
-            for (i = sMapMgr.GetMap(me->GetMapId(), me)->GetPlayers().begin(); i != sMapMgr.GetMap(me->GetMapId(), me)->GetPlayers().end(); ++i)
+            for (i = sMapMgr->GetMap(me->GetMapId(), me)->GetPlayers().begin(); i != sMapMgr->GetMap(me->GetMapId(), me)->GetPlayers().end(); ++i)
             {
             AttackStart((*i));
             }
@@ -329,7 +329,7 @@ public:
                     if (SpawnedAdds >= 42)
                     {
                         //Teleport Victor Nefarius way out of the map
-                        //sMapMgr.GetMap(me->GetMapId(), me)->CreatureRelocation(me,0,0,-5000,0);
+                        //sMapMgr->GetMap(me->GetMapId(), me)->CreatureRelocation(me,0,0,-5000,0);
 
                         //Interrupt any spell casting
                         me->InterruptNonMeleeSpells(false);
@@ -342,7 +342,7 @@ public:
 
                         //Teleport self to a hiding spot (this causes errors in the Trinity log but no real issues)
                         DoTeleportTo(HIDE_X,HIDE_Y,HIDE_Z);
-                        me->addUnitState(UNIT_STAT_FLEEING);
+                        me->AddUnitState(UNIT_STAT_FLEEING);
 
                         //Spawn nef and have him attack a random target
                         Creature* Nefarian = me->SummonCreature(CREATURE_NEFARIAN,NEF_X,NEF_Y,NEF_Z,0,TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT,120000);
@@ -353,7 +353,7 @@ public:
                             Nefarian->setFaction(103);
                             NefarianGUID = Nefarian->GetGUID();
                         }
-                        else sLog.outError("TSCR: Blackwing Lair: Unable to spawn nefarian properly.");
+                        else sLog->outError("TSCR: Blackwing Lair: Unable to spawn nefarian properly.");
                     }
 
                     AddSpawnTimer = 4000;

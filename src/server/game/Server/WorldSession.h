@@ -48,12 +48,13 @@ class CharacterHandler;
 class SpellCastTargets;
 struct AreaTableEntry;
 struct GM_Ticket;
+struct LfgJoinResultData;
 struct LfgLockStatus;
 struct LfgPlayerBoot;
 struct LfgProposal;
 struct LfgReward;
 struct LfgRoleCheck;
-
+struct LfgUpdateData;
 
 enum AccountDataType
 {
@@ -137,6 +138,43 @@ enum CharterTypes
     ARENA_TEAM_CHARTER_5v5_TYPE                   = 5
 };
 
+//class to deal with packet processing
+//allows to determine if next packet is safe to be processed
+class PacketFilter
+{
+public:
+    explicit PacketFilter(WorldSession * pSession) : m_pSession(pSession) {}
+    virtual ~PacketFilter() {}
+
+    virtual bool Process(WorldPacket * /*packet*/) { return true; }
+    virtual bool ProcessLogout() const { return true; }
+
+protected:
+    WorldSession * const m_pSession;
+};
+//process only thread-safe packets in Map::Update()
+class MapSessionFilter : public PacketFilter
+{
+public:
+    explicit MapSessionFilter(WorldSession * pSession) : PacketFilter(pSession) {}
+    ~MapSessionFilter() {}
+
+    virtual bool Process(WorldPacket * packet);
+    //in Map::Update() we do not process player logout!
+    virtual bool ProcessLogout() const { return false; }
+};
+
+//class used to filer only thread-unsafe packets from queue
+//in order to update only be used in World::UpdateSessions()
+class WorldSessionFilter : public PacketFilter
+{
+public:
+    explicit WorldSessionFilter(WorldSession * pSession) : PacketFilter(pSession) {}
+    ~WorldSessionFilter() {}
+
+    virtual bool Process(WorldPacket* packet);
+};
+
 /// Player session in the World
 class WorldSession
 {
@@ -200,7 +238,7 @@ class WorldSession
         void KickPlayer();
 
         void QueuePacket(WorldPacket* new_packet);
-        bool Update(uint32 diff);
+        bool Update(uint32 diff, PacketFilter& updater);
 
         /// Handle the authentication waiting queue (to be completed)
         void SendAuthWaitQue(uint32 position);
@@ -310,7 +348,7 @@ class WorldSession
         }
         void ResetTimeOutTime()
         {
-            m_timeOutTime = sWorld.getIntConfig(CONFIG_SOCKET_TIMEOUTTIME);
+            m_timeOutTime = sWorld->getIntConfig(CONFIG_SOCKET_TIMEOUTTIME);
         }
         bool IsConnectionIdle() const
         {
@@ -730,16 +768,16 @@ class WorldSession
         void HandleLfrSearchOpcode(WorldPacket &recv_data);
         void HandleLfrLeaveOpcode(WorldPacket &recv_data);
 
-        void SendLfgUpdatePlayer(uint8 updateType, std::set<uint32>* dungeons = NULL, std::string comment = "");
-        void SendLfgUpdateParty(uint8 updateType, std::set<uint32>* dungeons = NULL, std::string comment = "");
+        void SendLfgUpdatePlayer(const LfgUpdateData& updateData);
+        void SendLfgUpdateParty(const LfgUpdateData& updateData);
         void SendLfgRoleChosen(uint64 guid, uint8 roles);
-        void SendLfgRoleCheckUpdate(LfgRoleCheck *pRoleCheck);
+        void SendLfgRoleCheckUpdate(const LfgRoleCheck *pRoleCheck);
         void SendLfgUpdateSearch(bool update);
-        void SendLfgJoinResult(uint8 checkResult, uint8 checkValue = 0, std::map<uint32, std::set<LfgLockStatus*>*> *playersLockMap = NULL);
+        void SendLfgJoinResult(const LfgJoinResultData& joinData);
         void SendLfgQueueStatus(uint32 dungeon, int32 waitTime, int32 avgWaitTime, int32 waitTimeTanks, int32 waitTimeHealer, int32 waitTimeDps, uint32 queuedTime, uint8 tanks, uint8 healers, uint8 dps);
         void SendLfgPlayerReward(uint32 rdungeonEntry, uint32 sdungeonEntry, uint8 done, const LfgReward *reward, const Quest *qRew);
-        void SendLfgBootPlayer(LfgPlayerBoot *pBoot);
-        void SendLfgUpdateProposal(uint32 proposalId, LfgProposal *pProp);
+        void SendLfgBootPlayer(const LfgPlayerBoot *pBoot);
+        void SendLfgUpdateProposal(uint32 proposalId, const LfgProposal *pProp);
         void SendLfgDisabled();
         void SendLfgOfferContinue(uint32 dungeonEntry);
         void SendLfgTeleportError(uint8 err);
@@ -821,7 +859,7 @@ class WorldSession
         void HandleReadyForAccountDataTimes(WorldPacket& recv_data);
         void HandleQueryQuestsCompleted(WorldPacket& recv_data);
         void HandleQuestPOIQuery(WorldPacket& recv_data);
-        void HandleEjectPasenger(WorldPacket &data);
+        void HandleEjectPassenger(WorldPacket &data);
         void HandleEnterPlayerVehicle(WorldPacket &data);
 
     private:

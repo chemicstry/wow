@@ -58,7 +58,7 @@ void BattlegroundDS::Update(uint32 diff)
             UpdateArenaWorldState();
             CheckArenaAfterTimerConditions();
         }
-    } 
+    }
 
     if (getWaterFallTimer() < diff)
     {
@@ -86,7 +86,7 @@ void BattlegroundDS::Update(uint32 diff)
                 {
                         for(BattlegroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end();itr++)
                         {
-                                Player * plr = sObjectMgr.GetPlayer(itr->first);
+                                Player * plr = sObjectMgr->GetPlayer(itr->first);
                                 if (plr->GetTeam() == ALLIANCE && plr->GetDistance2d(1214, 765) <= 50 && plr->GetPositionZ() > 10)
                                         KnockBackPlayer(plr, 6.15f, 50.00f, 7.00f);
                                 if (plr->GetTeam() == HORDE && plr->GetDistance2d(1369, 817) <= 50 && plr->GetPositionZ() > 10)
@@ -149,7 +149,7 @@ void BattlegroundDS::HandleKillPlayer(Player* player, Player* killer)
 
     if (!killer)
     {
-        sLog.outError("BattlegroundDS: Killer player not found");
+        sLog->outError("BattlegroundDS: Killer player not found");
         return;
     }
 
@@ -170,7 +170,7 @@ void BattlegroundDS::HandleAreaTrigger(Player *Source, uint32 Trigger)
         case 5348:
             break;
         default:
-            sLog.outError("WARNING: Unhandled AreaTrigger in Battleground: %u", Trigger);
+            sLog->outError("WARNING: Unhandled AreaTrigger in Battleground: %u", Trigger);
             Source->GetSession()->SendAreaTriggerMessage("Warning: Unhandled AreaTrigger in Battleground: %u", Trigger);
             break;
     }
@@ -209,7 +209,7 @@ bool BattlegroundDS::SetupBattleground()
         || !AddObject(BG_DS_OBJECT_BUFF_1, BG_DS_OBJECT_TYPE_BUFF_1, 1291.7f, 813.424f, 7.11472f, 4.64562f, 0, 0, 0.730314f, -0.683111f, 120)
         || !AddObject(BG_DS_OBJECT_BUFF_2, BG_DS_OBJECT_TYPE_BUFF_2, 1291.7f, 768.911f, 7.11472f, 1.55194f, 0, 0, 0.700409f, 0.713742f, 120))
     {
-        sLog.outErrorDb("BatteGroundDS: Failed to spawn some object!");
+        sLog->outErrorDb("BatteGroundDS: Failed to spawn some object!");
         return false;
     }
 
@@ -230,5 +230,5 @@ void BattlegroundDS::KnockBackPlayer(Unit *pPlayer, float angle, float horizonta
         ((Player*)pPlayer)->GetSession()->SendPacket(&data);
     }
     else
-        sLog.outError("The target of KnockBackPlayer must be a player !");
+        sLog->outError("The target of KnockBackPlayer must be a player !");
 }

@@ -19,7 +19,6 @@
 #include "DatabaseEnv.h"
 #include "GridDefines.h"
 #include "WaypointManager.h"
-#include "ProgressBar.h"
 #include "MapManager.h"
 
 void WaypointStore::Free()
@@ -36,34 +35,26 @@ void WaypointStore::Free()
 
 void WaypointStore::Load()
 {
-    QueryResult result = WorldDatabase.Query("SELECT COUNT(id) FROM waypoint_data");
+    uint32 oldMSTime = getMSTime();
+
+    QueryResult result = WorldDatabase.Query("SELECT id,point,position_x,position_y,position_z,move_flag,delay,action,action_chance FROM waypoint_data ORDER BY id, point");
+
     if (!result)
     {
-        sLog.outError("an error occured while loading the table `waypoint_data` (maybe it doesn't exist ?)");
-        exit(1);                                            // Stop server at loading non exited table or not accessable table
-    }
-
-    records = (*result)[0].GetUInt32();
-
-    result = WorldDatabase.Query("SELECT id,point,position_x,position_y,position_z,move_flag,delay,action,action_chance FROM waypoint_data ORDER BY id, point");
-    if (!result)
-    {
-        sLog.outErrorDb("The table `waypoint_data` is empty or corrupted");
+        sLog->outErrorDb(">>  Loaded 0 waypoints. DB table `waypoint_data` is empty!");
+        sLog->outString();
         return;
     }
 
-    WaypointPath* path_data = NULL;
-
-    barGoLink bar(result->GetRowCount());
     uint32 count = 0;
     Field *fields;
     uint32 last_id = 0;
+    WaypointPath* path_data = NULL;
 
     do
     {
         fields = result->Fetch();
         uint32 id = fields[0].GetUInt32();
-        bar.step();
         count++;
         WaypointData *wp = new WaypointData;
 
@@ -94,10 +85,11 @@ void WaypointStore::Load()
 
         last_id = id;
 
-    } while (result->NextRow()) ;
+    }
+    while (result->NextRow()) ;
 
-    sLog.outString();
-    sLog.outString(">> Loaded %u waypoints", count);
+    sLog->outString(">> Loaded %u waypoints in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
+    sLog->outString();
 }
 
 void WaypointStore::UpdatePath(uint32 id)

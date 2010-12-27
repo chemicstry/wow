@@ -551,6 +551,7 @@ UPDATE `creature_template` SET `ScriptName`='mob_water_globule' WHERE `entry`=21
 UPDATE `creature_template` SET `ScriptName`='boss_the_lurker_below' WHERE `entry`=21217;
 UPDATE `creature_template` SET `ScriptName`='mob_coilfang_ambusher' WHERE `entry`=21865;
 UPDATE `creature_template` SET `ScriptName`='mob_coilfang_guardian' WHERE `entry`=21873;
+UPDATE `gameobject_template` SET `ScriptName`='go_strange_pool' WHERE `entry`=184956;
 /* Lady Vashj event */
 UPDATE `creature_template` SET `ScriptName`='boss_lady_vashj' WHERE `entry`=21212;
 UPDATE `creature_template` SET `ScriptName`='mob_enchanted_elemental' WHERE `entry`=21958;
@@ -731,7 +732,6 @@ UPDATE `creature_template` SET `ScriptName`='boss_loken' WHERE `entry`=28923;
 /* Volkhan */
 UPDATE `creature_template` SET `ScriptName`='boss_volkhan' WHERE `entry`=28587;
 UPDATE `creature_template` SET `ScriptName`='mob_molten_golem' WHERE `entry`=28695;
-UPDATE `creature_template` SET `ScriptName`='npc_volkhan_anvil' WHERE `entry`=28823;
 /* Ionar */
 UPDATE `creature_template` SET `ScriptName`='boss_ionar' WHERE `entry`=28546;
 UPDATE `creature_template` SET `ScriptName`='mob_spark_of_ionar' WHERE `entry`=28926;
@@ -837,7 +837,7 @@ UPDATE `instance_template` SET `script`='instance_icecrown_citadel' WHERE `map`=
 UPDATE `gameobject_template` SET `ScriptName`='icecrown_citadel_teleport' WHERE `entry` IN (202223,202235,202242,202243,202244,202245,202246);
 UPDATE `creature_template` SET `ScriptName`='boss_lord_marrowgar' WHERE `entry`=36612;
 UPDATE `creature_template` SET `ScriptName`='npc_coldflame' WHERE `entry`=36672;
-UPDATE `creature_template` SET `ScriptName`='npc_bone_spike' WHERE `entry`=36619;
+UPDATE `creature_template` SET `ScriptName`='npc_bone_spike' WHERE `entry` IN (36619,38711,38712);
 UPDATE `creature_template` SET `ScriptName`='boss_lady_deathwhisper' WHERE `entry`=36855;
 UPDATE `creature_template` SET `ScriptName`='npc_cult_fanatic' WHERE `entry` IN (37890,38009,38135);
 UPDATE `creature_template` SET `ScriptName`='npc_cult_adherent' WHERE `entry` IN(37949,38010,38136);
@@ -1061,7 +1061,6 @@ UPDATE `instance_template` SET `script`='instance_onyxias_lair' WHERE `map`=249;
 UPDATE `creature_template` SET `ScriptName`='boss_onyxia' WHERE `entry`=10184;
 
 /* ORGRIMMAR */
-UPDATE `creature_template` SET `ScriptName`='npc_neeru_fireblade' WHERE `entry`=3216;
 UPDATE `creature_template` SET `ScriptName`='npc_shenthul' WHERE `entry`=3401;
 UPDATE `creature_template` SET `ScriptName`='npc_thrall_warchief' WHERE `entry`=4949;
 
@@ -1527,6 +1526,7 @@ UPDATE `creature_template` SET `ScriptName`='boss_runemaster_molgeim' WHERE `ent
 UPDATE `creature_template` SET `ScriptName`='boss_stormcaller_brundir' WHERE `entry`=32857;
 UPDATE `creature_template` SET `ScriptName`='mob_lightning_elemental' WHERE `entry`=32958;
 UPDATE `creature_template` SET `ScriptName`='mob_rune_of_summoning' WHERE `entry`=33051;
+UPDATE `creature_template` SET `ScriptName`= 'mob_rune_of_power' WHERE entry = 33705;
 UPDATE `creature_template` SET `ScriptName`='boss_kologarn' WHERE `entry`=32930;
 UPDATE `creature_template` SET `ScriptName`='boss_algalon' WHERE `entry`=32871;
 UPDATE `creature_template` SET `ScriptName`='mob_collapsing_star' WHERE `entry`=32955;

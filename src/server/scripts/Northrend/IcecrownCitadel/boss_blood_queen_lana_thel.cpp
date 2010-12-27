@@ -70,7 +70,7 @@ enum eShadowmourne
     SPELL_THIRST_QUENCHED                   = 72154,
 };
 
-static const uint32 vampireAuras[3][MAX_DIFFICULTY] = 
+static const uint32 vampireAuras[3][MAX_DIFFICULTY] =
 {
     {70867, 71473, 71532, 71533},
     {70879, 71525, 71530, 71531},
@@ -118,26 +118,6 @@ bool IsVampire(Unit const* unit)
     return false;
 }
 
-class VampiricBiteTargetSelector : public std::unary_function<Unit*, bool>
-{
-    public:
-        VampiricBiteTargetSelector() { }
-
-        bool operator() (Unit const* target)
-        {
-            if (!target)
-                return false;
-
-            if (target->GetTypeId() != TYPEID_PLAYER)
-                return false;
-
-            if (IsVampire(target))
-                return false;
-
-            return true;
-        }
-};
-
 class boss_blood_queen_lana_thel : public CreatureScript
 {
     public:
@@ -167,7 +147,7 @@ class boss_blood_queen_lana_thel : public CreatureScript
                 events.ScheduleEvent(EVENT_PACT_OF_THE_DARKFALLEN, 15000, EVENT_GROUP_NORMAL);
                 events.ScheduleEvent(EVENT_SWARMING_SHADOWS, 30500, EVENT_GROUP_NORMAL);
                 events.ScheduleEvent(EVENT_TWILIGHT_BLOODBOLT, urand(20000, 25000), EVENT_GROUP_NORMAL);
-                events.ScheduleEvent(EVENT_AIR_PHASE, 124000 + (Is25ManRaid() ? 3000 : 0));
+                events.ScheduleEvent(EVENT_AIR_PHASE, 124000 + uint32(Is25ManRaid() ? 3000 : 0));
                 me->SetSpeed(MOVE_FLIGHT, 0.642857f, true);
                 offtank = NULL;
                 vampires.clear();
@@ -227,7 +207,7 @@ class boss_blood_queen_lana_thel : public CreatureScript
                 {
                     case POINT_CENTER:
                         DoCast(me, SPELL_INCITE_TERROR);
-                        events.ScheduleEvent(EVENT_AIR_PHASE, 100000 + (Is25ManRaid() ? 0 : 20000));
+                        events.ScheduleEvent(EVENT_AIR_PHASE, 100000 + uint32(Is25ManRaid() ? 0 : 20000));
                         events.RescheduleEvent(EVENT_SWARMING_SHADOWS, 30500, EVENT_GROUP_NORMAL);
                         events.RescheduleEvent(EVENT_PACT_OF_THE_DARKFALLEN, 25500, EVENT_GROUP_NORMAL);
                         events.ScheduleEvent(EVENT_AIR_START_FLYING, 5000);
@@ -257,7 +237,7 @@ class boss_blood_queen_lana_thel : public CreatureScript
 
                 events.Update(diff);
 
-                if (me->hasUnitState(UNIT_STAT_CASTING))
+                if (me->HasUnitState(UNIT_STAT_CASTING))
                     return;
 
                 while (uint32 eventId = events.ExecuteEvent())
@@ -335,7 +315,7 @@ class boss_blood_queen_lana_thel : public CreatureScript
                         {
                             std::list<Player*> targets;
                             SelectRandomTarget(false, &targets);
-                            Trinity::RandomResizeList<Player*>(targets, Is25ManRaid() ? 4 : 2);
+                            Trinity::RandomResizeList<Player*>(targets, uint32(Is25ManRaid() ? 4 : 2));
                             for (std::list<Player*>::iterator itr = targets.begin(); itr != targets.end(); ++itr)
                                 DoCast(*itr, SPELL_TWILIGHT_BLOODBOLT);
                             DoCast(me, SPELL_TWILIGHT_BLOODBOLT_TARGET);
@@ -453,7 +433,7 @@ class spell_blood_queen_vampiric_bite : public SpellScriptLoader
                 }
 
                 SpellEntry const* spell = sSpellStore.LookupEntry(SPELL_FRENZIED_BLOODTHIRST);
-                spell = sSpellMgr.GetSpellForDifficultyFromSpell(spell, GetCaster());
+                spell = sSpellMgr->GetSpellForDifficultyFromSpell(spell, GetCaster());
                 GetCaster()->RemoveAura(spell->Id, 0, 0, AURA_REMOVE_BY_ENEMY_SPELL);
                 GetCaster()->CastSpell(GetCaster(), SPELL_ESSENCE_OF_THE_BLOOD_QUEEN_PLR, true);
                 // Presence of the Darkfallen buff on Blood-Queen
@@ -468,7 +448,7 @@ class spell_blood_queen_vampiric_bite : public SpellScriptLoader
                         {
                             GetCaster()->CastSpell(GetCaster(), SPELL_THIRST_QUENCHED, true);
                             GetCaster()->RemoveAura(aura);
-                        } 
+                        }
                         else
                             GetCaster()->CastSpell(GetCaster(), SPELL_GUSHING_WOUND, true);
                     }

@@ -379,7 +379,7 @@ struct TrinityStringLocale
     StringVector Content;
 };
 
-typedef std::map<uint32,uint32> CreatureLinkedRespawnMap;
+typedef std::map<uint64,uint64> LinkedRespawnMap;
 typedef UNORDERED_MAP<uint32,CreatureData> CreatureDataMap;
 typedef UNORDERED_MAP<uint32,GameObjectData> GameObjectDataMap;
 typedef UNORDERED_MAP<uint32,CreatureLocale> CreatureLocaleMap;
@@ -595,7 +595,7 @@ class ObjectMgr
 
         typedef std::map<uint32, uint32> CharacterConversionMap;
 
-        Player* GetPlayer(const char* name) const { return sObjectAccessor.FindPlayerByName(name);}
+        Player* GetPlayer(const char* name) const { return sObjectAccessor->FindPlayerByName(name);}
         Player* GetPlayer(uint64 guid) const { return ObjectAccessor::FindPlayer(guid); }
         Player* GetPlayerByLowGUID(uint32 lowguid) const;
 
@@ -624,7 +624,7 @@ class ObjectMgr
         ArenaTeamMap::iterator GetArenaTeamMapBegin() { return mArenaTeamMap.begin(); }
         ArenaTeamMap::iterator GetArenaTeamMapEnd()   { return mArenaTeamMap.end(); }
 
-        static CreatureInfo const *GetCreatureTemplate(uint32 id);
+        static CreatureInfo const *GetCreatureTemplate(uint32 id) { return sCreatureStorage.LookupEntry<CreatureInfo>(id); }
         CreatureModelInfo const *GetCreatureModelInfo(uint32 modelid);
         CreatureModelInfo const* GetCreatureModelRandomGender(uint32 display_id);
         uint32 ChooseDisplayId(uint32 team, const CreatureInfo *cinfo, const CreatureData *data = NULL);
@@ -802,13 +802,13 @@ class ObjectMgr
         void LoadQuests();
         void LoadQuestRelations()
         {
-            sLog.outString("Loading GO Start Quest Data...");
+            sLog->outString("Loading GO Start Quest Data...");
             LoadGameobjectQuestRelations();
-            sLog.outString("Loading GO End Quest Data...");
+            sLog->outString("Loading GO End Quest Data...");
             LoadGameobjectInvolvedRelations();
-            sLog.outString("Loading Creature Start Quest Data...");
+            sLog->outString("Loading Creature Start Quest Data...");
             LoadCreatureQuestRelations();
-            sLog.outString("Loading Creature End Quest Data...");
+            sLog->outString("Loading Creature End Quest Data...");
             LoadCreatureInvolvedRelations();
         }
         void LoadGameobjectQuestRelations();
@@ -869,8 +869,7 @@ class ObjectMgr
         void LoadCreatureTemplates();
         void CheckCreatureTemplate(CreatureInfo const* cInfo);
         void LoadCreatures();
-        void LoadCreatureLinkedRespawn();
-        bool CheckCreatureLinkedRespawn(uint32 guid, uint32 linkedGuid) const;
+        void LoadLinkedRespawn();
         bool SetCreatureLinkedRespawn(uint32 guid, uint32 linkedGuid);
         void LoadCreatureRespawnTimes();
         void LoadCreatureAddons();
@@ -930,8 +929,7 @@ class ObjectMgr
 
         void LoadVendors();
         void LoadTrainerSpell();
-        bool AddSpellToTrainer(uint32 entry, uint32 spell, Field *fields, std::set<uint32> *skip_trainers, std::set<uint32> *talentIds);
-        int  LoadReferenceTrainer(uint32 trainer, int32 spell, std::set<uint32> *skip_trainers, std::set<uint32> *talentIds);
+        void AddSpellToTrainer(uint32 entry, uint32 spell, uint32 spellCost, uint32 reqSkill, uint32 reqSkillValue, uint32 reqLevel);
 
         std::string GeneratePetName(uint32 entry);
         uint32 GetBaseXP(uint8 level);
@@ -985,10 +983,10 @@ class ObjectMgr
         }
         CreatureData& NewOrExistCreatureData(uint32 guid) { return mCreatureDataMap[guid]; }
         void DeleteCreatureData(uint32 guid);
-        uint32 GetLinkedRespawnGuid(uint32 guid) const
+        uint64 GetLinkedRespawnGuid(uint64 guid) const
         {
-            CreatureLinkedRespawnMap::const_iterator itr = mCreatureLinkedRespawnMap.find(guid);
-            if (itr == mCreatureLinkedRespawnMap.end()) return 0;
+            LinkedRespawnMap::const_iterator itr = mLinkedRespawnMap.find(guid);
+            if (itr == mLinkedRespawnMap.end()) return 0;
             return itr->second;
         }
         CreatureLocale const* GetCreatureLocale(uint32 entry) const
@@ -1078,18 +1076,34 @@ class ObjectMgr
         void AddCorpseCellData(uint32 mapid, uint32 cellid, uint32 player_guid, uint32 instance);
         void DeleteCorpseCellData(uint32 mapid, uint32 cellid, uint32 player_guid);
 
+        time_t GetLinkedRespawnTime(uint64 guid, uint32 instance)
+        {
+            uint64 linkedGuid = GetLinkedRespawnGuid(guid);
+            switch (GUID_HIPART(linkedGuid))
+            {
+                case HIGHGUID_UNIT:
+                    return GetCreatureRespawnTime(GUID_LOPART(linkedGuid), instance);
+                case HIGHGUID_GAMEOBJECT:
+                    return GetGORespawnTime(GUID_LOPART(linkedGuid), instance);
+                default:
+                    return 0;
+             }
+        }
+
         time_t GetCreatureRespawnTime(uint32 loguid, uint32 instance)
         {
             ACE_GUARD_RETURN(ACE_Thread_Mutex, guard, m_CreatureRespawnTimesMtx, 0);
             return mCreatureRespawnTimes[MAKE_PAIR64(loguid,instance)];
         }
         void SaveCreatureRespawnTime(uint32 loguid, uint32 instance, time_t t);
+        void RemoveCreatureRespawnTime(uint32 loguid, uint32 instance);
         time_t GetGORespawnTime(uint32 loguid, uint32 instance)
         {
             ACE_GUARD_RETURN(ACE_Thread_Mutex, guard, m_GORespawnTimesMtx, 0);
             return mGORespawnTimes[MAKE_PAIR64(loguid,instance)];
         }
         void SaveGORespawnTime(uint32 loguid, uint32 instance, time_t t);
+        void RemoveGORespawnTime(uint32 loguid, uint32 instance);
         void DeleteRespawnTimeForInstance(uint32 instance);
 
         // grid objects
@@ -1286,7 +1300,7 @@ class ObjectMgr
     private:
         void LoadScripts(ScriptsType type);
         void CheckScripts(ScriptsType type, std::set<int32>& ids);
-        void LoadCreatureAddons(SQLStorage& creatureaddons, char const* entryName, char const* comment);
+        uint32 LoadCreatureAddons(SQLStorage& creatureaddons, char const* entryName);
         void ConvertCreatureAddonAuras(CreatureDataAddon* addon, char const* table, char const* guidEntryStr);
         void LoadQuestRelationsHelper(QuestRelations& map, std::string table, bool starter, bool go);
         void PlayerCreateInfoAddItemHelper(uint32 race_, uint32 class_, uint32 itemId, int32 count);
@@ -1322,7 +1336,7 @@ class ObjectMgr
 
         MapObjectGuids mMapObjectGuids;
         CreatureDataMap mCreatureDataMap;
-        CreatureLinkedRespawnMap mCreatureLinkedRespawnMap;
+        LinkedRespawnMap mLinkedRespawnMap;
         CreatureLocaleMap mCreatureLocaleMap;
         GameObjectDataMap mGameObjectDataMap;
         GameObjectLocaleMap mGameObjectLocaleMap;
@@ -1346,9 +1360,17 @@ class ObjectMgr
         std::set<uint32> difficultyEntries[MAX_DIFFICULTY - 1]; // already loaded difficulty 1 value in creatures, used in CheckCreatureTemplate
         std::set<uint32> hasDifficultyEntries[MAX_DIFFICULTY - 1]; // already loaded creatures with difficulty 1 values, used in CheckCreatureTemplate
 
+        enum CreatureLinkedRespawnType
+        {
+            CREATURE_TO_CREATURE,
+            CREATURE_TO_GO,         // Creature is dependant on GO
+            GO_TO_GO,
+            GO_TO_CREATURE,         // GO is dependant on creature
+        };
+
 };
 
-#define sObjectMgr (*ACE_Singleton<ObjectMgr, ACE_Null_Mutex>::instance())
+#define sObjectMgr ACE_Singleton<ObjectMgr, ACE_Null_Mutex>::instance()
 
 // scripting access functions
  bool LoadTrinityStrings(char const* table,int32 start_value = MAX_CREATURE_AI_TEXT_STRING_ID, int32 end_value = std::numeric_limits<int32>::min());

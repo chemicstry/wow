@@ -28,7 +28,6 @@
 #include "GroupReference.h"
 #include "ItemPrototype.h"
 #include "Item.h"
-#include "LFG.h"
 #include "MapReference.h"
 #include "NPCHandler.h"
 #include "Pet.h"
@@ -37,10 +36,10 @@
 #include "Unit.h"
 #include "Util.h"                                           // for Tokens typedef
 #include "WorldSession.h"
- 
+
 #include<string>
 #include<vector>
- 
+
 struct Mail;
 class Channel;
 class Creature;
@@ -506,6 +505,10 @@ enum AtLoginFlags
 };
 
 typedef std::map<uint32, QuestStatusData> QuestStatusMap;
+typedef std::set<uint32> RewardedQuestSet;
+
+//               quest,  keep
+typedef std::map<uint32, bool> QuestStatusSaveMap;
 
 enum QuestSlotOffsets
 {
@@ -790,7 +793,8 @@ enum PlayerLoginQueryIndex
     PLAYER_LOGIN_QUERY_LOADRANDOMBG             = 27,
     PLAYER_LOGIN_QUERY_LOADARENASTATS           = 28,
     PLAYER_LOGIN_QUERY_LOADBANNED               = 29,
-    MAX_PLAYER_LOGIN_QUERY                      = 30
+    PLAYER_LOGIN_QUERY_LOADQUESTSTATUSREW       = 30,
+    MAX_PLAYER_LOGIN_QUERY                      = 31
 };
 
 enum PlayerDelayedOperations
@@ -1156,7 +1160,7 @@ class Player : public Unit, public GridObject<Player>
         uint8 GetBankBagSlotCount() const { return GetByteValue(PLAYER_BYTES_2, 2); }
         void SetBankBagSlotCount(uint8 count) { SetByteValue(PLAYER_BYTES_2, 2, count); }
         bool HasItemCount(uint32 item, uint32 count, bool inBankAlso = false) const;
-        bool HasItemFitToSpellReqirements(SpellEntry const* spellInfo, Item const* ignoreItem = NULL);
+        bool HasItemFitToSpellRequirements(SpellEntry const* spellInfo, Item const* ignoreItem = NULL);
         bool CanNoReagentCast(SpellEntry const* spellInfo) const;
         bool HasItemOrGemWithIdEquipped(uint32 item, uint32 count, uint8 except_slot = NULL_SLOT) const;
         bool HasItemOrGemWithLimitCategoryEquipped(uint32 limitCategory, uint32 count, uint8 except_slot = NULL_SLOT) const;
@@ -1336,6 +1340,8 @@ class Player : public Unit, public GridObject<Player>
         bool GetQuestRewardStatus(uint32 quest_id) const;
         QuestStatus GetQuestStatus(uint32 quest_id) const;
         void SetQuestStatus(uint32 quest_id, QuestStatus status);
+        void RemoveActiveQuest(uint32 quest_id);
+        void RemoveRewardedQuest(uint32 quest_id);
 
         void SetDailyQuestStatus(uint32 quest_id);
         void SetWeeklyQuestStatus(uint32 quest_id);
@@ -1474,7 +1480,8 @@ class Player : public Unit, public GridObject<Player>
             UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_GOLD_VALUE_OWNED);
         }
 
-        QuestStatusMap& getQuestStatusMap() { return mQuestStatus; };
+        RewardedQuestSet& getRewardedQuests() { return m_RewardedQuests; }
+        QuestStatusMap& getQuestStatusMap() { return m_QuestStatus; };
 
         const uint64& GetSelection() const { return m_curSelection; }
         Unit *GetSelectedUnit() const;
@@ -1606,7 +1613,7 @@ class Player : public Unit, public GridObject<Player>
         bool IsAffectedBySpellmod(SpellEntry const *spellInfo, SpellModifier *mod, Spell * spell = NULL);
         template <class T> T ApplySpellMod(uint32 spellId, SpellModOp op, T &basevalue, Spell * spell = NULL);
         void RemoveSpellMods(Spell * spell);
-        void RestoreSpellMods(Spell * spell);
+        void RestoreSpellMods(Spell *spell, uint32 ownerAuraId=0);
         void DropModCharge(SpellModifier * mod, Spell * spell);
         void SetSpellModTakingSpell(Spell* spell, bool apply);
 
@@ -1696,7 +1703,7 @@ class Player : public Unit, public GridObject<Player>
         void SetContestedPvPTimer(uint32 newTime) {m_contestedPvPTimer = newTime;}
         void ResetContestedPvP()
         {
-            clearUnitState(UNIT_STAT_ATTACK_PLAYER);
+            ClearUnitState(UNIT_STAT_ATTACK_PLAYER);
             RemoveFlag(PLAYER_FLAGS, PLAYER_FLAGS_CONTESTED_PVP);
             m_contestedPvPTimer = 0;
         }
@@ -2255,34 +2262,7 @@ class Player : public Unit, public GridObject<Player>
         void SetAtLoginFlag(AtLoginFlags f) { m_atLoginFlags |= f; }
         void RemoveAtLoginFlag(AtLoginFlags f, bool in_db_also = false);
 
-        // Dungeon Finder
-        LfgDungeonSet *GetLfgDungeons() { return &m_LookingForGroup.applyDungeons; }
-        std::string GetLfgComment() { return m_LookingForGroup.comment; }
-        void SetLfgComment(std::string _comment) { m_LookingForGroup.comment = _comment; }
-        uint8 GetLfgRoles() { return m_LookingForGroup.roles; }
-        void SetLfgRoles(uint8 _roles) { m_LookingForGroup.roles = _roles; }
-        LfgState GetLfgState() const { return m_LookingForGroup.state; }
-        void SetLfgState(LfgState state)
-        {
-            
-            switch(state)
-            {
-                case LFG_STATE_NONE:
-                case LFG_STATE_DUNGEON:
-                case LFG_STATE_FINISHED_DUNGEON:
-                    m_LookingForGroup.oldState = state;
-                    // No break on purpose
-                default:
-                    m_LookingForGroup.state = state;
-            }
-        }
-        void ClearLfgState()
-        {
-            m_LookingForGroup.applyDungeons.clear();
-            m_LookingForGroup.roles = ROLE_NONE;
-            m_LookingForGroup.state = m_LookingForGroup.oldState;
-        }
-        bool isUsingLfg() { return GetLfgState() != LFG_STATE_NONE; }
+        bool isUsingLfg();
 
         typedef std::set<uint32> DFQuestsDoneList;
         DFQuestsDoneList m_DFQuests;
@@ -2466,6 +2446,7 @@ class Player : public Unit, public GridObject<Player>
         void _LoadMail();
         void _LoadMailedItems(Mail *mail);
         void _LoadQuestStatus(PreparedQueryResult result);
+        void _LoadQuestStatusRewarded(PreparedQueryResult result);
         void _LoadDailyQuestStatus(PreparedQueryResult result);
         void _LoadWeeklyQuestStatus(PreparedQueryResult result);
         void _LoadRandomBGStatus(PreparedQueryResult result);
@@ -2543,7 +2524,11 @@ class Player : public Unit, public GridObject<Player>
         uint64 m_comboTarget;
         int8 m_comboPoints;
 
-        QuestStatusMap mQuestStatus;
+        QuestStatusMap m_QuestStatus;
+        QuestStatusSaveMap m_QuestStatusSave;
+
+        RewardedQuestSet m_RewardedQuests;
+        QuestStatusSaveMap m_RewardedQuestsSave;
 
         SkillStatusMap mSkillStatus;
 
@@ -2660,7 +2645,7 @@ class Player : public Unit, public GridObject<Player>
 
         bool canSeeAlways(WorldObject const* obj) const;
 
-        bool isAlwaysDetectableFor(WorldObject const* seer) const;      
+        bool isAlwaysDetectableFor(WorldObject const* seer) const;     
     private:
         /*********************************************************/
         /***                    ANTICHEAT SYSTEM               ***/
@@ -2734,8 +2719,6 @@ class Player : public Unit, public GridObject<Player>
         uint32 m_timeSyncTimer;
         uint32 m_timeSyncClient;
         uint32 m_timeSyncServer;
-
-        LookingForGroup m_LookingForGroup;
 };
 
 void AddItemsSetItem(Player*player,Item *item);
@@ -2776,7 +2759,7 @@ template <class T> T Player::ApplySpellMod(uint32 spellId, SpellModOp op, T &bas
             if (mod->op == SPELLMOD_CASTING_TIME  && basevalue >= T(10000) && mod->value <= -100)
                 continue;
 
-            totalmul *= 1.0f + (float)mod->value / 100.0f;
+            AddPctN(totalmul, mod->value);
         }
 
         DropModCharge(mod, spell);

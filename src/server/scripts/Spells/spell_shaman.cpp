@@ -30,7 +30,7 @@ enum ShamanSpells
     SHAMAN_SPELL_MANA_TIDE_TOTEM        = 39609,
     SHAMAN_SPELL_FIRE_NOVA_R1           = 1535,
     SHAMAN_SPELL_FIRE_NOVA_TRIGGERED_R1 = 8349,
-    
+
     //For Earthen Power
     SHAMAN_TOTEM_SPELL_EARTHBIND_TOTEM  = 6474, //Spell casted by totem
     SHAMAN_TOTEM_SPELL_EARTHEN_POWER    = 59566,//Spell witch remove snare effect
@@ -49,11 +49,11 @@ public:
         {
             if (!sSpellStore.LookupEntry(SHAMAN_SPELL_FIRE_NOVA_R1))
                 return false;
-            if (sSpellMgr.GetFirstSpellInChain(SHAMAN_SPELL_FIRE_NOVA_R1) != sSpellMgr.GetFirstSpellInChain(spellEntry->Id))
+            if (sSpellMgr->GetFirstSpellInChain(SHAMAN_SPELL_FIRE_NOVA_R1) != sSpellMgr->GetFirstSpellInChain(spellEntry->Id))
                 return false;
 
-            uint8 rank = sSpellMgr.GetSpellRank(spellEntry->Id);
-            if (!sSpellMgr.GetSpellWithRank(SHAMAN_SPELL_FIRE_NOVA_TRIGGERED_R1, rank, true))
+            uint8 rank = sSpellMgr->GetSpellRank(spellEntry->Id);
+            if (!sSpellMgr->GetSpellWithRank(SHAMAN_SPELL_FIRE_NOVA_TRIGGERED_R1, rank, true))
                 return false;
             return true;
         }
@@ -62,8 +62,8 @@ public:
         {
             if (Unit* caster = GetCaster())
             {
-                uint8 rank = sSpellMgr.GetSpellRank(GetSpellInfo()->Id);
-                uint32 spellId = sSpellMgr.GetSpellWithRank(SHAMAN_SPELL_FIRE_NOVA_TRIGGERED_R1, rank);
+                uint8 rank = sSpellMgr->GetSpellRank(GetSpellInfo()->Id);
+                uint32 spellId = sSpellMgr->GetSpellWithRank(SHAMAN_SPELL_FIRE_NOVA_TRIGGERED_R1, rank);
                 // fire slot
                 if (spellId && caster->m_SummonSlot[1])
                 {
@@ -117,7 +117,7 @@ public:
                         if (AuraEffect *dummy = owner->GetAuraEffect(SHAMAN_SPELL_GLYPH_OF_MANA_TIDE, 0))
                             effValue += dummy->GetAmount();
                     // Regenerate 6% of Total Mana Every 3 secs
-                    int32 effBasePoints0 = unitTarget->GetMaxPower(POWER_MANA) * effValue / 100;
+                    int32 effBasePoints0 = int32(CalculatePctN(unitTarget->GetMaxPower(POWER_MANA), effValue));
                     caster->CastCustomSpell(unitTarget, SHAMAN_SPELL_MANA_TIDE_TOTEM, &effBasePoints0, NULL, NULL, true, NULL, NULL, GetOriginalCaster()->GetGUID());
                 }
             }
@@ -135,7 +135,7 @@ public:
     }
 };
 
-// 6474 - Earthbind Totem - Fix Talent:Earthen Power 
+// 6474 - Earthbind Totem - Fix Talent:Earthen Power
 class spell_sha_earthbind_totem : public SpellScriptLoader
 {
 public:
@@ -143,11 +143,11 @@ public:
 
     class spell_sha_earthbind_totem_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_sha_earthbind_totem_AuraScript); 
-        
+        PrepareAuraScript(spell_sha_earthbind_totem_AuraScript);
+
         bool Validate(SpellEntry const * /*spellEntry*/)
         {
-            if (!sSpellStore.LookupEntry(SHAMAN_TOTEM_SPELL_EARTHBIND_TOTEM)) 
+            if (!sSpellStore.LookupEntry(SHAMAN_TOTEM_SPELL_EARTHBIND_TOTEM))
                 return false;
             if (!sSpellStore.LookupEntry(SHAMAN_TOTEM_SPELL_EARTHEN_POWER))
                 return false;

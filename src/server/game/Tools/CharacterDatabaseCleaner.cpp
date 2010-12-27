@@ -21,15 +21,16 @@
 #include "World.h"
 #include "Database/DatabaseEnv.h"
 #include "DBCStores.h"
-#include "ProgressBar.h"
 
 void CharacterDatabaseCleaner::CleanDatabase()
 {
     // config to disable
-    if(!sWorld.getBoolConfig(CONFIG_CLEAN_CHARACTER_DB))
+    if(!sWorld->getBoolConfig(CONFIG_CLEAN_CHARACTER_DB))
         return;
 
-    sLog.outString("Cleaning character database...");
+    sLog->outString("Cleaning character database...");
+
+    uint32 oldMSTime = getMSTime();
 
     // check flags which clean ups are necessary
     QueryResult result = CharacterDatabase.Query("SELECT value FROM worldstates WHERE entry=20004");
@@ -47,6 +48,9 @@ void CharacterDatabaseCleaner::CleanDatabase()
     if(flags & CLEANING_FLAG_TALENTS)
         CleanCharacterTalent();
     CharacterDatabase.Query("UPDATE worldstates SET value = 0 WHERE entry=20004");
+
+    sLog->outString(">> Cleaned character database in %u ms", GetMSTimeDiffToNow(oldMSTime));
+    sLog->outString();
 }
 
 void CharacterDatabaseCleaner::CheckUnique(const char* column, const
@@ -55,16 +59,14 @@ char* table, bool (*check)(uint32))
     QueryResult result = CharacterDatabase.PQuery("SELECT DISTINCT %s FROM %s", column, table);
     if(!result)
     {
-        sLog.outString( "Table %s is empty.", table );
+        sLog->outString( "Table %s is empty.", table );
         return;
     }
 
     bool found = false;
     std::ostringstream ss;
-    barGoLink bar( (int)result->GetRowCount() );
     do
     {
-        bar.step();
 
         Field *fields = result->Fetch();
 

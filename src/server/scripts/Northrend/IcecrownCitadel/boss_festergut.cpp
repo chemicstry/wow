@@ -101,7 +101,6 @@ class boss_festergut : public CreatureScript
                 events.Reset();
                 events.ScheduleEvent(EVENT_BERSERK, 300000);
                 events.ScheduleEvent(EVENT_INHALE_BLIGHT, urand(25000, 30000));
-                events.ScheduleEvent(EVENT_VILE_GAS, urand(30000, 32500));
                 events.ScheduleEvent(EVENT_GAS_SPORE, urand(20000, 25000));
                 events.ScheduleEvent(EVENT_GASTRIC_BLOAT, urand(12500, 15000));
                 maxInoculatedStack = 0;
@@ -177,7 +176,7 @@ class boss_festergut : public CreatureScript
 
                 events.Update(diff);
 
-                if (me->hasUnitState(UNIT_STAT_CASTING))
+                if (me->HasUnitState(UNIT_STAT_CASTING))
                     return;
 
                 while (uint32 eventId = events.ExecuteEvent())
@@ -195,6 +194,7 @@ class boss_festergut : public CreatureScript
                                 inhaleCounter = 0;
                                 if (Creature* professor = ObjectAccessor::GetCreature(*me, instance->GetData64(DATA_PROFESSOR_PUTRICIDE)))
                                     professor->AI()->DoAction(ACTION_FESTERGUT_GAS);
+                                events.RescheduleEvent(EVENT_GAS_SPORE, urand(20000, 25000));
                             }
                             else
                             {
@@ -210,7 +210,7 @@ class boss_festergut : public CreatureScript
                         case EVENT_VILE_GAS:
                         {
                             std::list<Unit*> targets;
-                            uint32 minTargets = RAID_MODE(3,8,3,8);
+                            uint32 minTargets = RAID_MODE<uint32>(3, 8, 3, 8);
                             SelectTargetList(targets, minTargets, SELECT_TARGET_RANDOM, -5.0f, true);
                             float minDist = 0.0f;
                             if (targets.size() >= minTargets)
@@ -224,8 +224,9 @@ class boss_festergut : public CreatureScript
                         case EVENT_GAS_SPORE:
                             Talk(EMOTE_WARN_GAS_SPORE);
                             Talk(EMOTE_GAS_SPORE);
-                            me->CastCustomSpell(SPELL_GAS_SPORE, SPELLVALUE_MAX_TARGETS, RAID_MODE<int32>(2,3,2,3), me);
+                            me->CastCustomSpell(SPELL_GAS_SPORE, SPELLVALUE_MAX_TARGETS, RAID_MODE<int32>(2, 3, 2, 3), me);
                             events.ScheduleEvent(EVENT_GAS_SPORE, urand(40000, 45000));
+                            events.RescheduleEvent(EVENT_VILE_GAS, urand(28000, 35000));
                             break;
                         case EVENT_GASTRIC_BLOAT:
                             DoCastVictim(SPELL_GASTRIC_BLOAT);
@@ -268,9 +269,9 @@ class boss_festergut : public CreatureScript
             }
 
         private:
+            uint64 gasDummyGUID;
             uint32 maxInoculatedStack;
             uint8 inhaleCounter;
-            uint64 gasDummyGUID;
         };
 
         CreatureAI* GetAI(Creature* creature) const
@@ -306,7 +307,7 @@ class npc_stinky_icc : public CreatureScript
 
                 events.Update(diff);
 
-                if (me->hasUnitState(UNIT_STAT_CASTING))
+                if (me->HasUnitState(UNIT_STAT_CASTING))
                     return;
 
                 while (uint32 eventId = events.ExecuteEvent())
@@ -359,12 +360,12 @@ class spell_festergut_pungent_blight : public SpellScriptLoader
 
             void HandleScript(SpellEffIndex /*effIndex*/)
             {
-                SpellEntry const* spellInfo = sSpellStore.LookupEntry(GetEffectValue());
+                SpellEntry const* spellInfo = sSpellStore.LookupEntry(uint32(GetEffectValue()));
                 if (!spellInfo || GetCaster()->GetTypeId() != TYPEID_UNIT)
                     return;
 
                 // Get Inhaled Blight id for our difficulty
-                spellInfo = sSpellMgr.GetSpellForDifficultyFromSpell(spellInfo, GetCaster());
+                spellInfo = sSpellMgr->GetSpellForDifficultyFromSpell(spellInfo, GetCaster());
 
                 // ...and remove it
                 GetCaster()->RemoveAurasDueToSpell(spellInfo->Id);
@@ -403,7 +404,7 @@ class spell_festergut_gastric_bloat : public SpellScriptLoader
                     return;
 
                 // Get Gastric Explosion id for our difficulty
-                spellInfo = sSpellMgr.GetSpellForDifficultyFromSpell(spellInfo, GetCaster());
+                spellInfo = sSpellMgr->GetSpellForDifficultyFromSpell(spellInfo, GetCaster());
                 GetHitUnit()->RemoveAurasDueToSpell(GetSpellInfo()->Id);
                 GetHitUnit()->CastSpell(GetHitUnit(), spellInfo, true);
             }

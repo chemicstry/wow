@@ -141,8 +141,7 @@ class InstanceSaveManager
         };
         typedef std::multimap<time_t /*resetTime*/, InstResetEvent> ResetTimeQueue;
 
-        void CleanupInstances();
-        void PackInstances();
+        void CleanupAndPackInstances();
 
         void LoadResetTimes();
         time_t GetResetTimeFor(uint32 mapid, Difficulty d) const
@@ -178,7 +177,7 @@ class InstanceSaveManager
 
     private:
 
-        void _ResetOrWarnAll(uint32 mapid, Difficulty difficulty, bool warn, uint32 timeleft);
+        void _ResetOrWarnAll(uint32 mapid, Difficulty difficulty, bool warn, time_t resetTime);
         void _ResetInstance(uint32 mapid, uint32 instanceId);
         void _ResetSave(InstanceSaveHashMap::iterator &itr);
         void _DelHelper(const char *fields, const char *table, const char *queryTail,...);
@@ -191,5 +190,5 @@ class InstanceSaveManager
         ResetTimeQueue m_resetTimeQueue;
 };
 
-#define sInstanceSaveMgr (*ACE_Singleton<InstanceSaveManager, ACE_Thread_Mutex>::instance())
+#define sInstanceSaveMgr ACE_Singleton<InstanceSaveManager, ACE_Thread_Mutex>::instance()
 #endif

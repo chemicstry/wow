@@ -17,7 +17,6 @@ endif()
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
   if(SERVERS)
     add_subdirectory(jemalloc)
-    set(JEMALLOC_LIB "jemalloc")
   endif()
 endif()
 
@@ -35,7 +34,6 @@ endif()
 add_subdirectory(g3dlite)
 
 if(SERVERS)
-  add_subdirectory(sockets)
   add_subdirectory(gsoap)
 endif()
 

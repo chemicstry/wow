@@ -85,7 +85,7 @@ public:
         GameObject* obj = NULL;
 
         // by DB guid
-        if (GameObjectData const* go_data = sObjectMgr.GetGOData(lowguid))
+        if (GameObjectData const* go_data = sObjectMgr->GetGOData(lowguid))
             obj = handler->GetObjectGlobalyWithGuidOrNearWithDbGuid(lowguid,go_data->id);
 
         if (!obj)
@@ -121,7 +121,7 @@ public:
 
         char* spawntimeSecs = strtok(NULL, " ");
 
-        const GameObjectInfo *gInfo = sObjectMgr.GetGameObjectInfo(id);
+        const GameObjectInfo *gInfo = ObjectMgr::GetGameObjectInfo(id);
 
         if (!gInfo)
         {
@@ -133,7 +133,7 @@ public:
         if (gInfo->displayId && !sGameObjectDisplayInfoStore.LookupEntry(gInfo->displayId))
         {
             // report to DB errors log as in loading case
-            sLog.outErrorDb("Gameobject (Entry %u GoType: %u) have invalid displayId (%u), not spawned.",id, gInfo->type, gInfo->displayId);
+            sLog->outErrorDb("Gameobject (Entry %u GoType: %u) have invalid displayId (%u), not spawned.",id, gInfo->type, gInfo->displayId);
             handler->PSendSysMessage(LANG_GAMEOBJECT_HAVE_INVALID_DATA,id);
             handler->SetSentErrorMessage(true);
             return false;
@@ -147,7 +147,7 @@ public:
         Map *map = chr->GetMap();
 
         GameObject* pGameObj = new GameObject;
-        uint32 db_lowGUID = sObjectMgr.GenerateLowGuid(HIGHGUID_GAMEOBJECT);
+        uint32 db_lowGUID = sObjectMgr->GenerateLowGuid(HIGHGUID_GAMEOBJECT);
 
         if (!pGameObj->Create(db_lowGUID, gInfo->id, map, chr->GetPhaseMaskForSpawn(), x, y, z, o, 0.0f, 0.0f, 0.0f, 0.0f, 0, GO_STATE_READY))
         {
@@ -159,7 +159,7 @@ public:
         {
             uint32 value = atoi((char*)spawntimeSecs);
             pGameObj->SetRespawnTime(value);
-            //sLog.outDebug("*** spawntimeSecs: %d", value);
+            //sLog->outDebug("*** spawntimeSecs: %d", value);
         }
 
         // fill the gameobject data and save to the db
@@ -172,12 +172,12 @@ public:
             return false;
         }
 
-        sLog.outDebug(handler->GetTrinityString(LANG_GAMEOBJECT_CURRENT), gInfo->name, db_lowGUID, x, y, z, o);
+        sLog->outDebug(handler->GetTrinityString(LANG_GAMEOBJECT_CURRENT), gInfo->name, db_lowGUID, x, y, z, o);
 
         map->Add(pGameObj);
 
         // TODO: is it really necessary to add both the real and DB table guid here ?
-        sObjectMgr.AddGameobjectToGrid(db_lowGUID, sObjectMgr.GetGOData(db_lowGUID));
+        sObjectMgr->AddGameobjectToGrid(db_lowGUID, sObjectMgr->GetGOData(db_lowGUID));
 
         handler->PSendSysMessage(LANG_GAMEOBJECT_ADD,id,gInfo->name,db_lowGUID,x,y,z);
         return true;
@@ -219,7 +219,7 @@ public:
     {
         Player* pl = handler->GetSession()->GetPlayer();
         QueryResult result;
-        GameEventMgr::ActiveEvents const& activeEventsList = sGameEventMgr.GetActiveEventList();
+        GameEventMgr::ActiveEvents const& activeEventsList = sGameEventMgr->GetActiveEventList();
         if (*args)
         {
             // number or [name] Shift-click form |color|Hgameobject_entry:go_id|h[name]|h|r
@@ -293,8 +293,8 @@ public:
             o =       fields[5].GetFloat();
             mapid =   fields[6].GetUInt16();
             phase =   fields[7].GetUInt16();
-            pool_id = sPoolMgr.IsPartOfAPool<GameObject>(lowguid);
-            if (!pool_id || sPoolMgr.IsSpawnedObject<GameObject>(lowguid))
+            pool_id = sPoolMgr->IsPartOfAPool<GameObject>(lowguid);
+            if (!pool_id || sPoolMgr->IsSpawnedObject<GameObject>(lowguid))
                 found = true;
         } while (result->NextRow() && (!found));
 
@@ -304,7 +304,7 @@ public:
             return false;
         }
 
-        GameObjectInfo const* goI = sObjectMgr.GetGameObjectInfo(id);
+        GameObjectInfo const* goI = ObjectMgr::GetGameObjectInfo(id);
 
         if (!goI)
         {
@@ -345,7 +345,7 @@ public:
         GameObject* obj = NULL;
 
         // by DB guid
-        if (GameObjectData const* go_data = sObjectMgr.GetGOData(lowguid))
+        if (GameObjectData const* go_data = sObjectMgr->GetGOData(lowguid))
             obj = handler->GetObjectGlobalyWithGuidOrNearWithDbGuid(lowguid,go_data->id);
 
         if (!obj)
@@ -393,7 +393,7 @@ public:
         GameObject* obj = NULL;
 
         // by DB guid
-        if (GameObjectData const* go_data = sObjectMgr.GetGOData(lowguid))
+        if (GameObjectData const* go_data = sObjectMgr->GetGOData(lowguid))
             obj = handler->GetObjectGlobalyWithGuidOrNearWithDbGuid(lowguid,go_data->id);
 
         if (!obj)
@@ -444,7 +444,7 @@ public:
         GameObject* obj = NULL;
 
         // by DB guid
-        if (GameObjectData const* go_data = sObjectMgr.GetGOData(lowguid))
+        if (GameObjectData const* go_data = sObjectMgr->GetGOData(lowguid))
             obj = handler->GetObjectGlobalyWithGuidOrNearWithDbGuid(lowguid,go_data->id);
 
         if (!obj)
@@ -509,7 +509,7 @@ public:
         GameObject* obj = NULL;
 
         // by DB guid
-        if (GameObjectData const* go_data = sObjectMgr.GetGOData(lowguid))
+        if (GameObjectData const* go_data = sObjectMgr->GetGOData(lowguid))
             obj = handler->GetObjectGlobalyWithGuidOrNearWithDbGuid(lowguid,go_data->id);
 
         if (!obj)
@@ -557,7 +557,7 @@ public:
                 float z = fields[4].GetFloat();
                 uint16 mapid = fields[5].GetUInt16();
 
-                GameObjectInfo const * gInfo = sObjectMgr.GetGameObjectInfo(entry);
+                GameObjectInfo const * gInfo = ObjectMgr::GetGameObjectInfo(entry);
 
                 if (!gInfo)
                     continue;
@@ -589,7 +589,7 @@ public:
                 entry = atoi((char*)args);
         }
 
-        GameObjectInfo const* goinfo = sObjectMgr.GetGameObjectInfo(entry);
+        GameObjectInfo const* goinfo = ObjectMgr::GetGameObjectInfo(entry);
 
         if (!goinfo)
             return false;
@@ -624,7 +624,7 @@ public:
 
         GameObject* gobj = NULL;
 
-        if (GameObjectData const* goData = sObjectMgr.GetGOData(lowguid))
+        if (GameObjectData const* goData = sObjectMgr->GetGOData(lowguid))
             gobj = handler->GetObjectGlobalyWithGuidOrNearWithDbGuid(lowguid, goData->id);
 
         if (!gobj)

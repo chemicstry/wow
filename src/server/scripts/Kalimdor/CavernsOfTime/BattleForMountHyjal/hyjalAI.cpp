@@ -389,7 +389,7 @@ void hyjalAI::Reset()
     me->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
 
     //Initialize spells
-    memset(Spell, 0, sizeof(Spell));
+    memset(Spells, 0, sizeof(Spell) * HYJAL_AI_MAX_SPELLS);
 
     //Reset Instance Data for trash count
     if (pInstance)
@@ -402,7 +402,7 @@ void hyjalAI::Reset()
             pInstance->DoUpdateWorldState(WORLD_STATE_ENEMYCOUNT, 0);
             pInstance->SetData(DATA_RESET_TRASH_COUNT, 0);
         }
-    } else sLog.outError(ERROR_INST_DATA);
+    } else sLog->outError(ERROR_INST_DATA);
 
     //Visibility
     DoHide = true;
@@ -425,9 +425,9 @@ void hyjalAI::EnterEvadeMode()
 void hyjalAI::EnterCombat(Unit * /*who*/)
 {
     if (IsDummy)return;
-    for (uint8 i = 0; i < 3; ++i)
-        if (Spell[i].Cooldown)
-            SpellTimer[i] = Spell[i].Cooldown;
+    for (uint8 i = 0; i < HYJAL_AI_MAX_SPELLS; ++i)
+        if (Spells[i].Cooldown)
+            SpellTimer[i] = Spells[i].Cooldown;
 
     Talk(ATTACKED);
 }
@@ -533,7 +533,7 @@ void hyjalAI::SummonNextWave(const Wave wave[18], uint32 Count, float Base[4][3]
 
     if (!pInstance)
     {
-        sLog.outError(ERROR_INST_DATA);
+        sLog->outError(ERROR_INST_DATA);
         return;
     }
     InfernalCount = 0;//reset infernal count every new wave
@@ -563,7 +563,7 @@ void hyjalAI::SummonNextWave(const Wave wave[18], uint32 Count, float Base[4][3]
         else
         {
             NextWaveTimer = 15000;
-            sLog.outDebug("TSCR: HyjalAI: debug mode is enabled. Next Wave in 15 seconds");
+            sLog->outDebug("TSCR: HyjalAI: debug mode is enabled. Next Wave in 15 seconds");
         }
     }
     else
@@ -607,7 +607,7 @@ uint32 hyjalAI::GetInstanceData(uint32 Event)
 {
     if (pInstance)
         return pInstance->GetData(Event);
-    else sLog.outError(ERROR_INST_DATA);
+    else sLog->outError(ERROR_INST_DATA);
 
     return 0;
 }
@@ -881,9 +881,9 @@ void hyjalAI::UpdateAI(const uint32 diff)
     if (!UpdateVictim())
         return;
 
-    for (uint8 i = 0; i < 3; ++i)
+    for (uint8 i = 0; i < HYJAL_AI_MAX_SPELLS; ++i)
     {
-        if (Spell[i].SpellId)
+        if (Spells[i].SpellId)
         {
             if (SpellTimer[i] <= diff)
             {
@@ -892,7 +892,7 @@ void hyjalAI::UpdateAI(const uint32 diff)
 
                 Unit *pTarget = NULL;
 
-                switch(Spell[i].TargetType)
+                switch(Spells[i].TargetType)
                 {
                     case TARGETTYPE_SELF: pTarget = me; break;
                     case TARGETTYPE_RANDOM: pTarget = SelectUnit(SELECT_TARGET_RANDOM, 0); break;
@@ -901,8 +901,8 @@ void hyjalAI::UpdateAI(const uint32 diff)
 
                 if (pTarget && pTarget->isAlive())
                 {
-                    DoCast(pTarget, Spell[i].SpellId);
-                    SpellTimer[i] = Spell[i].Cooldown;
+                    DoCast(pTarget, Spells[i].SpellId);
+                    SpellTimer[i] = Spells[i].Cooldown;
                 }
             } else SpellTimer[i] -= diff;
         }

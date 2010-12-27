@@ -22,7 +22,6 @@
 #include "DatabaseEnv.h"
 #include "Log.h"
 #include "ObjectMgr.h"
-#include "ProgressBar.h"
 #include <list>
 #include <vector>
 #include "Util.h"
@@ -46,6 +45,8 @@ static EnchantmentStore RandomItemEnch;
 
 void LoadRandomEnchantmentsTable()
 {
+    uint32 oldMSTime = getMSTime();
+
     RandomItemEnch.clear();                                 // for reload case
 
     QueryResult result = WorldDatabase.Query("SELECT entry, ench, chance FROM item_enchantment_template");
@@ -53,12 +54,10 @@ void LoadRandomEnchantmentsTable()
     if (result)
     {
         uint32 count = 0;
-        barGoLink bar(result->GetRowCount());
 
         do
         {
             Field *fields = result->Fetch();
-            bar.step();
 
             uint32 entry = fields[0].GetUInt32();
             uint32 ench = fields[1].GetUInt32();
@@ -70,13 +69,13 @@ void LoadRandomEnchantmentsTable()
             ++count;
         } while (result->NextRow());
 
-        sLog.outString();
-        sLog.outString(">> Loaded %u Item Enchantment definitions", count);
+        sLog->outString(">> Loaded %u Item Enchantment definitions in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
+        sLog->outString();
     }
     else
     {
-        sLog.outString();
-        sLog.outErrorDb(">> Loaded 0 Item Enchantment definitions. DB table `item_enchantment_template` is empty.");
+        sLog->outErrorDb(">> Loaded 0 Item Enchantment definitions. DB table `item_enchantment_template` is empty.");
+        sLog->outString();
     }
 }
 
@@ -91,7 +90,7 @@ uint32 GetItemEnchantMod(int32 entry)
     EnchantmentStore::const_iterator tab = RandomItemEnch.find(entry);
     if (tab == RandomItemEnch.end())
     {
-        sLog.outErrorDb("Item RandomProperty / RandomSuffix id #%u used in `item_template` but it does not have records in `item_enchantment_template` table.",entry);
+        sLog->outErrorDb("Item RandomProperty / RandomSuffix id #%u used in `item_template` but it does not have records in `item_enchantment_template` table.",entry);
         return 0;
     }
 
@@ -121,7 +120,7 @@ uint32 GetItemEnchantMod(int32 entry)
 
 uint32 GenerateEnchSuffixFactor(uint32 item_id)
 {
-    ItemPrototype const *itemProto = sObjectMgr.GetItemPrototype(item_id);
+    ItemPrototype const *itemProto = ObjectMgr::GetItemPrototype(item_id);
 
     if (!itemProto)
         return 0;

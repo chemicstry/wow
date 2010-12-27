@@ -268,6 +268,7 @@ class boss_blood_council_controller : public CreatureScript
                     if (Creature* prince = ObjectAccessor::GetCreature(*me, invocationOrder[invocationStage].guid))
                         prince->Kill(prince);
                 }
+                instance->DoRemoveAurasDueToSpellOnPlayers(SPELL_SHADOW_PRISON_DUMMY);
             }
 
             void UpdateAI(const uint32 diff)
@@ -277,7 +278,7 @@ class boss_blood_council_controller : public CreatureScript
 
                 events.Update(diff);
 
-                if (me->hasUnitState(UNIT_STAT_CASTING))
+                if (me->HasUnitState(UNIT_STAT_CASTING))
                     return;
 
                 while (uint32 eventId = events.ExecuteEvent())
@@ -356,7 +357,7 @@ class boss_prince_keleseth_icc : public CreatureScript
 
             void InitializeAI()
             {
-                if (CreatureData const* data = sObjectMgr.GetCreatureData(me->GetDBTableGUIDLow()))
+                if (CreatureData const* data = sObjectMgr->GetCreatureData(me->GetDBTableGUIDLow()))
                     if (data->curhealth)
                         spawnHealth = data->curhealth;
 
@@ -484,7 +485,7 @@ class boss_prince_keleseth_icc : public CreatureScript
 
                 events.Update(diff);
 
-                if (me->hasUnitState(UNIT_STAT_CASTING))
+                if (me->HasUnitState(UNIT_STAT_CASTING))
                     return;
 
                 while (uint32 eventId = events.ExecuteEvent())
@@ -541,7 +542,7 @@ class boss_prince_taldaram_icc : public CreatureScript
 
             void InitializeAI()
             {
-                if (CreatureData const* data = sObjectMgr.GetCreatureData(me->GetDBTableGUIDLow()))
+                if (CreatureData const* data = sObjectMgr->GetCreatureData(me->GetDBTableGUIDLow()))
                     if (data->curhealth)
                         spawnHealth = data->curhealth;
 
@@ -678,7 +679,7 @@ class boss_prince_taldaram_icc : public CreatureScript
 
                 events.Update(diff);
 
-                if (me->hasUnitState(UNIT_STAT_CASTING))
+                if (me->HasUnitState(UNIT_STAT_CASTING))
                     return;
 
                 while (uint32 eventId = events.ExecuteEvent())
@@ -715,8 +716,8 @@ class boss_prince_taldaram_icc : public CreatureScript
             }
 
         private:
-            bool isEmpowered;  // bool check faster than map lookup
             uint32 spawnHealth;
+            bool isEmpowered;  // bool check faster than map lookup
         };
 
         CreatureAI* GetAI(Creature* creature) const
@@ -740,7 +741,7 @@ class boss_prince_valanar_icc : public CreatureScript
 
             void InitializeAI()
             {
-                if (CreatureData const* data = sObjectMgr.GetCreatureData(me->GetDBTableGUIDLow()))
+                if (CreatureData const* data = sObjectMgr->GetCreatureData(me->GetDBTableGUIDLow()))
                     if (data->curhealth)
                         spawnHealth = data->curhealth;
 
@@ -891,7 +892,7 @@ class boss_prince_valanar_icc : public CreatureScript
 
                 events.Update(diff);
 
-                if (me->hasUnitState(UNIT_STAT_CASTING))
+                if (me->HasUnitState(UNIT_STAT_CASTING))
                     return;
 
                 while (uint32 eventId = events.ExecuteEvent())
@@ -933,8 +934,8 @@ class boss_prince_valanar_icc : public CreatureScript
             }
 
         private:
-            bool isEmpowered;  // bool check faster than map lookup
             uint32 spawnHealth;
+            bool isEmpowered;  // bool check faster than map lookup
         };
 
         CreatureAI* GetAI(Creature* creature) const
@@ -1033,9 +1034,9 @@ class npc_blood_queen_lana_thel : public CreatureScript
             }
 
         private:
-            bool introDone;
             EventMap events;
             InstanceScript* instance;
+            bool introDone;
         };
 
         CreatureAI* GetAI(Creature* creature) const
@@ -1088,7 +1089,7 @@ class npc_ball_of_flame : public CreatureScript
                     if (Player* target = ObjectAccessor::GetPlayer(*me, chaseGUID))
                     {
                         // need to clear states now because this call is before AuraEffect is fully removed
-                        me->clearUnitState(UNIT_STAT_CASTING | UNIT_STAT_STUNNED);
+                        me->ClearUnitState(UNIT_STAT_CASTING | UNIT_STAT_STUNNED);
                         if (target && me->Attack(target, true))
                             me->GetMotionMaster()->MoveChase(target, 1.0f);
                     }
@@ -1109,8 +1110,8 @@ class npc_ball_of_flame : public CreatureScript
             }
 
         private:
-            uint32 despawnTimer;
             uint64 chaseGUID;
+            uint32 despawnTimer;
         };
 
         CreatureAI* GetAI(Creature* creature) const
@@ -1213,7 +1214,7 @@ class npc_dark_nucleus : public CreatureScript
                 }
 
                 DoCast(who, SPELL_SHADOW_RESONANCE_RESIST);
-                me->clearUnitState(UNIT_STAT_CASTING);
+                me->ClearUnitState(UNIT_STAT_CASTING);
             }
 
             void MoveInLineOfSight(Unit* who)
@@ -1247,7 +1248,7 @@ class npc_dark_nucleus : public CreatureScript
                             !victim->HasAura(SPELL_SHADOW_RESONANCE_RESIST, me->GetGUID()))
                         {
                             DoCast(victim, SPELL_SHADOW_RESONANCE_RESIST);
-                            me->clearUnitState(UNIT_STAT_CASTING);
+                            me->ClearUnitState(UNIT_STAT_CASTING);
                         }
                 }
                 else
@@ -1266,7 +1267,7 @@ class npc_dark_nucleus : public CreatureScript
                         lockedTarget = true;
                         AttackStart(victim);
                         DoCast(victim, SPELL_SHADOW_RESONANCE_RESIST);
-                        me->clearUnitState(UNIT_STAT_CASTING);
+                        me->ClearUnitState(UNIT_STAT_CASTING);
                     }
                 }
             }
@@ -1294,7 +1295,7 @@ class spell_taldaram_glittering_sparks : public SpellScriptLoader
             void HandleScript(SpellEffIndex effIndex)
             {
                 PreventHitDefaultEffect(effIndex);
-                GetCaster()->CastSpell(GetCaster(), GetEffectValue(), true);
+                GetCaster()->CastSpell(GetCaster(), uint32(GetEffectValue()), true);
             }
 
             void Register()
@@ -1321,7 +1322,7 @@ class spell_taldaram_summon_flame_ball : public SpellScriptLoader
             void HandleScript(SpellEffIndex effIndex)
             {
                 PreventHitDefaultEffect(effIndex);
-                GetCaster()->CastSpell(GetCaster(), GetEffectValue(), true);
+                GetCaster()->CastSpell(GetCaster(), uint32(GetEffectValue()), true);
             }
 
             void Register()
@@ -1397,7 +1398,7 @@ class spell_taldaram_ball_of_inferno_flame : public SpellScriptLoader
             void ModAuraStack()
             {
                 if (Aura* aur = GetHitAura())
-                    aur->SetStackAmount(GetSpellInfo()->StackAmount);
+                    aur->SetStackAmount(uint8(GetSpellInfo()->StackAmount));
             }
 
             void Register()

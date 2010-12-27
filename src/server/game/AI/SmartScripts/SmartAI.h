@@ -106,7 +106,7 @@ class SmartAI : public CreatureAI
         void SpellHitTarget(Unit* target, const SpellEntry* pSpell);
 
         // Called at any Damage from any attacker (before damage apply)
-        void DamageTaken(Unit* done_by, uint32& damage, DamageEffectType damagetype);
+        void DamageTaken(Unit* done_by, uint32& damage);
 
         // Called when the creature receives heal
         void HealReceived(Unit* done_by, uint32& addhealth);
@@ -124,7 +124,7 @@ class SmartAI : public CreatureAI
         void IsSummonedBy(Unit* summoner);
 
         // Called at any Damage to any victim (before damage apply)
-        void DamageDealt(Unit * done_to, uint32 & damage);
+        void DamageDealt(Unit * done_to, uint32 & damage, DamageEffectType /*damagetype*/);
 
         // Called when a summoned creature dissapears (UnSommoned)
         void SummonedCreatureDespawn(Creature* unit);
@@ -182,7 +182,7 @@ class SmartAI : public CreatureAI
         //void sQuestSelect(Player* player, Quest const* quest);
         //void sQuestComplete(Player* player, Quest const* quest);
         void sQuestReward(Player* player, Quest const* quest, uint32 opt);
-        void sOnDummyEffect(Unit* caster, uint32 spellId, SpellEffIndex effIndex);
+        bool sOnDummyEffect(Unit* caster, uint32 spellId, SpellEffIndex effIndex);
 
         uint32 mEscortQuestID;
 

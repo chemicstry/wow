@@ -258,17 +258,16 @@ public:
 
         Unit *GetHatedManaUser() const
         {
-            std::list<HostileReference*>::const_iterator i;
-            for (i = me->getThreatManager().getThreatList().begin(); i != me->getThreatManager().getThreatList().end(); ++i)
-            {
-                Unit* pUnit = Unit::GetUnit((*me), (*i)->getUnitGuid());
-                if (pUnit->getPowerType() == POWER_MANA)
-                    return pUnit;
-            }
+            std::list<HostileReference*> const& threatList = me->getThreatManager().getThreatList();
+            for (std::list<HostileReference*>::const_iterator i = threatList.begin(); i != threatList.end(); ++i)
+                if (Unit* unit = (*i)->getTarget())
+                    if (unit->getPowerType() == POWER_MANA)
+                        return unit;
+
             return NULL;
         }
 
-        Unit* GetAuraEffectTriggerTarget(uint32 spellId, uint8 /*effIndex*/) const
+        Unit* GetAuraEffectTriggerTarget(uint32 spellId, uint8 /*effIndex*/)
         {
             switch (spellId)
             {

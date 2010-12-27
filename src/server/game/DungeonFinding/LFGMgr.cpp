@@ -21,10 +21,11 @@
 
 #include "DisableMgr.h"
 #include "ObjectMgr.h"
-#include "ProgressBar.h"
 #include "SocialMgr.h"
 #include "LFGMgr.h"
 #include "LFGScripts.h"
+#include "LFGGroupData.h"
+#include "LFGPlayerData.h"
 
 #include "Group.h"
 #include "Player.h"
@@ -33,7 +34,7 @@ LFGMgr::LFGMgr(): m_update(true), m_QueueTimer(0), m_lfgProposalId(1),
 m_WaitTimeAvg(-1), m_WaitTimeTank(-1), m_WaitTimeHealer(-1), m_WaitTimeDps(-1),
 m_NumWaitTimeAvg(0), m_NumWaitTimeTank(0), m_NumWaitTimeHealer(0), m_NumWaitTimeDps(0)
 {
-    m_update = sWorld.getBoolConfig(CONFIG_DUNGEON_FINDER_ENABLE);
+    m_update = sWorld->getBoolConfig(CONFIG_DUNGEON_FINDER_ENABLE);
     if (m_update)
     {
         new LFGScripts();
@@ -73,27 +74,25 @@ LFGMgr::~LFGMgr()
 /// Load achievement <-> encounter associations
 void LFGMgr::LoadDungeonEncounters()
 {
+    uint32 oldMSTime = getMSTime();
+
     m_EncountersByAchievement.clear();
 
-    uint32 count = 0;
     QueryResult result = WorldDatabase.Query("SELECT achievementId, dungeonId FROM lfg_dungeon_encounters");
 
     if (!result)
     {
-        barGoLink bar(1);
-        bar.step();
 
-        sLog.outString();
-        sLog.outErrorDb(">> Loaded 0 dungeon encounter lfg associations. DB table `lfg_dungeon_encounters` is empty!");
+        sLog->outString();
+        sLog->outErrorDb(">> Loaded 0 dungeon encounter lfg associations. DB table `lfg_dungeon_encounters` is empty!");
         return;
     }
 
-    barGoLink bar(result->GetRowCount());
+    uint32 count = 0;
 
     Field* fields = NULL;
     do
     {
-        bar.step();
         fields = result->Fetch();
         uint32 achievementId = fields[0].GetUInt32();
         uint32 dungeonId = fields[1].GetUInt32();
@@ -102,19 +101,19 @@ void LFGMgr::LoadDungeonEncounters()
         {
             if (!(achievement->flags & ACHIEVEMENT_FLAG_COUNTER))
             {
-                sLog.outErrorDb("Achievement %u specified in table `lfg_dungeon_encounters` is not a statistic!", achievementId);
+                sLog->outErrorDb("Achievement %u specified in table `lfg_dungeon_encounters` is not a statistic!", achievementId);
                 continue;
             }
         }
         else
         {
-            sLog.outErrorDb("Achievement %u specified in table `lfg_dungeon_encounters` does not exist!", achievementId);
+            sLog->outErrorDb("Achievement %u specified in table `lfg_dungeon_encounters` does not exist!", achievementId);
             continue;
         }
 
         if (!sLFGDungeonStore.LookupEntry(dungeonId))
         {
-            sLog.outErrorDb("Dungeon %u specified in table `lfg_dungeon_encounters` does not exist!", dungeonId);
+            sLog->outErrorDb("Dungeon %u specified in table `lfg_dungeon_encounters` does not exist!", dungeonId);
             continue;
         }
 
@@ -122,38 +121,35 @@ void LFGMgr::LoadDungeonEncounters()
         ++count;
     } while (result->NextRow());
 
-    sLog.outString();
-    sLog.outString(">> Loaded %u dungeon encounter lfg associations.", count);
+    sLog->outString(">> Loaded %u dungeon encounter lfg associations in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
+    sLog->outString();
 }
 
 
 /// Load rewards for completing dungeons
 void LFGMgr::LoadRewards()
 {
+    uint32 oldMSTime = getMSTime();
+
     for (LfgRewardMap::iterator itr = m_RewardMap.begin(); itr != m_RewardMap.end(); ++itr)
         delete itr->second;
     m_RewardMap.clear();
 
-    uint32 count = 0;
     // ORDER BY is very important for GetRandomDungeonReward!
     QueryResult result = WorldDatabase.Query("SELECT dungeonId, maxLevel, firstQuestId, firstMoneyVar, firstXPVar, otherQuestId, otherMoneyVar, otherXPVar FROM lfg_dungeon_rewards ORDER BY dungeonId, maxLevel ASC");
 
     if (!result)
     {
-        barGoLink bar(1);
-        bar.step();
-
-        sLog.outString();
-        sLog.outErrorDb(">> Loaded 0 lfg dungeon rewards. DB table `lfg_dungeon_rewards` is empty!");
+        sLog->outErrorDb(">> Loaded 0 lfg dungeon rewards. DB table `lfg_dungeon_rewards` is empty!");
+        sLog->outString();
         return;
     }
 
-    barGoLink bar(result->GetRowCount());
+    uint32 count = 0;
 
     Field* fields = NULL;
     do
     {
-        bar.step();
         fields = result->Fetch();
         uint32 dungeonId = fields[0].GetUInt32();
         uint32 maxLevel = fields[1].GetUInt8();
@@ -166,25 +162,25 @@ void LFGMgr::LoadRewards()
 
         if (!sLFGDungeonStore.LookupEntry(dungeonId))
         {
-            sLog.outErrorDb("Dungeon %u specified in table `lfg_dungeon_rewards` does not exist!", dungeonId);
+            sLog->outErrorDb("Dungeon %u specified in table `lfg_dungeon_rewards` does not exist!", dungeonId);
             continue;
         }
 
-        if (!maxLevel || maxLevel > sWorld.getIntConfig(CONFIG_MAX_PLAYER_LEVEL))
+        if (!maxLevel || maxLevel > sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL))
         {
-            sLog.outErrorDb("Level %u specified for dungeon %u in table `lfg_dungeon_rewards` can never be reached!", maxLevel, dungeonId);
-            maxLevel = sWorld.getIntConfig(CONFIG_MAX_PLAYER_LEVEL);
+            sLog->outErrorDb("Level %u specified for dungeon %u in table `lfg_dungeon_rewards` can never be reached!", maxLevel, dungeonId);
+            maxLevel = sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL);
         }
 
-        if (firstQuestId && !sObjectMgr.GetQuestTemplate(firstQuestId))
+        if (firstQuestId && !sObjectMgr->GetQuestTemplate(firstQuestId))
         {
-            sLog.outErrorDb("First quest %u specified for dungeon %u in table `lfg_dungeon_rewards` does not exist!", firstQuestId, dungeonId);
+            sLog->outErrorDb("First quest %u specified for dungeon %u in table `lfg_dungeon_rewards` does not exist!", firstQuestId, dungeonId);
             firstQuestId = 0;
         }
 
-        if (otherQuestId && !sObjectMgr.GetQuestTemplate(otherQuestId))
+        if (otherQuestId && !sObjectMgr->GetQuestTemplate(otherQuestId))
         {
-            sLog.outErrorDb("Other quest %u specified for dungeon %u in table `lfg_dungeon_rewards` does not exist!", otherQuestId, dungeonId);
+            sLog->outErrorDb("Other quest %u specified for dungeon %u in table `lfg_dungeon_rewards` does not exist!", otherQuestId, dungeonId);
             otherQuestId = 0;
         }
 
@@ -192,8 +188,8 @@ void LFGMgr::LoadRewards()
         ++count;
     } while (result->NextRow());
 
-    sLog.outString();
-    sLog.outString(">> Loaded %u lfg dungeon rewards.", count);
+    sLog->outString(">> Loaded %u lfg dungeon rewards in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
+    sLog->outString();
 }
 
 void LFGMgr::Update(uint32 diff)
@@ -208,21 +204,24 @@ void LFGMgr::Update(uint32 diff)
     for (LfgRoleCheckMap::iterator it = m_RoleChecks.begin(); it != m_RoleChecks.end();)
     {
         LfgRoleCheckMap::iterator itRoleCheck = it++;
-        LfgRoleCheck* pRoleCheck = itRoleCheck->second;
-        if (currTime < pRoleCheck->cancelTime)
+        LfgRoleCheck* roleCheck = itRoleCheck->second;
+        if (currTime < roleCheck->cancelTime)
             continue;
-        pRoleCheck->result = LFG_ROLECHECK_MISSING_ROLE;
+        roleCheck->state = LFG_ROLECHECK_MISSING_ROLE;
 
-        for (LfgRolesMap::const_iterator itRoles = pRoleCheck->roles.begin(); itRoles != pRoleCheck->roles.end(); ++itRoles)
-            if (Player* plr = sObjectMgr.GetPlayerByLowGUID(itRoles->first))
+        for (LfgRolesMap::const_iterator itRoles = roleCheck->roles.begin(); itRoles != roleCheck->roles.end(); ++itRoles)
+        {
+            uint64 guid = itRoles->first;
+            ClearState(guid);
+            if (Player* plr = sObjectMgr->GetPlayer(guid))
             {
-                plr->GetSession()->SendLfgRoleCheckUpdate(pRoleCheck);
-                plr->ClearLfgState();
-
-                if (itRoles->first == pRoleCheck->leader)
-                    plr->GetSession()->SendLfgJoinResult(LFG_JOIN_FAILED, pRoleCheck->result);
+                plr->GetSession()->SendLfgRoleCheckUpdate(roleCheck);
+                
+                if (itRoles->first == roleCheck->leader)
+                    plr->GetSession()->SendLfgJoinResult(LfgJoinResultData(LFG_JOIN_FAILED, LFG_ROLECHECK_MISSING_ROLE));
             }
-        delete pRoleCheck;
+        }
+        delete roleCheck;
         m_RoleChecks.erase(itRoleCheck);
     }
 
@@ -243,8 +242,8 @@ void LFGMgr::Update(uint32 diff)
         {
             pBoot->inProgress = false;
             for (LfgAnswerMap::const_iterator itVotes = pBoot->votes.begin(); itVotes != pBoot->votes.end(); ++itVotes)
-                if (Player* plrg = sObjectMgr.GetPlayerByLowGUID(itVotes->first))
-                    if (plrg->GetGUIDLow() != pBoot->victimLowGuid)
+                if (Player* plrg = sObjectMgr->GetPlayer(itVotes->first))
+                    if (plrg->GetGUID() != pBoot->victim)
                         plrg->GetSession()->SendLfgBootPlayer(pBoot);
             delete pBoot;
             m_Boots.erase(itBoot);
@@ -259,7 +258,7 @@ void LFGMgr::Update(uint32 diff)
         LfgGuidList firstNew;
         while (!newToQueue.empty())
         {
-            sLog.outDebug("LFGMgr::Update: QueueId %u: checking [" UI64FMTD "] newToQueue(%u), currentQueue(%u)", it->first, newToQueue.front(), uint32(newToQueue.size()), uint32(currentQueue.size()));
+            sLog->outDebug("LFGMgr::Update: QueueId %u: checking [" UI64FMTD "] newToQueue(%u), currentQueue(%u)", it->first, newToQueue.front(), uint32(newToQueue.size()), uint32(currentQueue.size()));
             firstNew.push_back(newToQueue.front());
             LfgGuidList temporalList = currentQueue;
             if (LfgProposal* pProposal = FindNewGroups(firstNew, temporalList)) // Group found!
@@ -272,22 +271,28 @@ void LFGMgr::Update(uint32 diff)
                 }
                 m_Proposals[++m_lfgProposalId] = pProposal;
 
-                uint32 lowGuid = 0;
+                uint64 guid = 0;
                 for (LfgProposalPlayerMap::const_iterator itPlayers = pProposal->players.begin(); itPlayers != pProposal->players.end(); ++itPlayers)
                 {
-                    lowGuid = itPlayers->first;
-                    if (Player* plr = sObjectMgr.GetPlayerByLowGUID(itPlayers->first))
+                    guid = itPlayers->first;
+                    SetState(guid, LFG_STATE_PROPOSAL);
+                    if (Player* plr = sObjectMgr->GetPlayer(itPlayers->first))
                     {
-                        if (plr->GetGroup())
-                            plr->GetSession()->SendLfgUpdateParty(LFG_UPDATETYPE_PROPOSAL_BEGIN, plr->GetLfgDungeons(), plr->GetLfgComment());
+                        Group *grp = plr->GetGroup();
+                        if (grp)
+                         {
+                            uint64 gguid = grp->GetGUID();
+                            SetState(gguid, LFG_STATE_PROPOSAL);
+                            plr->GetSession()->SendLfgUpdateParty(LfgUpdateData(LFG_UPDATETYPE_PROPOSAL_BEGIN, GetSelectedDungeons(guid), GetComment(guid)));
+                        }
                         else
-                            plr->GetSession()->SendLfgUpdatePlayer(LFG_UPDATETYPE_PROPOSAL_BEGIN, plr->GetLfgDungeons(), plr->GetLfgComment());
+                            plr->GetSession()->SendLfgUpdatePlayer(LfgUpdateData(LFG_UPDATETYPE_PROPOSAL_BEGIN, GetSelectedDungeons(guid), GetComment(guid)));
                         plr->GetSession()->SendLfgUpdateProposal(m_lfgProposalId, pProposal);
                     }
                 }
 
                 if (pProposal->state == LFG_PROPOSAL_SUCCESS)
-                    UpdateProposal(m_lfgProposalId, lowGuid, true);
+                    UpdateProposal(m_lfgProposalId, guid, true);
             }
             else
             {
@@ -308,7 +313,7 @@ void LFGMgr::Update(uint32 diff)
             LfgQueueInfo* queue = itQueue->second;
             if (!queue)
             {
-                sLog.outError("LFGMgr::Update: [" UI64FMTD "] queued with null queue info!", itQueue->first);
+                sLog->outError("LFGMgr::Update: [" UI64FMTD "] queued with null queue info!", itQueue->first);
                 continue;
             }
             uint32 dungeonId = (*queue->dungeons.begin());
@@ -339,7 +344,7 @@ void LFGMgr::Update(uint32 diff)
             }
 
             for (LfgRolesMap::const_iterator itPlayer = queue->roles.begin(); itPlayer != queue->roles.end(); ++itPlayer)
-                if (Player* plr = sObjectMgr.GetPlayerByLowGUID(itPlayer->first))
+                if (Player* plr = sObjectMgr->GetPlayer(itPlayer->first))
                     plr->GetSession()->SendLfgQueueStatus(dungeonId, waitTime, m_WaitTimeAvg, m_WaitTimeTank, m_WaitTimeHealer, m_WaitTimeDps, queuedTime, queue->tanks, queue->healers, queue->dps);
         }
     }
@@ -356,18 +361,18 @@ void LFGMgr::Update(uint32 diff)
    @param[in]     guid Player or group guid to add to queue
    @param[in]     queueId Queue Id to add player/group to
 */
-void LFGMgr::AddToQueue(uint64& guid, uint8 queueId)
+void LFGMgr::AddToQueue(const uint64& guid, uint8 queueId)
 {
-    if (sWorld.getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_GROUP))
+    if (sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_GROUP))
         queueId = 0;
 
     LfgGuidList& list = m_newToQueue[queueId];
     if (std::find(list.begin(), list.end(), guid) != list.end())
-        sLog.outDebug("LFGMgr::AddToQueue: [" UI64FMTD "] already in new queue. ignoring", guid);
+        sLog->outDebug("LFGMgr::AddToQueue: [" UI64FMTD "] already in new queue. ignoring", guid);
     else
     {
         list.push_back(guid);
-        sLog.outDebug("LFGMgr::AddToQueue: [" UI64FMTD "] added to m_newToQueue (size: %u)", guid, uint32(list.size()));
+        sLog->outDebug("LFGMgr::AddToQueue: [" UI64FMTD "] added to m_newToQueue (size: %u)", guid, uint32(list.size()));
     }
 }
 
@@ -377,7 +382,7 @@ void LFGMgr::AddToQueue(uint64& guid, uint8 queueId)
    @param[in]     guid Player or group guid to add to queue
    @return true if guid was found in main queue.
 */
-bool LFGMgr::RemoveFromQueue(uint64& guid)
+bool LFGMgr::RemoveFromQueue(const uint64& guid)
 {
     for (LfgGuidListMap::iterator it = m_currentQueue.begin(); it != m_currentQueue.end(); ++it)
         it->second.remove(guid);
@@ -392,15 +397,78 @@ bool LFGMgr::RemoveFromQueue(uint64& guid)
     {
         delete it->second;
         m_QueueInfoMap.erase(it);
-        sLog.outDebug("LFGMgr::RemoveFromQueue: [" UI64FMTD "] removed", guid);
+        sLog->outDebug("LFGMgr::RemoveFromQueue: [" UI64FMTD "] removed", guid);
         return true;
     }
     else
     {
-        sLog.outDebug("LFGMgr::RemoveFromQueue: [" UI64FMTD "] not in queue", guid);
+        sLog->outDebug("LFGMgr::RemoveFromQueue: [" UI64FMTD "] not in queue", guid);
         return false;
     }
-    
+
+}
+
+/**
+    Generate the dungeon lock map for a given player
+
+   @param[in]     plr Player we need to initialize the lock status map
+*/
+void LFGMgr::InitializeLockedDungeons(Player* plr)
+{
+    uint64 guid = plr->GetGUID();
+    uint8 level = plr->getLevel();
+    uint8 expansion = plr->GetSession()->Expansion();
+    LfgDungeonSet dungeons = GetDungeonsByRandom(0);
+    LfgLockMap lock;
+
+    for (LfgDungeonSet::const_iterator it = dungeons.begin(); it != dungeons.end(); ++it)
+    {
+        LFGDungeonEntry const* dungeon = sLFGDungeonStore.LookupEntry(*it);
+        if (!dungeon) // should never happen - We provide a list from sLFGDungeonStore
+            continue;
+
+        AccessRequirement const* ar = sObjectMgr->GetAccessRequirement(dungeon->map, Difficulty(dungeon->difficulty));
+
+        LfgLockStatusType locktype = LFG_LOCKSTATUS_OK;
+        if (dungeon->expansion > expansion)
+            locktype = LFG_LOCKSTATUS_INSUFFICIENT_EXPANSION;
+        else if (sDisableMgr->IsDisabledFor(DISABLE_TYPE_MAP, dungeon->map, plr))
+            locktype = LFG_LOCKSTATUS_RAID_LOCKED;
+        else if (dungeon->difficulty > DUNGEON_DIFFICULTY_NORMAL && plr->GetBoundInstance(dungeon->map, Difficulty(dungeon->difficulty)))
+            locktype = LFG_LOCKSTATUS_RAID_LOCKED;
+        else if (dungeon->minlevel > level)
+            locktype = LFG_LOCKSTATUS_TOO_LOW_LEVEL;
+        else if (dungeon->maxlevel < level)
+            locktype = LFG_LOCKSTATUS_TOO_HIGH_LEVEL;
+        else if (locktype == LFG_LOCKSTATUS_OK && ar)
+        {
+            if (ar->achievement && !plr->GetAchievementMgr().HasAchieved(sAchievementStore.LookupEntry(ar->achievement)))
+                locktype = LFG_LOCKSTATUS_RAID_LOCKED;       // FIXME: Check the correct lock value
+            else if (plr->GetTeam() == ALLIANCE && ar->quest_A && !plr->GetQuestRewardStatus(ar->quest_A))
+                locktype = LFG_LOCKSTATUS_QUEST_NOT_COMPLETED;
+            else if (plr->GetTeam() == HORDE && ar->quest_H && !plr->GetQuestRewardStatus(ar->quest_H))
+                locktype = LFG_LOCKSTATUS_QUEST_NOT_COMPLETED;
+            else
+                if (ar->item)
+                {
+                    if (!plr->HasItemCount(ar->item, 1) && (!ar->item2 || !plr->HasItemCount(ar->item2, 1)))
+                        locktype = LFG_LOCKSTATUS_MISSING_ITEM;
+                }
+                else if (ar->item2 && !plr->HasItemCount(ar->item2, 1))
+                    locktype = LFG_LOCKSTATUS_MISSING_ITEM;
+        }
+        /* TODO VoA closed if WG is not under team control (LFG_LOCKSTATUS_RAID_LOCKED)
+            locktype = LFG_LOCKSTATUS_TOO_LOW_GEAR_SCORE;
+            locktype = LFG_LOCKSTATUS_TOO_HIGH_GEAR_SCORE;
+            locktype = LFG_LOCKSTATUS_ATTUNEMENT_TOO_LOW_LEVEL;
+            locktype = LFG_LOCKSTATUS_ATTUNEMENT_TOO_HIGH_LEVEL;
+            locktype = LFG_LOCKSTATUS_NOT_IN_SEASON; // Need list of instances and needed season to open
+        */
+
+        if (locktype != LFG_LOCKSTATUS_OK)
+            lock[dungeon->Entry()] = locktype;
+    }
+    SetLockedDungeons(guid, lock);
 }
 
 /**
@@ -413,86 +481,80 @@ bool LFGMgr::RemoveFromQueue(uint64& guid)
    @param[in]     dungeons Dungeons the player/group is applying for
    @param[in]     comment Player selected comment
 */
-void LFGMgr::Join(Player* plr, uint8 roles, LfgDungeonSet& dungeons, std::string& comment)
+void LFGMgr::Join(Player* plr, uint8 roles, const LfgDungeonSet& selectedDungeons, const std::string& comment)
 {
-    if (!plr || !plr->GetSession() || !dungeons.size())
+    if (!plr || !plr->GetSession() || !selectedDungeons.size())
       return;
 
     Group* grp = plr->GetGroup();
     uint64 guid = plr->GetGUID();
     uint64 gguid = grp ? grp->GetGUID() : guid;
-    LfgJoinResult result = LFG_JOIN_OK;
+    LfgJoinResultData joinData;
     PlayerSet players;
     uint32 rDungeonId = 0;
-    bool isContinue = grp && grp->isLFGGroup() && grp->GetLfgState() != LFG_STATE_FINISHED_DUNGEON;
+    bool isContinue = grp && grp->isLFGGroup() && GetState(gguid) != LFG_STATE_FINISHED_DUNGEON;
+    LfgDungeonSet dungeons = selectedDungeons;
 
     // Do not allow to change dungeon in the middle of a current dungeon
     if (isContinue)
     {
         dungeons.clear();
-        dungeons.insert(grp->GetLfgDungeonEntry());
+        dungeons.insert(GetDungeon(gguid));
     }
 
     // Already in queue?
     LfgQueueInfoMap::iterator itQueue = m_QueueInfoMap.find(gguid);
     if (itQueue != m_QueueInfoMap.end())
     {
-        bool sameDungeons = true;
-        for (LfgDungeonSet::const_iterator it = plr->GetLfgDungeons()->begin(); it != plr->GetLfgDungeons()->end() && sameDungeons; ++it)
-            if (dungeons.find(*it) == dungeons.end())
-                sameDungeons = false;
-
-        if (sameDungeons)                                   // Joining the same dungeons -- Send OK
-        {
-            plr->GetSession()->SendLfgJoinResult(LFG_JOIN_OK);
+        LfgDungeonSet playerDungeons = GetSelectedDungeons(guid);
+        if (playerDungeons == dungeons)                     // Joining the same dungeons -- Send OK
+         {
+            LfgUpdateData updateData = LfgUpdateData(LFG_UPDATETYPE_ADDED_TO_QUEUE, dungeons, comment);
+            plr->GetSession()->SendLfgJoinResult(joinData); // Default value of joinData.result = LFG_JOIN_OK
             if (grp)
             {
                 for (GroupReference* itr = grp->GetFirstMember(); itr != NULL; itr = itr->next())
                     if (itr->getSource() && itr->getSource()->GetSession())
-                        itr->getSource()->GetSession()->SendLfgUpdateParty(LFG_UPDATETYPE_ADDED_TO_QUEUE, &dungeons, comment);
+                        itr->getSource()->GetSession()->SendLfgUpdateParty(updateData);
             }
+            return;
         }
-        else if (!isContinue)                              // Different dungeons and it's not an offer to continue
-        {
-            // Different dungeons and it's not a LfgGroup in the middle of a dungeon that need more people
-            Leave(plr, grp);
-            Join(plr, roles, dungeons, comment);
-        }
-        return;
+        else // Remove from queue and rejoin
+            RemoveFromQueue(gguid);
     }
 
     // Check player or group member restrictions
     if (plr->InBattleground() || plr->InArena() || plr->InBattlegroundQueue())
-        result = LFG_JOIN_USING_BG_SYSTEM;
+        joinData.result = LFG_JOIN_USING_BG_SYSTEM;
     else if (plr->HasAura(LFG_SPELL_DUNGEON_DESERTER))
-        result = LFG_JOIN_DESERTER;
+        joinData.result = LFG_JOIN_DESERTER;
     else if (plr->HasAura(LFG_SPELL_DUNGEON_COOLDOWN))
-        result = LFG_JOIN_RANDOM_COOLDOWN;
+        joinData.result = LFG_JOIN_RANDOM_COOLDOWN;
     else if (!dungeons.size())
-        result = LFG_JOIN_NOT_MEET_REQS;
+        joinData.result = LFG_JOIN_NOT_MEET_REQS;
     else if (grp)
     {
         if (grp->GetMembersCount() > MAXGROUPSIZE)
-            result = LFG_JOIN_TOO_MUCH_MEMBERS;
+            joinData.result = LFG_JOIN_TOO_MUCH_MEMBERS;
         else
         {
             uint8 memberCount = 0;
-            for (GroupReference* itr = grp->GetFirstMember(); itr != NULL && result == LFG_JOIN_OK; itr = itr->next())
+            for (GroupReference* itr = grp->GetFirstMember(); itr != NULL && joinData.result == LFG_JOIN_OK; itr = itr->next())
             {
                 if (Player* plrg = itr->getSource())
                 {
                     if (plrg->HasAura(LFG_SPELL_DUNGEON_DESERTER))
-                        result = LFG_JOIN_PARTY_DESERTER;
+                        joinData.result = LFG_JOIN_PARTY_DESERTER;
                     else if (plrg->HasAura(LFG_SPELL_DUNGEON_COOLDOWN))
-                        result = LFG_JOIN_PARTY_RANDOM_COOLDOWN;
+                        joinData.result = LFG_JOIN_PARTY_RANDOM_COOLDOWN;
                     else if (plrg->InBattleground() || plrg->InArena() || plrg->InBattlegroundQueue())
-                        result = LFG_JOIN_USING_BG_SYSTEM;
+                        joinData.result = LFG_JOIN_USING_BG_SYSTEM;
                     ++memberCount;
                     players.insert(plrg);
                 }
             }
             if (memberCount != grp->GetMembersCount())
-                result = LFG_JOIN_DISCONNECTED;
+                joinData.result = LFG_JOIN_DISCONNECTED;
         }
     }
     else
@@ -500,84 +562,75 @@ void LFGMgr::Join(Player* plr, uint8 roles, LfgDungeonSet& dungeons, std::string
 
     // Check if all dungeons are valid
     bool isRaid = false;
-    if (result == LFG_JOIN_OK)
+    if (joinData.result == LFG_JOIN_OK)
     {
         bool isDungeon = false;
-        for (LfgDungeonSet::const_iterator it = dungeons.begin(); it != dungeons.end() && result == LFG_JOIN_OK; ++it)
+        for (LfgDungeonSet::const_iterator it = dungeons.begin(); it != dungeons.end() && joinData.result == LFG_JOIN_OK; ++it)
         {
             switch(GetDungeonType(*it))
             {
                 case LFG_TYPE_RANDOM:
                     if (dungeons.size() > 1)               // Only allow 1 random dungeon
-                        result = LFG_JOIN_DUNGEON_INVALID;
+                        joinData.result = LFG_JOIN_DUNGEON_INVALID;
                     else
                         rDungeonId = (*dungeons.begin());
                     // No break on purpose (Random can only be dungeon or heroic dungeon)
                 case LFG_TYPE_HEROIC:
                 case LFG_TYPE_DUNGEON:
                     if (isRaid)
-                        result = LFG_JOIN_MIXED_RAID_DUNGEON;
+                        joinData.result = LFG_JOIN_MIXED_RAID_DUNGEON;
                     isDungeon = true;
                     break;
                 case LFG_TYPE_RAID:
                     if (isDungeon)
-                        result = LFG_JOIN_MIXED_RAID_DUNGEON;
+                        joinData.result = LFG_JOIN_MIXED_RAID_DUNGEON;
                     isRaid = true;
                     break;
                 default:
-                    result = LFG_JOIN_DUNGEON_INVALID;
+                    joinData.result = LFG_JOIN_DUNGEON_INVALID;
                     break;
             }
         }
 
-        // Expand random dungeons and check restrictions        
+        // Expand random dungeons and check restrictions
         if (rDungeonId)
-            GetDungeonsByRandom(rDungeonId, dungeons);
+            dungeons = GetDungeonsByRandom(rDungeonId);
 
-        LfgLockStatusMap* lockStatusMap = CheckCompatibleDungeons(dungeons, players);
-        if (!dungeons.size())
-        {
-            sLog.outDebug("LFGMgr::Join: [" UI64FMTD "] joining with %u members. result: LFG_JOIN_PARTY_NOT_MEET_REQS", guid, uint8(players.size()));
-            plr->GetSession()->SendLfgJoinResult(LFG_JOIN_PARTY_NOT_MEET_REQS, 0, lockStatusMap);
-        }
-        if (lockStatusMap)
-        {
-            for (LfgLockStatusMap::const_iterator it = lockStatusMap->begin(); it != lockStatusMap->end(); ++it)
-                delete it->second;
-            delete lockStatusMap;
-        }
-        if (!dungeons.size())
-            return;
+        // if we have lockmap then there are no compatible dungeons
+        GetCompatibleDungeons(dungeons, players, joinData.lockmap);
+        if (dungeons.empty())
+            joinData.result = grp ? LFG_JOIN_PARTY_NOT_MEET_REQS : LFG_JOIN_NOT_MEET_REQS;
     }
 
     // Can't join. Send result
-    if (result != LFG_JOIN_OK)
+    if (joinData.result != LFG_JOIN_OK)
     {
-        sLog.outDebug("LFGMgr::Join: [" UI64FMTD "] joining with %u members. result: %u", guid, grp ? grp->GetMembersCount() : 1, result);
-        plr->GetSession()->SendLfgJoinResult(result);
+        sLog->outDebug("LFGMgr::Join: [" UI64FMTD "] joining with %u members. result: %u", guid, grp ? grp->GetMembersCount() : 1, joinData.result);
+        if (!dungeons.empty())                             // Only should show lockmap when have no dungeons available
+            joinData.lockmap.clear();
+        plr->GetSession()->SendLfgJoinResult(joinData);
         return;
     }
 
     // FIXME - Raid browser not supported yet
     if (isRaid)
     {
-        sLog.outDebug("LFGMgr::Join: [" UI64FMTD "] trying to join raid browser and it's disabled.", guid);
+        sLog->outDebug("LFGMgr::Join: [" UI64FMTD "] trying to join raid browser and it's disabled.", guid);
         return;
     }
 
-    plr->SetLfgComment(comment);
-    plr->SetLfgRoles(roles);
+    SetComment(guid, comment);
 
     if (grp)                                               // Begin rolecheck
     {
         // Create new rolecheck
-        LfgRoleCheck* pRoleCheck = new LfgRoleCheck();
-        pRoleCheck->cancelTime = time_t(time(NULL)) + LFG_TIME_ROLECHECK;
-        pRoleCheck->result = LFG_ROLECHECK_INITIALITING;
-        pRoleCheck->leader = plr->GetGUIDLow();
-        pRoleCheck->dungeons = dungeons;
-        pRoleCheck->rDungeonId = rDungeonId;
-        m_RoleChecks[grp->GetLowGUID()] = pRoleCheck;
+        LfgRoleCheck* roleCheck = new LfgRoleCheck();
+        roleCheck->cancelTime = time_t(time(NULL)) + LFG_TIME_ROLECHECK;
+        roleCheck->state = LFG_ROLECHECK_INITIALITING;
+        roleCheck->leader = guid;
+        roleCheck->dungeons = dungeons;
+        roleCheck->rDungeonId = rDungeonId;
+        m_RoleChecks[gguid] = roleCheck;
 
         if (rDungeonId)
         {
@@ -585,58 +638,56 @@ void LFGMgr::Join(Player* plr, uint8 roles, LfgDungeonSet& dungeons, std::string
             dungeons.insert(rDungeonId);
         }
 
+        SetState(gguid, LFG_STATE_ROLECHECK);
         // Send update to player
+        LfgUpdateData updateData = LfgUpdateData(LFG_UPDATETYPE_JOIN_PROPOSAL, dungeons, comment);
         for (GroupReference* itr = grp->GetFirstMember(); itr != NULL; itr = itr->next())
         {
             if (Player* plrg = itr->getSource())
             {
-                plrg->GetSession()->SendLfgUpdateParty(LFG_UPDATETYPE_JOIN_PROPOSAL, &dungeons, comment);
-                plrg->SetLfgState(LFG_STATE_ROLECHECK);
+                uint64 pguid = plrg->GetGUID();
+                plrg->GetSession()->SendLfgUpdateParty(updateData);
+                SetState(pguid, LFG_STATE_ROLECHECK);
                 if (!isContinue)
-                {
-                    plrg->GetLfgDungeons()->clear();
-                    for (LfgDungeonSet::const_iterator it = dungeons.begin(); it != dungeons.end(); ++it)
-                        plrg->GetLfgDungeons()->insert(*it);
-                }
-                pRoleCheck->roles[plrg->GetGUIDLow()] = 0;
+                    SetSelectedDungeons(pguid, dungeons);
+                roleCheck->roles[pguid] = 0;
             }
         }
         // Update leader role
-        UpdateRoleCheck(grp, plr, true);
+        UpdateRoleCheck(gguid, guid, roles);
     }
     else                                                   // Add player to queue
     {
-        // Send update to player
-        plr->GetSession()->SendLfgJoinResult(LFG_JOIN_OK);
-        plr->GetSession()->SendLfgUpdatePlayer(LFG_UPDATETYPE_JOIN_PROPOSAL, &dungeons, comment);
-        plr->SetLfgState(LFG_STATE_QUEUED);
-        if (!isContinue)
-        {
-            plr->GetLfgDungeons()->clear();
-            if (rDungeonId)
-                plr->GetLfgDungeons()->insert(rDungeonId);
-            else
-                for (LfgDungeonSet::const_iterator it = dungeons.begin(); it != dungeons.end(); ++it)
-                    plr->GetLfgDungeons()->insert(*it);
-        }
-
         // Queue player
         LfgQueueInfo* pqInfo = new LfgQueueInfo();
         pqInfo->joinTime = time_t(time(NULL));
-        pqInfo->roles[plr->GetGUIDLow()] = plr->GetLfgRoles();
+        pqInfo->roles[plr->GetGUID()] = roles;
         pqInfo->dungeons = dungeons;
-        uint8 roles = plr->GetLfgRoles();
         if (roles & ROLE_TANK)
             --pqInfo->tanks;
         else if (roles & ROLE_HEALER)
             --pqInfo->healers;
         else
             --pqInfo->dps;
-
         m_QueueInfoMap[guid] = pqInfo;
+
+        // Send update to player
+        plr->GetSession()->SendLfgJoinResult(joinData);
+        plr->GetSession()->SendLfgUpdatePlayer(LfgUpdateData(LFG_UPDATETYPE_JOIN_PROPOSAL, dungeons, comment));
+        SetState(gguid, LFG_STATE_QUEUED);
+        SetRoles(guid, roles);
+        if (!isContinue)
+        {
+            if (rDungeonId)
+            {
+                dungeons.clear();
+                dungeons.insert(rDungeonId);
+            }
+            SetSelectedDungeons(guid, dungeons);
+        }
         AddToQueue(guid, uint8(plr->GetTeam()));
     }
-    sLog.outDebug("LFGMgr::Join: [" UI64FMTD "] joined with %u members. dungeons: %u", guid, grp ? grp->GetMembersCount() : 1, uint8(dungeons.size()));
+    sLog->outDebug("LFGMgr::Join: [" UI64FMTD "] joined with %u members. dungeons: %u", guid, grp ? grp->GetMembersCount() : 1, uint8(dungeons.size()));
 }
 
 /**
@@ -651,53 +702,46 @@ void LFGMgr::Leave(Player* plr, Group* grp /* = NULL*/)
     if (!plr && !grp)
         return;
 
-    uint64 guid = 0;
-    LfgState state;
+    uint64 guid = grp ? grp->GetGUID() : plr->GetGUID();
+    LfgState state = GetState(guid);
 
-    if (grp)
-    {
-        guid = grp->GetGUID();
-        state = grp->GetLfgState();
-    }
-    else
-    {
-        guid = plr->GetGUID();
-        state = plr->GetLfgState();
-    }
-
-    sLog.outDebug("LFGMgr::Leave: [" UI64FMTD "]", guid);
+    sLog->outDebug("LFGMgr::Leave: [" UI64FMTD "]", guid);
     switch(state)
     {
         case LFG_STATE_QUEUED:
-            RemoveFromQueue(guid);
-            if (grp)
             {
-                grp->RestoreLfgState();
-                for (GroupReference* itr = grp->GetFirstMember(); itr != NULL; itr = itr->next())
-                    if (Player* plrg = itr->getSource())
-                    {
-                        plrg->GetSession()->SendLfgUpdateParty(LFG_UPDATETYPE_REMOVED_FROM_QUEUE);
-                        plrg->ClearLfgState();
-                    }
-            }
-            else
-            {
-                plr->GetSession()->SendLfgUpdatePlayer(LFG_UPDATETYPE_REMOVED_FROM_QUEUE);
-                plr->ClearLfgState();
+                RemoveFromQueue(guid);
+                LfgUpdateData updateData = LfgUpdateData(LFG_UPDATETYPE_REMOVED_FROM_QUEUE);
+                if (grp)
+                {
+                    RestoreState(guid);
+                    for (GroupReference* itr = grp->GetFirstMember(); itr != NULL; itr = itr->next())
+                        if (Player* plrg = itr->getSource())
+                        {
+                            plrg->GetSession()->SendLfgUpdateParty(updateData);
+                            uint64 pguid = plrg->GetGUID();
+                            ClearState(pguid);
+                        }
+                }
+                else
+                {
+                    plr->GetSession()->SendLfgUpdatePlayer(updateData);
+                    ClearState(guid);
+                }
             }
             break;
         case LFG_STATE_ROLECHECK:
             if (grp)
-                UpdateRoleCheck(grp);                      // No player to update role = LFG_ROLECHECK_ABORTED
+                UpdateRoleCheck(guid);                     // No player to update role = LFG_ROLECHECK_ABORTED
             break;
         case LFG_STATE_PROPOSAL:
         {
             // Remove from Proposals
             LfgProposalMap::iterator it = m_Proposals.begin();
-            uint32 lowguid = plr ? plr->GetGUIDLow() : GUID_LOPART(grp->GetLeaderGUID());
+            uint64 guid = plr ? plr->GetGUID() : grp->GetLeaderGUID();
             while (it != m_Proposals.end())
             {
-                LfgProposalPlayerMap::iterator itPlayer = it->second->players.find(lowguid);
+                LfgProposalPlayerMap::iterator itPlayer = it->second->players.find(guid);
                 if (itPlayer != it->second->players.end())
                 {
                     // Mark the player/leader of group who left as didn't accept the proposal
@@ -724,9 +768,12 @@ void LFGMgr::Leave(Player* plr, Group* grp /* = NULL*/)
 */
 void LFGMgr::OfferContinue(Group* grp)
 {
-    Player* leader = grp ? sObjectMgr.GetPlayer(grp->GetLeaderGUID()) : NULL;
-    if (leader)
-        leader->GetSession()->SendLfgOfferContinue(grp->GetLfgDungeonEntry(false));
+    if (grp)
+    {
+        uint64 gguid = grp->GetGUID();
+        if (Player* leader = sObjectMgr->GetPlayer(grp->GetLeaderGUID()))
+            leader->GetSession()->SendLfgOfferContinue(GetDungeon(gguid, false));
+    }
 }
 
 /**
@@ -738,7 +785,7 @@ void LFGMgr::OfferContinue(Group* grp)
 */
 LfgProposal* LFGMgr::FindNewGroups(LfgGuidList& check, LfgGuidList& all)
 {
-    sLog.outDebug("LFGMgr::FindNewGroup: (%s) - all(%s)", ConcatenateGuids(check).c_str(), ConcatenateGuids(all).c_str());
+    sLog->outDebug("LFGMgr::FindNewGroup: (%s) - all(%s)", ConcatenateGuids(check).c_str(), ConcatenateGuids(all).c_str());
 
     LfgProposal* pProposal = NULL;
     if (!check.size() || check.size() > MAXGROUPSIZE || !CheckCompatibility(check, pProposal))
@@ -747,7 +794,7 @@ LfgProposal* LFGMgr::FindNewGroups(LfgGuidList& check, LfgGuidList& all)
     // Try to match with queued groups
     while (!pProposal && all.size() > 0)
     {
-        check.push_back(all.front());        
+        check.push_back(all.front());
         all.pop_front();
         pProposal = FindNewGroups(check, all);
         check.pop_back();
@@ -771,7 +818,7 @@ bool LFGMgr::CheckCompatibility(LfgGuidList check, LfgProposal*& pProposal)
 
     if (check.size() > MAXGROUPSIZE || !check.size())
     {
-        sLog.outDebug("LFGMgr::CheckCompatibility: (%s): Size wrong - Not compatibles", strGuids.c_str());
+        sLog->outDebug("LFGMgr::CheckCompatibility: (%s): Size wrong - Not compatibles", strGuids.c_str());
         return false;
     }
 
@@ -782,10 +829,10 @@ bool LFGMgr::CheckCompatibility(LfgGuidList check, LfgProposal*& pProposal)
     LfgAnswer answer = GetCompatibles(strGuids);
     if (answer != LFG_ANSWER_PENDING)
     {
-        sLog.outDebug("LFGMgr::CheckCompatibility: (%s) compatibles (cached): %d", strGuids.c_str(), answer);
+        sLog->outDebug("LFGMgr::CheckCompatibility: (%s) compatibles (cached): %d", strGuids.c_str(), answer);
         return bool(answer);
     }
-    
+
     // Check all but new compatiblitity
     if (check.size() > 2)
     {
@@ -795,7 +842,7 @@ bool LFGMgr::CheckCompatibility(LfgGuidList check, LfgProposal*& pProposal)
         // Check all-but-new compatibilities (New,A,B,C,D) --> check(A,B,C,D)
         if (!CheckCompatibility(check, pProposal))          // Group not compatible
         {
-            sLog.outDebug("LFGMgr::CheckCompatibility: (%s) not compatibles (%s not compatibles)", strGuids.c_str(), ConcatenateGuids(check).c_str());
+            sLog->outDebug("LFGMgr::CheckCompatibility: (%s) not compatibles (%s not compatibles)", strGuids.c_str(), ConcatenateGuids(check).c_str());
             SetCompatibles(strGuids, false);
             return false;
         }
@@ -813,7 +860,7 @@ bool LFGMgr::CheckCompatibility(LfgGuidList check, LfgProposal*& pProposal)
         LfgQueueInfoMap::iterator itQueue = m_QueueInfoMap.find(guid);
         if (itQueue == m_QueueInfoMap.end())
         {
-            sLog.outError("LFGMgr::CheckCompatibility: [" UI64FMTD "] is not queued but listed as queued!", (*it));
+            sLog->outError("LFGMgr::CheckCompatibility: [" UI64FMTD "] is not queued but listed as queued!", (*it));
             RemoveFromQueue(guid);
             return false;
         }
@@ -823,7 +870,7 @@ bool LFGMgr::CheckCompatibility(LfgGuidList check, LfgProposal*& pProposal)
         if (IS_GROUP(guid))
         {
             uint32 lowGuid = GUID_LOPART(guid);
-            if (Group* grp = sObjectMgr.GetGroupByGUID(lowGuid))
+            if (Group* grp = sObjectMgr->GetGroupByGUID(lowGuid))
                 if (grp->isLFGGroup())
                 {
                     if (!numLfgGroups)
@@ -841,22 +888,22 @@ bool LFGMgr::CheckCompatibility(LfgGuidList check, LfgProposal*& pProposal)
     {
         SetCompatibles(strGuids, false);
         if (numLfgGroups > 1)
-            sLog.outDebug("LFGMgr::CheckCompatibility: (%s) More than one Lfggroup (%u)", strGuids.c_str(), numLfgGroups);
+            sLog->outDebug("LFGMgr::CheckCompatibility: (%s) More than one Lfggroup (%u)", strGuids.c_str(), numLfgGroups);
         else
-            sLog.outDebug("LFGMgr::CheckCompatibility: (%s) Too much players (%u)", strGuids.c_str(), numPlayers);
+            sLog->outDebug("LFGMgr::CheckCompatibility: (%s) Too much players (%u)", strGuids.c_str(), numPlayers);
         return false;
     }
 
     // ----- Player checks -----
     LfgRolesMap rolesMap;
-    uint32 newLeaderLowGuid = 0;
+    uint64 leader = 0;
     for (LfgQueueInfoMap::const_iterator it = pqInfoMap.begin(); it != pqInfoMap.end(); ++it)
     {
         for (LfgRolesMap::const_iterator itRoles = it->second->roles.begin(); itRoles != it->second->roles.end(); ++itRoles)
         {
             // Assign new leader
-            if (itRoles->second & ROLE_LEADER && (!newLeaderLowGuid || urand(0, 1)))
-                newLeaderLowGuid = itRoles->first;
+            if (itRoles->second & ROLE_LEADER && (!leader || urand(0, 1)))
+                leader = itRoles->first;
 
             rolesMap[itRoles->first] = itRoles->second;
         }
@@ -868,9 +915,9 @@ bool LFGMgr::CheckCompatibility(LfgGuidList check, LfgProposal*& pProposal)
     PlayerSet players;
     for (LfgRolesMap::const_iterator it = rolesMap.begin(); it != rolesMap.end(); ++it)
     {
-        Player* plr = sObjectMgr.GetPlayerByLowGUID(it->first);
+        Player* plr = sObjectMgr->GetPlayer(it->first);
         if (!plr)
-            sLog.outDebug("LFGMgr::CheckCompatibility: (%s) Warning! %u offline! Marking as not compatibles!", strGuids.c_str(), it->first);
+            sLog->outDebug("LFGMgr::CheckCompatibility: (%s) Warning! [" UI64FMTD "] offline! Marking as not compatibles!", strGuids.c_str(), it->first);
         else
         {
             for (PlayerSet::const_iterator itPlayer = players.begin(); itPlayer != players.end() && plr; ++itPlayer)
@@ -878,7 +925,7 @@ bool LFGMgr::CheckCompatibility(LfgGuidList check, LfgProposal*& pProposal)
                 // Do not form a group with ignoring candidates
                 if (plr->GetSocial()->HasIgnore((*itPlayer)->GetGUIDLow()) || (*itPlayer)->GetSocial()->HasIgnore(plr->GetGUIDLow()))
                 {
-                    sLog.outDebug("LFGMgr::CheckCompatibility: (%s) Players [" UI64FMTD "] and [" UI64FMTD "] ignoring", strGuids.c_str(), (*itPlayer)->GetGUID(), plr->GetGUID());
+                    sLog->outDebug("LFGMgr::CheckCompatibility: (%s) Players [" UI64FMTD "] and [" UI64FMTD "] ignoring", strGuids.c_str(), (*itPlayer)->GetGUID(), plr->GetGUID());
                     plr = NULL;
                 }
             }
@@ -892,7 +939,7 @@ bool LFGMgr::CheckCompatibility(LfgGuidList check, LfgProposal*& pProposal)
     if (players.size() != numPlayers || !CheckGroupRoles(rolesMap))
     {
         if (players.size() == numPlayers)
-            sLog.outDebug("LFGMgr::CheckCompatibility: (%s) Roles not compatible", strGuids.c_str());
+            sLog->outDebug("LFGMgr::CheckCompatibility: (%s) Roles not compatible", strGuids.c_str());
         SetCompatibles(strGuids, false);
         return false;
     }
@@ -912,9 +959,10 @@ bool LFGMgr::CheckCompatibility(LfgGuidList check, LfgProposal*& pProposal)
         if (itOther == pqInfoMap.end())
             compatibleDungeons.insert(*itDungeon);
     }
-    CheckCompatibleDungeons(compatibleDungeons, players, false);
+    LfgLockPartyMap lockMap;
+    GetCompatibleDungeons(compatibleDungeons, players, lockMap);
 
-    if (!compatibleDungeons.size())
+    if (compatibleDungeons.empty())
     {
         SetCompatibles(strGuids, false);
         return false;
@@ -924,10 +972,10 @@ bool LFGMgr::CheckCompatibility(LfgGuidList check, LfgProposal*& pProposal)
     // ----- Group is compatible, if we have MAXGROUPSIZE members then match is found
     if (numPlayers != MAXGROUPSIZE)
     {
-        sLog.outDebug("LFGMgr::CheckCompatibility: (%s) Compatibles but not match. Players(%u)", strGuids.c_str(), numPlayers);
+        sLog->outDebug("LFGMgr::CheckCompatibility: (%s) Compatibles but not match. Players(%u)", strGuids.c_str(), numPlayers);
         return true;
     }
-    sLog.outDebug("LFGMgr::CheckCompatibility: (%s) MATCH! Group formed", strGuids.c_str());
+    sLog->outDebug("LFGMgr::CheckCompatibility: (%s) MATCH! Group formed", strGuids.c_str());
 
     // GROUP FORMED!
     // TODO - Improve algorithm to select proper group based on Item Level
@@ -948,19 +996,19 @@ bool LFGMgr::CheckCompatibility(LfgGuidList check, LfgProposal*& pProposal)
 
     // Assign new roles to players and assign new leader
     PlayerSet::const_iterator itPlayers = players.begin();
-    if (!newLeaderLowGuid)
+    if (!leader)
     {
-        uint8 pos = urand(0, players.size() - 1);
+        uint8 pos = uint8(urand(0, players.size() - 1));
         for (uint8 i = 0; i < pos; ++i)
             ++itPlayers;
-        newLeaderLowGuid = (*itPlayers)->GetGUIDLow();
+        leader = (*itPlayers)->GetGUID();
     }
-    pProposal->leaderLowGuid = newLeaderLowGuid;
+    pProposal->leader = leader;
 
     uint8 numAccept = 0;
     for (itPlayers = players.begin(); itPlayers != players.end(); ++itPlayers)
     {
-        uint32 lowGuid = (*itPlayers)->GetGUIDLow();
+        uint64 guid = (*itPlayers)->GetGUID();
         LfgProposalPlayer* ppPlayer = new LfgProposalPlayer();
         if (Group* grp = (*itPlayers)->GetGroup())
         {
@@ -971,8 +1019,8 @@ bool LFGMgr::CheckCompatibility(LfgGuidList check, LfgProposal*& pProposal)
                 ++numAccept;
             }
         }
-        ppPlayer->role = rolesMap[lowGuid];
-        pProposal->players[lowGuid] = ppPlayer;
+        ppPlayer->role = rolesMap[guid];
+        pProposal->players[guid] = ppPlayer;
     }
     if (numAccept == MAXGROUPSIZE)
         pProposal->state = LFG_PROPOSAL_SUCCESS;
@@ -983,85 +1031,93 @@ bool LFGMgr::CheckCompatibility(LfgGuidList check, LfgProposal*& pProposal)
 /**
    Update the Role check info with the player selected role.
 
-   @param[in]     grp Group to update rolecheck
-   @param[in]     plr Player to update role (NULL = Rolecheck Failed)
-   @param[in]     newRoleCheck Determines if its a new rolecheck (Default false)
+   @param[in]     grp Group guid to update rolecheck
+   @param[in]     guid Player guid (0 = rolecheck failed)
+   @param[in]     roles Player selected roles
 */
-void LFGMgr::UpdateRoleCheck(Group* grp, Player* plr /* = NULL*/, bool newRoleCheck /* = false */)
+void LFGMgr::UpdateRoleCheck(uint64& gguid, uint64 guid /* = 0 */, uint8 roles /* = ROLE_NONE */)
 {
-    if (!grp)
+    if (!gguid)
         return;
 
     LfgRolesMap check_roles;
-    LfgRoleCheckMap::iterator itRoleCheck = m_RoleChecks.find(grp->GetLowGUID());
+    LfgRoleCheckMap::iterator itRoleCheck = m_RoleChecks.find(gguid);
     if (itRoleCheck == m_RoleChecks.end())
         return;
 
-    LfgRoleCheck* pRoleCheck = itRoleCheck->second;
-    if (!plr)
-        pRoleCheck->result = LFG_ROLECHECK_ABORTED;
-    else if (plr->GetLfgRoles() < ROLE_TANK)               // Player selected no role.
-        pRoleCheck->result = LFG_ROLECHECK_NO_ROLE;
+    LfgRoleCheck* roleCheck = itRoleCheck->second;
+    bool sendRoleChosen = roleCheck->state != LFG_ROLECHECK_DEFAULT && guid;
+
+    if (!guid)
+        roleCheck->state = LFG_ROLECHECK_ABORTED;
+    else if (roles < ROLE_TANK)                            // Player selected no role.
+        roleCheck->state = LFG_ROLECHECK_NO_ROLE;
     else
     {
-        pRoleCheck->roles[plr->GetGUIDLow()] = plr->GetLfgRoles();
+        roleCheck->roles[guid] = roles;
 
         // Check if all players have selected a role
-        LfgRolesMap::const_iterator itRoles = pRoleCheck->roles.begin();
-        while (itRoles != pRoleCheck->roles.end() && itRoles->second != ROLE_NONE)
+        LfgRolesMap::const_iterator itRoles = roleCheck->roles.begin();
+        while (itRoles != roleCheck->roles.end() && itRoles->second != ROLE_NONE)
             ++itRoles;
 
-        if (itRoles == pRoleCheck->roles.end())
+        if (itRoles == roleCheck->roles.end())
         {
             // use temporal var to check roles, CheckGroupRoles modifies the roles
-            check_roles = pRoleCheck->roles;
-            pRoleCheck->result = CheckGroupRoles(check_roles) ? LFG_ROLECHECK_FINISHED : LFG_ROLECHECK_WRONG_ROLES;
+            check_roles = roleCheck->roles;
+            roleCheck->state = CheckGroupRoles(check_roles) ? LFG_ROLECHECK_FINISHED : LFG_ROLECHECK_WRONG_ROLES;
         }
     }
 
     uint8 team = 0;
     LfgDungeonSet dungeons;
-    if (pRoleCheck->rDungeonId)
-        dungeons.insert(pRoleCheck->rDungeonId);
+    if (roleCheck->rDungeonId)
+        dungeons.insert(roleCheck->rDungeonId);
     else
-        dungeons = pRoleCheck->dungeons;
+        dungeons = roleCheck->dungeons;
 
-    for (GroupReference* itr = grp->GetFirstMember(); itr != NULL; itr = itr->next())
+    LfgJoinResultData joinData = LfgJoinResultData(LFG_JOIN_FAILED, roleCheck->state);
+    for (LfgRolesMap::const_iterator it = roleCheck->roles.begin(); it != roleCheck->roles.end(); ++it)
     {
-        Player* plrg = itr->getSource();
+        uint64 pguid = it->first;
+        Player* plrg = sObjectMgr->GetPlayer(pguid);
         if (!plrg)
+        {
+            if (roleCheck->state == LFG_ROLECHECK_FINISHED)
+                SetState(pguid, LFG_STATE_QUEUED);
+            else if (roleCheck->state != LFG_ROLECHECK_INITIALITING)
+                ClearState(pguid);
             continue;
+        }
 
-        team = plrg->GetTeam();
-        WorldSession* session = plrg->GetSession();
-        if (!newRoleCheck && plr)
-            session->SendLfgRoleChosen(plr->GetGUID(), plr->GetLfgRoles());
-        session->SendLfgRoleCheckUpdate(pRoleCheck);
-
-        switch(pRoleCheck->result)
+        team = uint8(plrg->GetTeam());
+        if (!sendRoleChosen)
+            plrg->GetSession()->SendLfgRoleChosen(guid, roles);
+        plrg->GetSession()->SendLfgRoleCheckUpdate(roleCheck);
+        switch (roleCheck->state)
         {
             case LFG_ROLECHECK_INITIALITING:
                 continue;
             case LFG_ROLECHECK_FINISHED:
-                plrg->SetLfgState(LFG_STATE_QUEUED);
-                session->SendLfgUpdateParty(LFG_UPDATETYPE_ADDED_TO_QUEUE, &dungeons, plrg->GetLfgComment());
+                SetState(pguid, LFG_STATE_QUEUED);
+                plrg->GetSession()->SendLfgUpdateParty(LfgUpdateData(LFG_UPDATETYPE_ADDED_TO_QUEUE, dungeons, GetComment(pguid)));
                 break;
             default:
-                if (grp->GetLeaderGUID() == plrg->GetGUID())
-                    session->SendLfgJoinResult(LFG_JOIN_FAILED, pRoleCheck->result);
-                session->SendLfgUpdateParty(LFG_UPDATETYPE_ROLECHECK_FAILED);
-                plrg->ClearLfgState();
+                if (roleCheck->leader == pguid)
+                    plrg->GetSession()->SendLfgJoinResult(joinData);
+                plrg->GetSession()->SendLfgUpdateParty(LfgUpdateData(LFG_UPDATETYPE_ROLECHECK_FAILED));
+                ClearState(pguid);
                 break;
         }
     }
 
-    if (pRoleCheck->result == LFG_ROLECHECK_FINISHED && pRoleCheck->dungeons.size())
+    if (roleCheck->state == LFG_ROLECHECK_FINISHED)
     {
-        grp->SetLfgState(LFG_STATE_QUEUED);
+        SetState(gguid, LFG_STATE_QUEUED);
         LfgQueueInfo* pqInfo = new LfgQueueInfo();
         pqInfo->joinTime = time_t(time(NULL));
-        pqInfo->roles = pRoleCheck->roles;
-        pqInfo->dungeons = pRoleCheck->dungeons;
+        pqInfo->roles = roleCheck->roles;
+        pqInfo->dungeons = roleCheck->dungeons;
 
         // Set queue roles needed - As we are using check_roles will not have more that 1 tank, 1 healer, 3 dps
         for (LfgRolesMap::const_iterator it = check_roles.begin(); it != check_roles.end(); ++it)
@@ -1075,16 +1131,15 @@ void LFGMgr::UpdateRoleCheck(Group* grp, Player* plr /* = NULL*/, bool newRoleCh
                 --pqInfo->dps;
         }
 
-        uint64 guid = grp->GetGUID();
-        m_QueueInfoMap[guid] = pqInfo;
-        AddToQueue(guid, team);
+        m_QueueInfoMap[gguid] = pqInfo;
+        AddToQueue(gguid, team);
     }
 
-    if (pRoleCheck->result != LFG_ROLECHECK_INITIALITING)
+    if (roleCheck->state != LFG_ROLECHECK_INITIALITING)
     {
-        if (pRoleCheck->result != LFG_ROLECHECK_FINISHED)
-            grp->RestoreLfgState();
-        delete pRoleCheck;
+        if (roleCheck->state != LFG_ROLECHECK_FINISHED)
+            RestoreState(gguid);
+        delete roleCheck;
         m_RoleChecks.erase(itRoleCheck);
     }
 }
@@ -1100,7 +1155,7 @@ void LFGMgr::RemoveFromCompatibles(uint64 guid)
     out << guid;
     std::string strGuid = out.str();
 
-    sLog.outDebug("LFGMgr::RemoveFromCompatibles: Removing [" UI64FMTD "]", guid);
+    sLog->outDebug("LFGMgr::RemoveFromCompatibles: Removing [" UI64FMTD "]", guid);
     for (LfgCompatibleMap::iterator itNext = m_CompatibleMap.begin(); itNext != m_CompatibleMap.end();)
     {
         LfgCompatibleMap::iterator it = itNext++;
@@ -1141,35 +1196,28 @@ LfgAnswer LFGMgr::GetCompatibles(std::string key)
 
    @param[in,out] dungeons Dungeons to check restrictions
    @param[in]     players Set of players to check their dungeon restrictions
-   @param[in]     returnLockMap Determines when to return a function value (Default true)
-   @return Map of players Lock status info of given dungeons
+   @param[out]    lockMap Map of players Lock status info of given dungeons (Empty if dungeons is not empty)
 */
-LfgLockStatusMap* LFGMgr::CheckCompatibleDungeons(LfgDungeonSet& dungeons, PlayerSet& players, bool returnLockMap /* = true */)
+void LFGMgr::GetCompatibleDungeons(LfgDungeonSet& dungeons, const PlayerSet& players, LfgLockPartyMap& lockMap)
 {
-    if (!dungeons.size())
-        return NULL;
-
-    LfgLockStatusMap* pLockDungeons = GetGroupLockStatusDungeons(players, dungeons, false);
-    if (pLockDungeons) // Found dungeons not compatible, remove them from the set
+    lockMap.clear();
+    for (PlayerSet::const_iterator it = players.begin(); it != players.end() && dungeons.size(); ++it)
     {
-        for (LfgLockStatusMap::const_iterator itLockMap = pLockDungeons->begin(); itLockMap != pLockDungeons->end() && dungeons.size(); ++itLockMap)
+        uint64 guid = (*it)->GetGUID();
+        LfgLockMap cachedLockMap = GetLockedDungeons(guid);
+        for(LfgLockMap::const_iterator it = cachedLockMap.begin(); it != cachedLockMap.end() && dungeons.size(); ++it)
         {
-            for(LfgLockStatusSet::const_iterator itLockSet = itLockMap->second->begin(); itLockSet != itLockMap->second->end(); ++itLockSet)
+            uint32 dungeonId = (it->first & 0x00FFFFFF); // Compare dungeon ids
+            LfgDungeonSet::iterator itDungeon = dungeons.find(dungeonId);
+            if (itDungeon != dungeons.end())
             {
-                LfgDungeonSet::iterator itDungeon = dungeons.find((*itLockSet)->dungeon);
-                if (itDungeon != dungeons.end())
-                     dungeons.erase(itDungeon);
+                dungeons.erase(itDungeon);
+                lockMap[guid][dungeonId] = it->second;
             }
-            if (!returnLockMap)
-                delete itLockMap->second;
-        }
-        if (!returnLockMap)
-        {
-            delete pLockDungeons;
-            return NULL;
         }
     }
-    return pLockDungeons;
+    if (dungeons.size())
+        lockMap.clear();
 }
 
 /**
@@ -1249,10 +1297,10 @@ bool LFGMgr::CheckGroupRoles(LfgRolesMap& groles, bool removeLeaderFlag /*= true
    Update Proposal info with player answer
 
    @param[in]     proposalId Proposal id to be updated
-   @param[in]     lowguid Player low guid to update answer
+   @param[in]     guid Player guid to update answer
    @param[in]     accept Player answer
 */
-void LFGMgr::UpdateProposal(uint32 proposalId, uint32 lowGuid, bool accept)
+void LFGMgr::UpdateProposal(uint32 proposalId, const uint64& guid, bool accept)
 {
     // Check if the proposal exists
     LfgProposalMap::iterator itProposal = m_Proposals.find(proposalId);
@@ -1261,13 +1309,13 @@ void LFGMgr::UpdateProposal(uint32 proposalId, uint32 lowGuid, bool accept)
     LfgProposal* pProposal = itProposal->second;
 
     // Check if proposal have the current player
-    LfgProposalPlayerMap::iterator itProposalPlayer = pProposal->players.find(lowGuid);
+    LfgProposalPlayerMap::iterator itProposalPlayer = pProposal->players.find(guid);
     if (itProposalPlayer == pProposal->players.end())
         return;
     LfgProposalPlayer* ppPlayer = itProposalPlayer->second;
 
     ppPlayer->accept = LfgAnswer(accept);
-    sLog.outDebug("LFGMgr::UpdateProposal: Player [" UI64FMTD "] of proposal %u selected: %u", MAKE_NEW_GUID(lowGuid, 0, HIGHGUID_PLAYER), proposalId, accept);
+    sLog->outDebug("LFGMgr::UpdateProposal: Player [" UI64FMTD "] of proposal %u selected: %u", guid, proposalId, accept);
     if (!accept)
     {
         RemoveProposal(itProposal, LFG_UPDATETYPE_PROPOSAL_DECLINED);
@@ -1281,16 +1329,17 @@ void LFGMgr::UpdateProposal(uint32 proposalId, uint32 lowGuid, bool accept)
     bool allAnswered = true;
     for (LfgProposalPlayerMap::const_iterator itPlayers = pProposal->players.begin(); itPlayers != pProposal->players.end(); ++itPlayers)
     {
-        if (Player* plr = sObjectMgr.GetPlayerByLowGUID(itPlayers->first))
+        if (Player* plr = sObjectMgr->GetPlayer(itPlayers->first))
         {
-            if (itPlayers->first == pProposal->leaderLowGuid)
+            if (itPlayers->first == pProposal->leader)
                 players.push_front(plr);
             else
                 players.push_back(plr);
 
             // Only teleport new players
             Group* grp = plr->GetGroup();
-            if (!grp || !grp->isLFGGroup() || grp->GetLfgState() == LFG_STATE_FINISHED_DUNGEON) 
+            uint64 gguid = grp ? grp->GetGUID() : 0;
+            if (!gguid || !grp->isLFGGroup() || GetState(gguid) == LFG_STATE_FINISHED_DUNGEON)
                 playersToTeleport.push_back(plr);
         }
 
@@ -1312,16 +1361,16 @@ void LFGMgr::UpdateProposal(uint32 proposalId, uint32 lowGuid, bool accept)
         // Save wait times before redoing groups
         for (LfgPlayerList::const_iterator it = players.begin(); it != players.end(); ++it)
         {
-            LfgProposalPlayer* pPlayer = pProposal->players[(*it)->GetGUIDLow()];
+            LfgProposalPlayer* pPlayer = pProposal->players[(*it)->GetGUID()];
             uint32 lowgroupguid = (*it)->GetGroup() ? (*it)->GetGroup()->GetLowGUID() : 0;
             if (pPlayer->groupLowGuid != lowgroupguid)
-                sLog.outError("LFGMgr::UpdateProposal: [" UI64FMTD "] group mismatch: actual (%u) - queued (%u)", (*it)->GetGUID(), lowgroupguid, pPlayer->groupLowGuid);
+                sLog->outError("LFGMgr::UpdateProposal: [" UI64FMTD "] group mismatch: actual (%u) - queued (%u)", (*it)->GetGUID(), lowgroupguid, pPlayer->groupLowGuid);
 
             uint64 guid = pPlayer->groupLowGuid ? MAKE_NEW_GUID(pPlayer->groupLowGuid, 0, HIGHGUID_GROUP) : (*it)->GetGUID();
             LfgQueueInfoMap::iterator itQueue = m_QueueInfoMap.find(guid);
             if (itQueue == m_QueueInfoMap.end())
             {
-                sLog.outError("LFGMgr::UpdateProposal: Queue info for guid [" UI64FMTD "] not found!", guid);
+                sLog->outError("LFGMgr::UpdateProposal: Queue info for guid [" UI64FMTD "] not found!", guid);
                 waitTimesMap[(*it)->GetGUID()] = -1;
             }
             else
@@ -1329,35 +1378,38 @@ void LFGMgr::UpdateProposal(uint32 proposalId, uint32 lowGuid, bool accept)
         }
 
         // Create a new group (if needed)
-        Group* grp = pProposal->groupLowGuid ? sObjectMgr.GetGroupByGUID(pProposal->groupLowGuid) : NULL;
+        LfgUpdateData updateData = LfgUpdateData(LFG_UPDATETYPE_GROUP_FOUND);
+        Group* grp = pProposal->groupLowGuid ? sObjectMgr->GetGroupByGUID(pProposal->groupLowGuid) : NULL;
         for (LfgPlayerList::const_iterator it = players.begin(); it != players.end(); ++it)
         {
             Player* plr = (*it);
+            uint64 pguid = plr->GetGUID();
             Group* group = plr->GetGroup();
             if (sendUpdate)
                 plr->GetSession()->SendLfgUpdateProposal(proposalId, pProposal);
             if (group)
             {
-                plr->GetSession()->SendLfgUpdateParty(LFG_UPDATETYPE_GROUP_FOUND);
+                plr->GetSession()->SendLfgUpdateParty(updateData);
                 if (group != grp)
                     plr->RemoveFromGroup();
             }
             else
-                plr->GetSession()->SendLfgUpdatePlayer(LFG_UPDATETYPE_GROUP_FOUND);
+                plr->GetSession()->SendLfgUpdatePlayer(updateData);
 
             if (!grp)
             {
                 grp = new Group();
-                grp->Create(plr->GetGUID(), plr->GetName());
+                grp->Create(pguid, plr->GetName());
                 grp->ConvertToLFG();
-                grp->SetLfgState(LFG_STATE_PROPOSAL);
-                sObjectMgr.AddGroup(grp);
+                uint64 gguid = grp->GetGUID();
+                SetState(gguid, LFG_STATE_PROPOSAL);
+                sObjectMgr->AddGroup(grp);
             }
             else if (group != grp)
-                grp->AddMember(plr->GetGUID(), plr->GetName());
+                grp->AddMember(pguid, plr->GetName());
 
             // Update timers
-            uint8 role = plr->GetLfgRoles();
+            uint8 role = GetRoles(pguid);
             role &= ~ROLE_LEADER;
             switch(role)
             {
@@ -1374,15 +1426,17 @@ void LFGMgr::UpdateProposal(uint32 proposalId, uint32 lowGuid, bool accept)
                     m_WaitTimeAvg = int32((m_WaitTimeAvg * m_NumWaitTimeAvg + waitTimesMap[plr->GetGUID()]) / ++m_NumWaitTimeAvg);
                     break;
             }
-            grp->SetLfgRoles(plr->GetGUID(), pProposal->players[plr->GetGUIDLow()]->role);
+            grp->SetLfgRoles(pguid, pProposal->players[pguid]->role);
+            SetState(pguid, LFG_STATE_DUNGEON);
         }
 
         // Set the dungeon difficulty
         LFGDungeonEntry const* dungeon = sLFGDungeonStore.LookupEntry(pProposal->dungeonId);
         ASSERT(dungeon);
         grp->SetDungeonDifficulty(Difficulty(dungeon->difficulty));
-        grp->SetLfgDungeonEntry(dungeon->Entry());
-        grp->SetLfgState(LFG_STATE_DUNGEON);
+        uint64 gguid = grp->GetGUID();
+        SetDungeon(gguid, dungeon->Entry());
+        SetState(gguid, LFG_STATE_DUNGEON);
 
         // Remove players/groups from Queue
         for (LfgGuidList::const_iterator it = pProposal->queues.begin(); it != pProposal->queues.end(); ++it)
@@ -1414,7 +1468,7 @@ void LFGMgr::RemoveProposal(LfgProposalMap::iterator itProposal, LfgUpdateType t
     LfgProposal* pProposal = itProposal->second;
     pProposal->state = LFG_PROPOSAL_FAILED;
 
-    sLog.outDebug("LFGMgr::RemoveProposal: Proposal %u, state FAILED, UpdateType %u", itProposal->first, type);
+    sLog->outDebug("LFGMgr::RemoveProposal: Proposal %u, state FAILED, UpdateType %u", itProposal->first, type);
     // Mark all people that didn't answered as no accept
     if (type == LFG_UPDATETYPE_PROPOSAL_FAILED)
         for (LfgProposalPlayerMap::const_iterator it = pProposal->players.begin(); it != pProposal->players.end(); ++it)
@@ -1428,7 +1482,7 @@ void LFGMgr::RemoveProposal(LfgProposalMap::iterator itProposal, LfgUpdateType t
         if (it->second->accept == LFG_ANSWER_AGREE)
             continue;
 
-        uint64 guid = it->second->groupLowGuid ? MAKE_NEW_GUID(it->second->groupLowGuid, 0, HIGHGUID_GROUP) : MAKE_NEW_GUID(it->first, 0, HIGHGUID_PLAYER);
+        uint64 guid = it->second->groupLowGuid ? MAKE_NEW_GUID(it->second->groupLowGuid, 0, HIGHGUID_GROUP) : it->first;
         // Player didn't accept or still pending when no secs left
         if (it->second->accept == LFG_ANSWER_DENY || type == LFG_UPDATETYPE_PROPOSAL_FAILED)
         {
@@ -1441,7 +1495,7 @@ void LFGMgr::RemoveProposal(LfgProposalMap::iterator itProposal, LfgUpdateType t
     // Notify players
     for (LfgProposalPlayerMap::const_iterator it = pProposal->players.begin(); it != pProposal->players.end(); ++it)
     {
-        Player* plr = sObjectMgr.GetPlayerByLowGUID(it->first);
+        Player* plr = sObjectMgr->GetPlayer(it->first);
         if (!plr)
             continue;
 
@@ -1454,37 +1508,37 @@ void LFGMgr::RemoveProposal(LfgProposalMap::iterator itProposal, LfgUpdateType t
 
         if (toRemove.find(gguid) != toRemove.end())         // Didn't accept or in same group that someone that didn't accept
         {
-            LfgUpdateType updateType;
+            LfgUpdateData updateData;
             if (it->second->accept == LFG_ANSWER_DENY)
             {
-                updateType = type;
-                sLog.outDebug("LFGMgr::RemoveProposal: [" UI64FMTD "] didn't accept. Removing from queue and compatible cache", guid);
+                updateData.updateType = type;
+                sLog->outDebug("LFGMgr::RemoveProposal: [" UI64FMTD "] didn't accept. Removing from queue and compatible cache", guid);
             }
             else
             {
-                updateType = LFG_UPDATETYPE_REMOVED_FROM_QUEUE;
-                sLog.outDebug("LFGMgr::RemoveProposal: [" UI64FMTD "] in same group that someone that didn't accept. Removing from queue and compatible cache", guid);
+                updateData.updateType = LFG_UPDATETYPE_REMOVED_FROM_QUEUE;
+                sLog->outDebug("LFGMgr::RemoveProposal: [" UI64FMTD "] in same group that someone that didn't accept. Removing from queue and compatible cache", guid);
             }
-            plr->ClearLfgState();
+            ClearState(guid);
             if (grp)
             {
-                grp->RestoreLfgState();
-                plr->GetSession()->SendLfgUpdateParty(updateType);
+                RestoreState(gguid);
+                plr->GetSession()->SendLfgUpdateParty(updateData);
             }
             else
-                plr->GetSession()->SendLfgUpdatePlayer(updateType);
+                plr->GetSession()->SendLfgUpdatePlayer(updateData);
         }
         else
         {
-            sLog.outDebug("LFGMgr::RemoveProposal: Readding [" UI64FMTD "] to queue.", guid);
-            plr->SetLfgState(LFG_STATE_QUEUED);
+            sLog->outDebug("LFGMgr::RemoveProposal: Readding [" UI64FMTD "] to queue.", guid);
+            SetState(guid, LFG_STATE_QUEUED);
             if (grp)
             {
-                grp->SetLfgState(LFG_STATE_QUEUED);
-                plr->GetSession()->SendLfgUpdateParty(LFG_UPDATETYPE_ADDED_TO_QUEUE, plr->GetLfgDungeons(), plr->GetLfgComment());
+                SetState(gguid, LFG_STATE_QUEUED);
+                plr->GetSession()->SendLfgUpdateParty(LfgUpdateData(LFG_UPDATETYPE_ADDED_TO_QUEUE, GetSelectedDungeons(guid), GetComment(guid)));
             }
             else
-                plr->GetSession()->SendLfgUpdatePlayer(LFG_UPDATETYPE_ADDED_TO_QUEUE, plr->GetLfgDungeons(), plr->GetLfgComment());
+                plr->GetSession()->SendLfgUpdatePlayer(LfgUpdateData(LFG_UPDATETYPE_ADDED_TO_QUEUE, GetSelectedDungeons(guid), GetComment(guid)));
         }
     }
 
@@ -1511,23 +1565,23 @@ void LFGMgr::RemoveProposal(LfgProposalMap::iterator itProposal, LfgUpdateType t
    Initialize a boot kick vote
 
    @param[in]     grp Group the vote kicks belongs to
-   @param[in]     kicker Kicker low guid
-   @param[in]     victim Victim low guid
+   @param[in]     kicker Kicker guid
+   @param[in]     victim Victim guid
    @param[in]     reason Kick reason
 */
-void LFGMgr::InitBoot(Group* grp, uint32 kicker, uint32 victim, std::string reason)
+void LFGMgr::InitBoot(Group* grp, const uint64& kicker, const uint64& victim, std::string reason)
 {
     if (!grp)
         return;
-
-    grp->SetLfgState(LFG_STATE_BOOT);
+    uint64 gguid = grp->GetGUID();
+    SetState(gguid, LFG_STATE_BOOT);
 
     LfgPlayerBoot* pBoot = new LfgPlayerBoot();
     pBoot->inProgress = true;
     pBoot->cancelTime = time_t(time(NULL)) + LFG_TIME_BOOT;
     pBoot->reason = reason;
-    pBoot->victimLowGuid = victim;
-    pBoot->votedNeeded = GROUP_LFG_KICK_VOTES_NEEDED;
+    pBoot->victim = victim;
+    pBoot->votedNeeded = GetVotesNeeded(gguid);
     PlayerSet players;
 
     // Set votes
@@ -1535,15 +1589,15 @@ void LFGMgr::InitBoot(Group* grp, uint32 kicker, uint32 victim, std::string reas
     {
         if (Player* plrg = itr->getSource())
         {
-            plrg->SetLfgState(LFG_STATE_BOOT);
-            uint32 pLowGuid = plrg->GetGUIDLow();
-            if (pLowGuid == victim)
-                pBoot->votes[pLowGuid] = LFG_ANSWER_DENY;  // Victim auto vote NO
-            else if (pLowGuid == kicker)
-                pBoot->votes[pLowGuid] = LFG_ANSWER_AGREE; // Kicker auto vote YES
+            uint64 guid = plrg->GetGUID();
+            SetState(guid, LFG_STATE_BOOT);
+            if (guid == victim)
+                pBoot->votes[victim] = LFG_ANSWER_DENY;    // Victim auto vote NO
+            else if (guid == kicker)
+                pBoot->votes[kicker] = LFG_ANSWER_AGREE;   // Kicker auto vote YES
             else
             {
-                pBoot->votes[pLowGuid] = LFG_ANSWER_PENDING; // Other members need to vote
+                pBoot->votes[guid] = LFG_ANSWER_PENDING;   // Other members need to vote
                 players.insert(plrg);
             }
         }
@@ -1569,7 +1623,7 @@ void LFGMgr::UpdateBoot(Player* plr, bool accept)
         return;
 
     uint32 bootId = grp->GetLowGUID();
-    uint32 lowGuid = plr->GetGUIDLow();
+    uint64 guid = plr->GetGUID();
 
     LfgPlayerBootMap::iterator itBoot = m_Boots.find(bootId);
     if (itBoot == m_Boots.end())
@@ -1579,10 +1633,10 @@ void LFGMgr::UpdateBoot(Player* plr, bool accept)
     if (!pBoot)
         return;
 
-    if (pBoot->votes[lowGuid] != LFG_ANSWER_PENDING)       // Cheat check: Player can't vote twice
+    if (pBoot->votes[guid] != LFG_ANSWER_PENDING)          // Cheat check: Player can't vote twice
         return;
 
-    pBoot->votes[lowGuid] = LfgAnswer(accept);
+    pBoot->votes[guid] = LfgAnswer(accept);
 
     uint8 votesNum = 0;
     uint8 agreeNum = 0;
@@ -1603,25 +1657,28 @@ void LFGMgr::UpdateBoot(Player* plr, bool accept)
         // Send update info to all players
         pBoot->inProgress = false;
         for (LfgAnswerMap::const_iterator itVotes = pBoot->votes.begin(); itVotes != pBoot->votes.end(); ++itVotes)
-            if (Player* plrg = sObjectMgr.GetPlayerByLowGUID(itVotes->first))
-                if (plrg->GetGUIDLow() != pBoot->victimLowGuid)
-                {
-                    plrg->SetLfgState(LFG_STATE_DUNGEON);
+        {
+            uint64 pguid = itVotes->first;
+            if (pguid != pBoot->victim)
+            {
+                SetState(pguid, LFG_STATE_DUNGEON);
+                if (Player* plrg = sObjectMgr->GetPlayer(pguid))
                     plrg->GetSession()->SendLfgBootPlayer(pBoot);
-                }
+            }
+        }
 
-        grp->SetLfgState(LFG_STATE_DUNGEON);
+        uint64 gguid = grp->GetGUID();
+        SetState(gguid, LFG_STATE_DUNGEON);
         if (agreeNum == pBoot->votedNeeded)                // Vote passed - Kick player
         {
-            Player::RemoveFromGroup(grp, MAKE_NEW_GUID(pBoot->victimLowGuid, 0, HIGHGUID_PLAYER));
-            if (Player* victim = sObjectMgr.GetPlayerByLowGUID(pBoot->victimLowGuid))
+            Player::RemoveFromGroup(grp, pBoot->victim);
+            if (Player* victim = sObjectMgr->GetPlayer(pBoot->victim))
             {
                 TeleportPlayer(victim, true, false);
-                victim->SetLfgState(LFG_STATE_NONE);
+                SetState(pBoot->victim, LFG_STATE_NONE);
             }
             OfferContinue(grp);
-            grp->SetLfgKicks(grp->GetLfgKicks() + 1);
-            
+            DecreaseKicksLeft(gguid);
         }
         delete pBoot;
         m_Boots.erase(itBoot);
@@ -1637,7 +1694,7 @@ void LFGMgr::UpdateBoot(Player* plr, bool accept)
 */
 void LFGMgr::TeleportPlayer(Player* plr, bool out, bool fromOpcode /*= false*/)
 {
-    sLog.outDebug("LFGMgr::TeleportPlayer: [" UI64FMTD "] is being teleported %s", plr->GetGUID(), out ? "out" : "in");
+    sLog->outDebug("LFGMgr::TeleportPlayer: [" UI64FMTD "] is being teleported %s", plr->GetGUID(), out ? "out" : "in");
     if (out)
     {
         plr->RemoveAurasDueToSpell(LFG_SPELL_LUCK_OF_THE_DRAW);
@@ -1653,11 +1710,12 @@ void LFGMgr::TeleportPlayer(Player* plr, bool out, bool fromOpcode /*= false*/)
         error = LFG_TELEPORTERROR_INVALID_LOCATION;
     else if (!plr->isAlive())
         error = LFG_TELEPORTERROR_PLAYER_DEAD;
-    else if (plr->IsFalling() || plr->hasUnitState(UNIT_STAT_JUMPING))
+    else if (plr->IsFalling() || plr->HasUnitState(UNIT_STAT_JUMPING))
         error = LFG_TELEPORTERROR_FALLING;
     else
     {
-        LFGDungeonEntry const* dungeon = sLFGDungeonStore.LookupEntry(grp->GetLfgDungeonEntry());
+        uint64 gguid = grp->GetGUID();
+        LFGDungeonEntry const* dungeon = sLFGDungeonStore.LookupEntry(GetDungeon(gguid));
 
         if (!dungeon)
             error = LFG_TELEPORTERROR_INVALID_LOCATION;
@@ -1671,7 +1729,7 @@ void LFGMgr::TeleportPlayer(Player* plr, bool out, bool fromOpcode /*= false*/)
 
             if (!fromOpcode)
             {
-                
+
                 // Select a player inside to be teleported to
                 for (GroupReference* itr = grp->GetFirstMember(); itr != NULL && !mapid; itr = itr->next())
                 {
@@ -1689,10 +1747,10 @@ void LFGMgr::TeleportPlayer(Player* plr, bool out, bool fromOpcode /*= false*/)
 
             if (!mapid)
             {
-                AreaTrigger const* at = sObjectMgr.GetMapEntranceTrigger(dungeon->map);
+                AreaTrigger const* at = sObjectMgr->GetMapEntranceTrigger(dungeon->map);
                 if (!at)
                 {
-                    sLog.outError("LfgMgr::TeleportPlayer: Failed to teleport [" UI64FMTD "]: No areatrigger found for map: %u difficulty: %u", plr->GetGUID(), dungeon->map, dungeon->difficulty);
+                    sLog->outError("LfgMgr::TeleportPlayer: Failed to teleport [" UI64FMTD "]: No areatrigger found for map: %u difficulty: %u", plr->GetGUID(), dungeon->map, dungeon->difficulty);
                     error = LFG_TELEPORTERROR_INVALID_LOCATION;
                 }
                 else
@@ -1722,14 +1780,14 @@ void LFGMgr::TeleportPlayer(Player* plr, bool out, bool fromOpcode /*= false*/)
                 else
                 {
                     error = LFG_TELEPORTERROR_INVALID_LOCATION;
-                    sLog.outError("LfgMgr::TeleportPlayer: Failed to teleport [" UI64FMTD "] to map %u: ", plr->GetGUID(), mapid);
+                    sLog->outError("LfgMgr::TeleportPlayer: Failed to teleport [" UI64FMTD "] to map %u: ", plr->GetGUID(), mapid);
                 }
             }
         }
     }
 
     if (error != LFG_TELEPORTERROR_OK)
-        plr->GetSession()->SendLfgTeleportError(error);
+        plr->GetSession()->SendLfgTeleportError(uint8(error));
 }
 
 /**
@@ -1738,34 +1796,37 @@ void LFGMgr::TeleportPlayer(Player* plr, bool out, bool fromOpcode /*= false*/)
    @param[in]     dungeonId Dungeonid (Obsolete)
    @param[in]     plr Player to reward
 */
-void LFGMgr::RewardDungeonDoneFor(const uint32 dungeonId, Player* player)
+void LFGMgr::RewardDungeonDoneFor(const uint32 /*dungeonId*/, Player* player)
 {
     Group* group = player->GetGroup();
     if (!group || !group->isLFGGroup())
     {
-        sLog.outDebug("LFGMgr::RewardDungeonDoneFor: [" UI64FMTD "] is not in a group or not a LFGGroup. Ignoring", player->GetGUID());
+        sLog->outDebug("LFGMgr::RewardDungeonDoneFor: [" UI64FMTD "] is not in a group or not a LFGGroup. Ignoring", player->GetGUID());
         return;
     }
 
-    if (player->GetLfgState() == LFG_STATE_FINISHED_DUNGEON)
+    uint64 guid = player->GetGUID();
+    uint64 gguid = player->GetGroup()->GetGUID();
+
+    if (GetState(guid) == LFG_STATE_FINISHED_DUNGEON)
     {
-        sLog.outDebug("LFGMgr::RewardDungeonDoneFor: [" UI64FMTD "] Already rewarded player. Ignoring", player->GetGUID());
+        sLog->outDebug("LFGMgr::RewardDungeonDoneFor: [" UI64FMTD "] Already rewarded player. Ignoring", guid);
         return;
     }
 
     // Mark dungeon as finished
-    group->SetLfgState(LFG_STATE_FINISHED_DUNGEON);
+    SetState(gguid, LFG_STATE_FINISHED_DUNGEON);
 
     // Clear player related lfg stuff
-    uint32 rDungeonId = (*player->GetLfgDungeons()->begin());
-    player->ClearLfgState();
-    player->SetLfgState(LFG_STATE_FINISHED_DUNGEON);
+    uint32 rDungeonId = (*GetSelectedDungeons(guid).begin());
+    ClearState(guid);
+    SetState(guid, LFG_STATE_FINISHED_DUNGEON);
 
     // Give rewards only if its a random dungeon
     LFGDungeonEntry const* dungeon = sLFGDungeonStore.LookupEntry(rDungeonId);
     if (!dungeon || dungeon->type != LFG_TYPE_RANDOM)
     {
-        sLog.outDebug("LFGMgr::RewardDungeonDoneFor: [" UI64FMTD "] dungeon %u is not random. Queued for %u dungeons", player->GetGUID(), rDungeonId, uint8(player->GetLfgDungeons()->size()));
+        sLog->outDebug("LFGMgr::RewardDungeonDoneFor: [" UI64FMTD "] dungeon %u is not random", guid, rDungeonId);
         return;
     }
 
@@ -1778,7 +1839,7 @@ void LFGMgr::RewardDungeonDoneFor(const uint32 dungeonId, Player* player)
         return;
 
     uint8 index = 0;
-    Quest const* qReward = sObjectMgr.GetQuestTemplate(reward->reward[index].questId);
+    Quest const* qReward = sObjectMgr->GetQuestTemplate(reward->reward[index].questId);
     if (!qReward)
         return;
 
@@ -1788,7 +1849,7 @@ void LFGMgr::RewardDungeonDoneFor(const uint32 dungeonId, Player* player)
     else
     {
         index = 1;
-        qReward = sObjectMgr.GetQuestTemplate(reward->reward[index].questId);
+        qReward = sObjectMgr->GetQuestTemplate(reward->reward[index].questId);
         if (!qReward)
             return;
         // we give reward without informing client (retail does this)
@@ -1796,8 +1857,8 @@ void LFGMgr::RewardDungeonDoneFor(const uint32 dungeonId, Player* player)
     }
 
     // Give rewards
-    sLog.outDebug("LFGMgr::RewardDungeonDoneFor: [" UI64FMTD "] done dungeon %u,%s previously done.", player->GetGUID(), group->GetLfgDungeonEntry(), index > 0 ? " " : " not");
-    player->GetSession()->SendLfgPlayerReward(dungeon->Entry(), group->GetLfgDungeonEntry(false), index, reward, qReward);
+    sLog->outDebug("LFGMgr::RewardDungeonDoneFor: [" UI64FMTD "] done dungeon %u,%s previously done.", player->GetGUID(), GetDungeon(gguid), index > 0 ? " " : " not");
+    player->GetSession()->SendLfgPlayerReward(dungeon->Entry(), GetDungeon(gguid, false), index, reward, qReward);
 }
 
 // --------------------------------------------------------------------------//
@@ -1805,152 +1866,16 @@ void LFGMgr::RewardDungeonDoneFor(const uint32 dungeonId, Player* player)
 // --------------------------------------------------------------------------//
 
 /**
-   Get all Group members list of all dungeons that can't be done and reason
-   leader excluded as the list given is he list he can do
-
-   @param[in]     plr Players to check group lock status
-   @returns Map of player's group dungeon Lock status
-*/
-LfgLockStatusMap* LFGMgr::GetPartyLockStatusDungeons(Player* plr)
-{
-    Group* grp = plr->GetGroup();
-    if (!grp)
-        return NULL;
-
-    PlayerSet players;
-    for (GroupReference* itr = grp->GetFirstMember(); itr != NULL; itr = itr->next())
-    {
-        Player* plrg = itr->getSource();
-        if (plrg && plrg != plr)
-            players.insert(plrg);
-    }
-
-    LfgDungeonSet allDungeons;
-    GetDungeonsByRandom(0, allDungeons);
-    return GetGroupLockStatusDungeons(players, allDungeons, true);
-}
-
-/**
-   Get list of all dungeons player can't do and reasons
-
-   @param[in]     plr Players to check dungeon lock status
-   @returns Set of player's dungeon Lock status
-*/
-LfgLockStatusSet* LFGMgr::GetPlayerLockStatusDungeons(Player* plr)
-{
-    LfgDungeonSet allDungeons;
-    GetDungeonsByRandom(0, allDungeons);
-    return GetPlayerLockStatusDungeons(plr, allDungeons, true);
-}
-
-/**
-   Given a group get the dungeons that can't be done and reason
-
-   @param[in]     players Players to check lock status
-   @param[in]     dungeons Dungeons to check
-   @param[in]     useEntry Use dungeon entry (true) or id (false)
-   @returns Map of player's dungeon Lock status
-*/
-LfgLockStatusMap* LFGMgr::GetGroupLockStatusDungeons(PlayerSet& players, LfgDungeonSet& dungeons, bool useEntry)
-{
-    LfgLockStatusMap* dungeonMap = new LfgLockStatusMap();
-    for (PlayerSet::const_iterator itr = players.begin(); itr != players.end(); ++itr)
-        if (LfgLockStatusSet* dungeonSet = GetPlayerLockStatusDungeons(*itr, dungeons, useEntry))
-            (*dungeonMap)[(*itr)->GetGUIDLow()] = dungeonSet;
-
-    if (!dungeonMap->size())
-    {
-        delete dungeonMap;
-        dungeonMap = NULL;
-    }
-    return dungeonMap;
-}
-
-/**
-   Given a list of dungeon return the list of dungeons player can't do and reasons
-
-   @param[in]     plr Players to check dungeon lock status
-   @param[in]     dungeons Dungeons to check (Default = NULL, means check all dungeons)
-   @param[in]     useEntry Use dungeon entry (true) or id (false)
-   @returns Set of player's dungeon Lock status
-*/
-LfgLockStatusSet* LFGMgr::GetPlayerLockStatusDungeons(Player* plr, LfgDungeonSet& dungeons, bool useEntry)
-{
-    LfgLockStatusSet* list = new LfgLockStatusSet();
-    uint8 level = plr->getLevel();
-    uint8 expansion = plr->GetSession()->Expansion();
-
-    for (LfgDungeonSet::const_iterator it = dungeons.begin(); it != dungeons.end(); ++it)
-    {
-        LFGDungeonEntry const* dungeon = sLFGDungeonStore.LookupEntry(*it);
-        if (!dungeon) // should never happen - We provide a list from sLFGDungeonStore
-            continue;
-
-        AccessRequirement const* ar = sObjectMgr.GetAccessRequirement(dungeon->map, Difficulty(dungeon->difficulty));
-
-        LfgLockStatusType locktype = LFG_LOCKSTATUS_OK;
-        if (dungeon->expansion > expansion)
-            locktype = LFG_LOCKSTATUS_INSUFFICIENT_EXPANSION;
-        else if (sDisableMgr.IsDisabledFor(DISABLE_TYPE_MAP, dungeon->map, plr))
-            locktype = LFG_LOCKSTATUS_RAID_LOCKED;
-        else if (dungeon->difficulty > DUNGEON_DIFFICULTY_NORMAL && plr->GetBoundInstance(dungeon->map, Difficulty(dungeon->difficulty)))
-            locktype = LFG_LOCKSTATUS_RAID_LOCKED;
-        else if (dungeon->minlevel > level)
-            locktype = LFG_LOCKSTATUS_TOO_LOW_LEVEL;
-        else if (dungeon->maxlevel < level)
-            locktype = LFG_LOCKSTATUS_TOO_HIGH_LEVEL;
-        else if (locktype == LFG_LOCKSTATUS_OK && ar)
-        {
-            if (ar->achievement && !plr->GetAchievementMgr().HasAchieved(sAchievementStore.LookupEntry(ar->achievement)))
-                locktype = LFG_LOCKSTATUS_RAID_LOCKED;       // FIXME: Check the correct lock value
-            else if (plr->GetTeam() == ALLIANCE && ar->quest_A && !plr->GetQuestRewardStatus(ar->quest_A))
-                locktype = LFG_LOCKSTATUS_QUEST_NOT_COMPLETED;
-            else if (plr->GetTeam() == HORDE && ar->quest_H && !plr->GetQuestRewardStatus(ar->quest_H))
-                locktype = LFG_LOCKSTATUS_QUEST_NOT_COMPLETED;
-            else
-                if (ar->item)
-                {
-                    if (!plr->HasItemCount(ar->item, 1) && (!ar->item2 || !plr->HasItemCount(ar->item2, 1)))
-                        locktype = LFG_LOCKSTATUS_MISSING_ITEM;
-                }
-                else if (ar->item2 && !plr->HasItemCount(ar->item2, 1))
-                    locktype = LFG_LOCKSTATUS_MISSING_ITEM;
-        }
-        /* TODO VoA closed if WG is not under team control (LFG_LOCKSTATUS_RAID_LOCKED)
-            locktype = LFG_LOCKSTATUS_TOO_LOW_GEAR_SCORE;
-            locktype = LFG_LOCKSTATUS_TOO_HIGH_GEAR_SCORE;
-            locktype = LFG_LOCKSTATUS_ATTUNEMENT_TOO_LOW_LEVEL;
-            locktype = LFG_LOCKSTATUS_ATTUNEMENT_TOO_HIGH_LEVEL;
-            locktype = LFG_LOCKSTATUS_NOT_IN_SEASON; // Need list of instances and needed season to open
-        */
-
-        if (locktype != LFG_LOCKSTATUS_OK)
-        {
-            LfgLockStatus* lockstatus = new LfgLockStatus();
-            lockstatus->dungeon = useEntry ? dungeon->Entry(): dungeon->ID;
-            lockstatus->lockstatus = locktype;
-            list->insert(lockstatus);
-        }
-    }
-    if (!list->size())
-    {
-        delete list;
-        list = NULL;
-    }
-    return list;
-}
-
-/**
    Get the dungeon list that can be done given a random dungeon entry.
 
    @param[in]     randomdungeon Random dungeon id (if value = 0 will return all dungeons)
-   @param[out]    dungeons Set of dungeons that can be done.
+   @returns Set of dungeons that can be done.
 */
-void LFGMgr::GetDungeonsByRandom(uint32 randomdungeon, LfgDungeonSet& dungeons)
+const LfgDungeonSet& LFGMgr::GetDungeonsByRandom(uint32 randomdungeon)
 {
     LFGDungeonEntry const* dungeon = sLFGDungeonStore.LookupEntry(randomdungeon);
-    uint8 groupType = dungeon ? dungeon->grouptype : 0;
-    dungeons = m_CachedDungeonMap[groupType];
+    uint32 groupType = dungeon ? dungeon->grouptype : 0;
+    return m_CachedDungeonMap[groupType];
 }
 
 /**
@@ -2022,4 +1947,129 @@ std::string LFGMgr::ConcatenateGuids(LfgGuidList check)
     for (++it; it != check.end(); ++it)
         o << "|" << (*it);
     return o.str();
+}
+
+
+LfgState LFGMgr::GetState(const uint64& guid)
+{
+    sLog->outDebug("LFGMgr::GetState: [" UI64FMTD "]", guid);
+    if (IS_GROUP(guid))
+        return m_Groups[guid].GetState();
+    else
+        return m_Players[guid].GetState();
+}
+
+uint32 LFGMgr::GetDungeon(const uint64& guid, bool asId /*= true*/)
+{
+    sLog->outDebug("LFGMgr::GetDungeon: [" UI64FMTD "] asId: %u", guid, asId);
+    return m_Groups[guid].GetDungeon(asId);
+}
+
+uint8 LFGMgr::GetRoles(const uint64& guid)
+{
+    sLog->outDebug("LFGMgr::GetRoles: [" UI64FMTD "]", guid);
+    return m_Players[guid].GetRoles();
+}
+
+const std::string& LFGMgr::GetComment(const uint64& guid)
+{
+    sLog->outDebug("LFGMgr::GetComment: [" UI64FMTD "]", guid);
+    return m_Players[guid].GetComment();
+}
+
+const LfgDungeonSet& LFGMgr::GetSelectedDungeons(const uint64& guid)
+{
+    sLog->outDebug("LFGMgr::GetSelectedDungeons: [" UI64FMTD "]", guid);
+    return m_Players[guid].GetSelectedDungeons();
+}
+
+const LfgLockMap& LFGMgr::GetLockedDungeons(const uint64& guid)
+{
+    sLog->outDebug("LFGMgr::GetLockedDungeons: [" UI64FMTD "]", guid);
+    return m_Players[guid].GetLockedDungeons();
+}
+
+uint8 LFGMgr::GetKicksLeft(const uint64& guid)
+{
+    sLog->outDebug("LFGMgr::GetKicksLeft: [" UI64FMTD "]", guid);
+    return m_Groups[guid].GetKicksLeft();
+}
+
+uint8 LFGMgr::GetVotesNeeded(const uint64& guid)
+{
+    sLog->outDebug("LFGMgr::GetVotesNeeded: [" UI64FMTD "]", guid);
+    return m_Groups[guid].GetVotesNeeded();
+}
+
+void LFGMgr::RestoreState(const uint64& guid)
+{
+    sLog->outDebug("LFGMgr::RestoreState: [" UI64FMTD "]", guid);
+    m_Groups[guid].RestoreState();
+}
+
+void LFGMgr::ClearState(const uint64& guid)
+{
+    sLog->outDebug("LFGMgr::ClearState: [" UI64FMTD "]", guid);
+    m_Players[guid].ClearState();
+}
+
+void LFGMgr::SetState(const uint64& guid, LfgState state)
+{
+    sLog->outDebug("LFGMgr::SetState: [" UI64FMTD "] state %u", guid, state);
+    if (IS_GROUP(guid))
+        m_Groups[guid].SetState(state);
+    else
+        m_Players[guid].SetState(state);
+}
+
+void LFGMgr::SetDungeon(const uint64& guid, uint32 dungeon)
+{
+    sLog->outDebug("LFGMgr::SetDungeon: [" UI64FMTD "] dungeon %u", guid, dungeon);
+    m_Groups[guid].SetDungeon(dungeon);
+}
+
+void LFGMgr::SetRoles(const uint64& guid, uint8 roles)
+{
+    sLog->outDebug("LFGMgr::SetRoles: [" UI64FMTD "] roles: %u", guid, roles);
+    m_Players[guid].SetRoles(roles);
+}
+
+void LFGMgr::SetComment(const uint64& guid, const std::string& comment)
+{
+    sLog->outDebug("LFGMgr::SetComment: [" UI64FMTD "] comment: %s", guid, comment.c_str());
+    m_Players[guid].SetComment(comment);
+}
+
+void LFGMgr::SetSelectedDungeons(const uint64& guid, const LfgDungeonSet& dungeons)
+{
+    sLog->outDebug("LFGMgr::SetSelectedDungeons: [" UI64FMTD "]", guid);
+    m_Players[guid].SetSelectedDungeons(dungeons);
+}
+
+void LFGMgr::SetLockedDungeons(const uint64& guid, const LfgLockMap& lock)
+{
+    sLog->outDebug("LFGMgr::SetLockedDungeons: [" UI64FMTD "]", guid);
+    m_Players[guid].SetLockedDungeons(lock);
+}
+
+void LFGMgr::DecreaseKicksLeft(const uint64& guid)
+{
+    sLog->outDebug("LFGMgr::DecreaseKicksLeft: [" UI64FMTD "]", guid);
+    m_Groups[guid].DecreaseKicksLeft();
+}
+
+void LFGMgr::RemovePlayerData(const uint64& guid)
+{
+    sLog->outDebug("LFGMgr::RemovePlayerData: [" UI64FMTD "]", guid);
+    LfgPlayerDataMap::iterator it = m_Players.find(guid);
+    if (it != m_Players.end())
+        m_Players.erase(it);
+}
+
+void LFGMgr::RemoveGroupData(const uint64& guid)
+{
+    sLog->outDebug("LFGMgr::RemoveGroupData: [" UI64FMTD "]", guid);
+    LfgGroupDataMap::iterator it = m_Groups.find(guid);
+    if (it != m_Groups.end())
+        m_Groups.erase(it);
 }

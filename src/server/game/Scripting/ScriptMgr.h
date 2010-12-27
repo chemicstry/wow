@@ -310,7 +310,7 @@ template<class TMap> class MapScript : public UpdatableScript<TMap>
             : _mapEntry(sMapStore.LookupEntry(mapId))
         {
             if (!_mapEntry)
-                sLog.outError("Invalid MapScript for %u; no such map ID.", mapId);
+                sLog->outError("Invalid MapScript for %u; no such map ID.", mapId);
         }
 
     public:
@@ -709,6 +709,9 @@ class PlayerScript : public ScriptObject
         // Called when a player is created/deleted
         virtual void OnCreate(Player* /*player*/) { }
         virtual void OnDelete(uint64 /*guid*/) { }
+
+        // Called when a player is binded to an instance
+        virtual void OnBindToInstance(Player* /*player*/, Difficulty /*difficulty*/, uint32 /*mapid*/, bool /*permanent*/) { }
 };
 
 class GuildScript : public ScriptObject
@@ -751,7 +754,7 @@ public:
 };
 
 // Placed here due to ScriptRegistry::AddScript dependency.
-#define sScriptMgr (*ACE_Singleton<ScriptMgr, ACE_Null_Mutex>::instance())
+#define sScriptMgr ACE_Singleton<ScriptMgr, ACE_Null_Mutex>::instance()
 
 // Manages registration, loading, and execution of scripts.
 class ScriptMgr
@@ -943,6 +946,7 @@ class ScriptMgr
         void OnPlayerLogout(Player* player);
         void OnPlayerCreate(Player* player);
         void OnPlayerDelete(uint64 guid);
+        void OnPlayerBindToInstance(Player* player, Difficulty difficulty, uint32 mapid, bool permanent);
 
     public: /* GuildScript */
         void OnGuildAddMember(Guild *guild, Player *player, uint8& plRank);
@@ -953,7 +957,7 @@ class ScriptMgr
         void OnGuildDisband(Guild *guild);
         void OnGuildMemberWitdrawMoney(Guild* guild, Player* player, uint32 &amount, bool isRepair);
         void OnGuildMemberDepositMoney(Guild* guild, Player* player, uint32 &amount);
-        void OnGuildItemMove(Guild* guild, Player* player, Item* pItem, bool isSrcBank, uint8 srcContainer, uint8 srcSlotId, 
+        void OnGuildItemMove(Guild* guild, Player* player, Item* pItem, bool isSrcBank, uint8 srcContainer, uint8 srcSlotId,
             bool isDestBank, uint8 destContainer, uint8 destSlotId);
         void OnGuildEvent(Guild* guild, uint8 eventType, uint32 playerGuid1, uint32 playerGuid2, uint8 newRank);
         void OnGuildBankEvent(Guild* guild, uint8 eventType, uint8 tabId, uint32 playerGuid, uint32 itemOrMoney, uint16 itemStackCount, uint8 destTabId);
@@ -993,7 +997,7 @@ class ScriptMgr
                     {
                         if (it->second == script)
                         {
-                            sLog.outError("Script '%s' has same memory pointer as '%s'.",
+                            sLog->outError("Script '%s' has same memory pointer as '%s'.",
                                 script->GetName().c_str(), it->second->GetName().c_str());
 
                             return;
@@ -1024,12 +1028,12 @@ class ScriptMgr
                             if (!existing)
                             {
                                 ScriptPointerList[id] = script;
-                                sScriptMgr.IncrementScriptCount();
+                                sScriptMgr->IncrementScriptCount();
                             }
                             else
                             {
                                 // If the script is already assigned -> delete it!
-                                sLog.outError("Script '%s' already assigned with the same script name, so the script can't work.",
+                                sLog->outError("Script '%s' already assigned with the same script name, so the script can't work.",
                                     script->GetName().c_str());
 
                                 ASSERT(false); // Error that should be fixed ASAP.
@@ -1039,7 +1043,7 @@ class ScriptMgr
                         {
                             // The script uses a script name from database, but isn't assigned to anything.
                             if (script->GetName().find("example") == std::string::npos && script->GetName().find("Smart") == std::string::npos)
-                                sLog.outErrorDb("Script named '%s' does not have a script name assigned in database.",
+                                sLog->outErrorDb("Script named '%s' does not have a script name assigned in database.",
                                     script->GetName().c_str());
                         }
                     }
@@ -1047,7 +1051,7 @@ class ScriptMgr
                     {
                         // We're dealing with a code-only script; just add it.
                         ScriptPointerList[_scriptIdCounter++] = script;
-                        sScriptMgr.IncrementScriptCount();
+                        sScriptMgr->IncrementScriptCount();
                     }
                 }
 

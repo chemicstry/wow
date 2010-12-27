@@ -19,7 +19,6 @@
 #include "DatabaseEnv.h"
 #include "SQLStorage.h"
 #include "ObjectMgr.h"
-#include "ProgressBar.h"
 #include "ObjectDefines.h"
 #include "GridDefines.h"
 #include "GridNotifiers.h"
@@ -52,7 +51,7 @@ SmartAI::SmartAI(Creature *c) : CreatureAI(c)
     mRun = true;
 
     me->GetPosition(&mLastOOCPos);
-    
+
     mCanAutoAttack = true;
     mCanCombatMove = true;
 
@@ -108,7 +107,7 @@ WayPoint* SmartAI::GetNextWayPoint()
         mLastWP = (*itr).second;
         if (mLastWP->id != mCurrentWPID)
         {
-            sLog.outError("SmartAI::GetNextWayPoint: Got not expected waypoint id %u, expected %u", mLastWP->id, mCurrentWPID);
+            sLog->outError("SmartAI::GetNextWayPoint: Got not expected waypoint id %u, expected %u", mLastWP->id, mCurrentWPID);
         }
         return (*itr).second;
     }
@@ -119,7 +118,7 @@ void SmartAI::StartPath(bool run, uint32 path, bool repeat, Unit* /*invoker*/)
 {
     if (me->isInCombat())// no wp movement in combat
     {
-        sLog.outError("SmartAI::StartPath: Creature entry %u wanted to start waypoint movement while in combat, ignoring.", me->GetEntry());
+        sLog->outError("SmartAI::StartPath: Creature entry %u wanted to start waypoint movement while in combat, ignoring.", me->GetEntry());
         return;
     }
     if (HasEscortState(SMART_ESCORT_ESCORTING))
@@ -148,7 +147,7 @@ bool SmartAI::LoadPath(uint32 entry)
 {
     if (HasEscortState(SMART_ESCORT_ESCORTING))
         return false;
-    mWayPoints = sSmartWaypointMgr.GetPath(entry);
+    mWayPoints = sSmartWaypointMgr->GetPath(entry);
     if (!mWayPoints)
     {
         GetScript()->SetPathId(0);
@@ -164,7 +163,7 @@ void SmartAI::PausePath(uint32 delay, bool forced)
         return;
     if (HasEscortState(SMART_ESCORT_PAUSED))
     {
-        sLog.outError("SmartAI::StartPath: Creature entry %u wanted to pause waypoint movement while already paused, ignoring.", me->GetEntry());
+        sLog->outError("SmartAI::StartPath: Creature entry %u wanted to pause waypoint movement while already paused, ignoring.", me->GetEntry());
         return;
     }
     mForcedPaused = forced;
@@ -206,7 +205,7 @@ void SmartAI::EndPath(bool fail)
     mCurrentWPID = 0;
     mWPPauseTimer = 0;
     mLastWP = NULL;
-    
+
     if (mCanRepeatPath)
         StartPath(mRun, GetScript()->GetPathId(), mCanRepeatPath);
     else
@@ -333,7 +332,7 @@ void SmartAI::UpdatePath(const uint32 diff)
                 me->GetMotionMaster()->MovePoint(wp->id, wp->x, wp->y, wp->z);
             }
         }
-        
+
     }
 }
 
@@ -461,7 +460,7 @@ void SmartAI::EnterEvadeMode()
         me->GetMotionMaster()->MoveTargetedHome();
     }
 
-    Reset(); 
+    Reset();
 }
 
 void SmartAI::MoveInLineOfSight(Unit* who)
@@ -620,7 +619,7 @@ void SmartAI::SpellHitTarget(Unit* target, const SpellEntry* pSpell)
     GetScript()->ProcessEventsFor(SMART_EVENT_SPELLHIT_TARGET, target, 0, 0, false, pSpell);
 }
 
-void SmartAI::DamageTaken(Unit* done_by, uint32& damage, DamageEffectType /*damagetype*/)
+void SmartAI::DamageTaken(Unit* done_by, uint32& damage)
 {
     GetScript()->ProcessEventsFor(SMART_EVENT_DAMAGED, done_by, damage);
 }
@@ -640,7 +639,7 @@ void SmartAI::IsSummonedBy(Unit* summoner)
     GetScript()->ProcessEventsFor(SMART_EVENT_JUST_SUMMONED, summoner);
 }
 
-void SmartAI::DamageDealt(Unit* done_to, uint32& damage)
+void SmartAI::DamageDealt(Unit* done_to, uint32& damage, DamageEffectType /*damagetype*/)
 {
     GetScript()->ProcessEventsFor(SMART_EVENT_DAMAGED_TARGET, done_to, damage);
 }
@@ -667,7 +666,7 @@ void SmartAI::PassengerBoarded(Unit* who, int8 seatId, bool apply)
 void SmartAI::InitializeAI()
 {
     GetScript()->OnInitialize(me);
-    if (!me->isDead()) 
+    if (!me->isDead())
         Reset();
     GetScript()->ProcessEventsFor(SMART_EVENT_RESPAWN);
 }
@@ -746,9 +745,10 @@ void SmartAI::sQuestReward(Player* player, Quest const* quest, uint32 opt)
     GetScript()->ProcessEventsFor(SMART_EVENT_REWARD_QUEST, player, quest->GetQuestId(), opt);
 }
 
-void SmartAI::sOnDummyEffect(Unit* caster, uint32 spellId, SpellEffIndex effIndex)
+bool SmartAI::sOnDummyEffect(Unit* caster, uint32 spellId, SpellEffIndex effIndex)
 {
     GetScript()->ProcessEventsFor(SMART_EVENT_DUMMY_EFFECT,caster,spellId,(uint32)effIndex);
+    return true;
 }
 
 void SmartAI::SetCombatMove(bool on)
@@ -843,9 +843,9 @@ void SmartGameObjectAI::Reset()
 }
 
 // Called when a player opens a gossip dialog with the gameobject.
-bool SmartGameObjectAI::GossipHello(Player* player) 
+bool SmartGameObjectAI::GossipHello(Player* player)
 {
-    sLog.outDebug("SmartGameObjectAI::GossipHello");
+    sLog->outDebug("SmartGameObjectAI::GossipHello");
     GetScript()->ProcessEventsFor(SMART_EVENT_GOSSIP_HELLO, player, 0 ,0 , false, NULL, go);
     return false;
 }
@@ -909,7 +909,7 @@ class SmartTrigger : public AreaTriggerScript
 
         bool OnTrigger(Player* player, AreaTriggerEntry const* trigger)
         {
-            sLog.outDebug("AreaTrigger %u is using SmartTrigger script", trigger->id);
+            sLog->outDebug("AreaTrigger %u is using SmartTrigger script", trigger->id);
             SmartScript script;
             script.OnInitialize(NULL, trigger);
             script.ProcessEventsFor(SMART_EVENT_AREATRIGGER_ONTRIGGER, player, trigger->id);

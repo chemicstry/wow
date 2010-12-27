@@ -49,9 +49,6 @@ class OutdoorPvPMgr
         // create outdoor pvp events
         void InitOutdoorPvP();
 
-        // loads outdoorpvp_template
-        void LoadTemplates();
-
         // called when a player enters an outdoor pvp area
         void HandlePlayerEnterZone(Player * plr, uint32 areaflag);
 
@@ -103,6 +100,6 @@ class OutdoorPvPMgr
         uint32 m_UpdateTimer;
 };
 
-#define sOutdoorPvPMgr (*ACE_Singleton<OutdoorPvPMgr, ACE_Null_Mutex>::instance())
+#define sOutdoorPvPMgr ACE_Singleton<OutdoorPvPMgr, ACE_Null_Mutex>::instance()
 
 #endif /*OUTDOOR_PVP_MGR_H_*/

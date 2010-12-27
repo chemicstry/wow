@@ -66,7 +66,7 @@ public:
 
         uint32 entry = atol(cId);
 
-        Quest const* pQuest = sObjectMgr.GetQuestTemplate(entry);
+        Quest const* pQuest = sObjectMgr->GetQuestTemplate(entry);
 
         if (!pQuest)
         {
@@ -120,7 +120,7 @@ public:
 
         uint32 entry = atol(cId);
 
-        Quest const* pQuest = sObjectMgr.GetQuestTemplate(entry);
+        Quest const* pQuest = sObjectMgr->GetQuestTemplate(entry);
 
         if (!pQuest)
         {
@@ -142,11 +142,8 @@ public:
             }
         }
 
-        // set quest status to not started (will updated in DB at next save)
-        player->SetQuestStatus(entry, QUEST_STATUS_NONE);
-
-        // reset rewarded for restart repeatable quest
-        player->getQuestStatusMap()[entry].m_rewarded = false;
+        player->RemoveActiveQuest(entry);
+        player->RemoveRewardedQuest(entry);
 
         handler->SendSysMessage(LANG_COMMAND_QUEST_REMOVED);
         return true;
@@ -170,7 +167,7 @@ public:
 
         uint32 entry = atol(cId);
 
-        Quest const* pQuest = sObjectMgr.GetQuestTemplate(entry);
+        Quest const* pQuest = sObjectMgr->GetQuestTemplate(entry);
 
         // If player doesn't have the quest
         if (!pQuest || player->GetQuestStatus(entry) == QUEST_STATUS_NONE)
@@ -212,7 +209,7 @@ public:
             }
             else if (creature > 0)
             {
-                if (CreatureInfo const* cInfo = sObjectMgr.GetCreatureTemplate(creature))
+                if (CreatureInfo const* cInfo = ObjectMgr::GetCreatureTemplate(creature))
                     for (uint16 z = 0; z < creaturecount; ++z)
                         player->KilledMonster(cInfo,0);
             }

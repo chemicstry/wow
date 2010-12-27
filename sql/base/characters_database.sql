@@ -184,7 +184,6 @@ CREATE TABLE `auctionhouse` (
   `id` int(11) unsigned NOT NULL default '0',
   `auctioneerguid` int(11) unsigned NOT NULL default '0',
   `itemguid` int(11) unsigned NOT NULL default '0',
-  `item_template` int(11) unsigned NOT NULL default '0' COMMENT 'Item Identifier',
   `itemowner` int(11) unsigned NOT NULL default '0',
   `buyoutprice` int(11) NOT NULL default '0',
   `time` bigint(40) NOT NULL default '0',
@@ -462,6 +461,7 @@ DROP TABLE IF EXISTS `character_aura`;
 CREATE TABLE `character_aura` (
   `guid` int(11) unsigned NOT NULL default '0' COMMENT 'Global Unique Identifier',
   `caster_guid` bigint(20) unsigned NOT NULL default '0' COMMENT 'Full Global Unique Identifier',
+  `item_guid`  bigint(20) UNSIGNED NOT NULL DEFAULT '0',
   `spell` int(11) unsigned NOT NULL default '0',
   `effect_mask` tinyint(3) unsigned NOT NULL default '0',
   `recalculate_mask` tinyint(3) unsigned NOT NULL default '0',
@@ -475,7 +475,7 @@ CREATE TABLE `character_aura` (
   `maxduration` int(11) NOT NULL default '0',
   `remaintime` int(11) NOT NULL default '0',
   `remaincharges` tinyint(3) unsigned NOT NULL default '0',
-  PRIMARY KEY  (`guid`,`caster_guid`,`spell`,`effect_mask`)
+  PRIMARY KEY  (`guid`,`caster_guid`,`item_guid`,`spell`,`effect_mask`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Player System';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -762,7 +762,6 @@ CREATE TABLE `character_inventory` (
   `bag` int(11) unsigned NOT NULL default '0',
   `slot` tinyint(3) unsigned NOT NULL default '0',
   `item` int(11) unsigned NOT NULL default '0' COMMENT 'Item Global Unique Identifier',
-  `item_template` int(11) unsigned NOT NULL default '0' COMMENT 'Item Identifier',
   PRIMARY KEY  (`item`),
   KEY `idx_guid` (`guid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Player System';
@@ -858,7 +857,6 @@ CREATE TABLE `character_queststatus` (
   `guid` int(11) unsigned NOT NULL DEFAULT '0' COMMENT 'Global Unique Identifier',
   `quest` int(11) unsigned NOT NULL DEFAULT '0' COMMENT 'Quest Identifier',
   `status` tinyint(1) unsigned NOT NULL DEFAULT '0',
-  `rewarded` tinyint(1) unsigned NOT NULL DEFAULT '0',
   `explored` tinyint(1) unsigned NOT NULL DEFAULT '0',
   `timer` bigint(20) unsigned NOT NULL DEFAULT '0',
   `mobcount1` smallint(3) unsigned NOT NULL DEFAULT '0',
@@ -906,6 +904,14 @@ LOCK TABLES `character_queststatus_daily` WRITE;
 /*!40000 ALTER TABLE `character_queststatus_daily` DISABLE KEYS */;
 /*!40000 ALTER TABLE `character_queststatus_daily` ENABLE KEYS */;
 UNLOCK TABLES;
+
+DROP TABLE IF EXISTS `character_queststatus_rewarded`;
+CREATE TABLE `character_queststatus_rewarded` (
+  `guid` int(10) unsigned NOT NULL default '0' COMMENT 'Global Unique Identifier',
+  `quest` int(10) unsigned NOT NULL default '0' COMMENT 'Quest Identifier',
+  PRIMARY KEY (`guid`,`quest`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Player System';
+
 
 --
 -- Table structure for table `character_queststatus_weekly`
@@ -1278,7 +1284,7 @@ DROP TABLE IF EXISTS `creature_respawn`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `creature_respawn` (
   `guid` int(10) unsigned NOT NULL DEFAULT '0' COMMENT 'Global Unique Identifier',
-  `respawntime` bigint(20) NOT NULL DEFAULT '0',
+  `respawntime` bigint(20) unsigned NOT NULL DEFAULT '0',
   `instance` mediumint(8) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`guid`,`instance`),
   KEY `instance` (`instance`)
@@ -1303,7 +1309,7 @@ DROP TABLE IF EXISTS `gameobject_respawn`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `gameobject_respawn` (
   `guid` int(10) unsigned NOT NULL DEFAULT '0' COMMENT 'Global Unique Identifier',
-  `respawntime` bigint(20) NOT NULL DEFAULT '0',
+  `respawntime` bigint(20) unsigned NOT NULL DEFAULT '0',
   `instance` mediumint(8) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`guid`,`instance`),
   KEY `instance` (`instance`)
@@ -1557,7 +1563,6 @@ CREATE TABLE `guild_bank_item` (
   `TabId` tinyint(1) unsigned NOT NULL default '0',
   `SlotId` tinyint(3) unsigned NOT NULL default '0',
   `item_guid` int(11) unsigned NOT NULL default '0',
-  `item_entry` int(11) unsigned NOT NULL default '0',
   PRIMARY KEY  (`guildid`,`tabid`,`slotid`),
   KEY `guildid_key` (`guildid`),    
   INDEX `Idx_item_guid`(`item_guid`)
@@ -1790,6 +1795,7 @@ DROP TABLE IF EXISTS `item_instance`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `item_instance` (
   `guid` int(11) unsigned NOT NULL default '0',
+  `itemEntry` mediumint(8) unsigned NOT NULL default '0',
   `owner_guid` int(11) unsigned NOT NULL default '0',
   `creatorGuid` int(10) unsigned NOT NULL default '0',
   `giftCreatorGuid` int(10) unsigned NOT NULL default '0',
@@ -1938,7 +1944,6 @@ DROP TABLE IF EXISTS `mail_items`;
 CREATE TABLE `mail_items` (
   `mail_id` int(11) NOT NULL default '0',
   `item_guid` int(11) NOT NULL default '0',
-  `item_template` int(11) NOT NULL default '0',
   `receiver` int(11) unsigned NOT NULL default '0' COMMENT 'Character Global Unique Identifier',
   PRIMARY KEY  (`mail_id`,`item_guid`),
   KEY `idx_receiver` (`receiver`)

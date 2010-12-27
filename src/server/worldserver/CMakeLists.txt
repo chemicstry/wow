@@ -146,13 +146,13 @@ set(worldserver_LINK_FLAGS "")
 add_executable(worldserver ${worldserver_SRCS})
 
 if( NOT WIN32 )
-  add_definitions(-D_TRINITY_CORE_CONFIG="${CONF_DIR}/worldserver.conf")
+  add_definitions(-D_TRINITY_CORE_CONFIG='"${CONF_DIR}/worldserver.conf"')
 endif()
 
 add_dependencies(worldserver revision.h)
 
 if( UNIX )
-  set(worldserver_LINK_FLAGS "-pthread -lncurses ${worldserver_LINK_FLAGS}")
+  set(worldserver_LINK_FLAGS "-pthread -lncurses -lcrypto ${worldserver_LINK_FLAGS}")
 endif()
 
 set_target_properties(worldserver PROPERTIES LINK_FLAGS "${worldserver_LINK_FLAGS}")
@@ -161,11 +161,10 @@ target_link_libraries(worldserver
   game
   shared
   scripts
-  trinitysockets
   collision
   g3dlib
   gsoap
-  ${JEMALLOC_LIB}
+  ${JEMALLOC_LIBRARY}
   ${READLINE_LIBRARY}
   ${TERMCAP_LIBRARY}
   ${ACE_LIBRARY}
@@ -199,3 +198,4 @@ if( USE_COREPCH )
     add_native_precompiled_header(worldserver ${CMAKE_CURRENT_SOURCE_DIR}/PrecompiledHeaders/worldPCH)
   endif()
 endif()
+

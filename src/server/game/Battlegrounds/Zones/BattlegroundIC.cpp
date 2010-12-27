@@ -285,7 +285,7 @@ bool BattlegroundIC::SetupBattleground()
 		      case STATE_BANNER_ALLY:  BanneAura=BG_IC_OBJECTID_AURA_A;break;
 		      case STATE_BANNER_HORDE: BanneAura=BG_IC_OBJECTID_AURA_H;break;
 		      default:
-			  sLog.outError("BattlegroundIC::SetupBattleground() Object: %i, bad state: %u",i,BG_IC_OBJ[i].state);
+			  sLog->outError("BattlegroundIC::SetupBattleground() Object: %i, bad state: %u",i,BG_IC_OBJ[i].state);
 			  return false;
 		  }
                 
@@ -470,7 +470,7 @@ bool BattlegroundIC::SetupBattleground()
     for(int i=BG_IC_ALLIANCE_KEEP;i<BG_IC_ALL_NODES_COUNT;i++)
         if (!AddSpiritGuide(i, BG_IC_SpiritGuidePos[i][0], BG_IC_SpiritGuidePos[i][1], BG_IC_SpiritGuidePos[i][2], BG_IC_SpiritGuidePos[i][3], BG_IC_graveInitTeam[i]))
         {
-            sLog.outError("Failed to spawn spirit guide! point: %u, team: %u,", i, BG_IC_graveInitTeam[i]);
+            sLog->outError("Failed to spawn spirit guide! point: %u, team: %u,", i, BG_IC_graveInitTeam[i]);
             return false;    
         }
     
@@ -502,7 +502,7 @@ bool BattlegroundIC::SetupBattleground()
     //Send transport init packet to all player in map
     for (BattlegroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end();itr++)
         {
-            if (Player* p = sObjectMgr.GetPlayer(itr->first))
+            if (Player* p = sObjectMgr->GetPlayer(itr->first))
             {
                 SendTransportInit(p);
             }
@@ -595,11 +595,11 @@ Transport* BattlegroundIC::MakeTransport(uint32 gobentry,uint32 period,std::stri
         uint32 entry = gobentry;
         std::string name = nametransport;
 
-        const GameObjectInfo *goinfo = sObjectMgr.GetGameObjectInfo(entry);
+        const GameObjectInfo *goinfo = sObjectMgr->GetGameObjectInfo(entry);
 
         if (!goinfo)
         {
-            sLog.outErrorDb("Transport ID:%u, Name: %s, will not be loaded, gameobject_template missing", entry, name.c_str());
+            sLog->outErrorDb("Transport ID:%u, Name: %s, will not be loaded, gameobject_template missing", entry, name.c_str());
             delete t;
             return NULL;
         }
@@ -608,7 +608,7 @@ Transport* BattlegroundIC::MakeTransport(uint32 gobentry,uint32 period,std::stri
         if (!t->GenerateWaypoints(goinfo->moTransport.taxiPathId, mapsUsed))
             // skip transports with empty waypoints list
         {
-            sLog.outErrorDb("Transport (path id %u) path size = 0. Transport ignored, check DBC files or transport GO data0 field.",goinfo->moTransport.taxiPathId);
+            sLog->outErrorDb("Transport (path id %u) path size = 0. Transport ignored, check DBC files or transport GO data0 field.",goinfo->moTransport.taxiPathId);
             delete t;
             return NULL;
         }
@@ -618,7 +618,7 @@ Transport* BattlegroundIC::MakeTransport(uint32 gobentry,uint32 period,std::stri
         x = t->m_WayPoints[0].x; y = t->m_WayPoints[0].y; z = t->m_WayPoints[0].z; mapid = t->m_WayPoints[0].mapid; o = 1;
 
          // creates the Gameobject
-        if (!t->Create(sObjectMgr.GenerateLowGuid(HIGHGUID_GAMEOBJECT),entry, mapid, x, y, z, o, 100, 0))
+        if (!t->Create(sObjectMgr->GenerateLowGuid(HIGHGUID_GAMEOBJECT),entry, mapid, x, y, z, o, 100, 0))
         {
             delete t;
             return NULL;
@@ -658,7 +658,7 @@ void BattlegroundIC::_NodeOccupied(uint8 node,Team team)
 
     if(node != BG_IC_NODE_QUARRY && node != BG_IC_NODE_REFINERY)
         if (!AddSpiritGuide(node, BG_IC_SpiritGuidePos[node][0], BG_IC_SpiritGuidePos[node][1], BG_IC_SpiritGuidePos[node][2], BG_IC_SpiritGuidePos[node][3], team))
-            sLog.outError("Failed to spawn spirit guide! point: %u, team: %u,", node, team);
+            sLog->outError("Failed to spawn spirit guide! point: %u, team: %u,", node, team);
 
 
     if (node == BG_IC_NODE_QUARRY)
@@ -668,11 +668,11 @@ void BattlegroundIC::_NodeOccupied(uint8 node,Team team)
         {
             if (itr->second.OfflineRemoveTime)
                 continue;
-            Player *plr = sObjectMgr.GetPlayer(itr->first);
+            Player *plr = sObjectMgr->GetPlayer(itr->first);
 
             if (!plr)
             {
-                sLog.outError("Battleground:CastSpellOnTeam: Player (GUID: %u) not found!", GUID_LOPART(itr->first));
+                sLog->outError("Battleground:CastSpellOnTeam: Player (GUID: %u) not found!", GUID_LOPART(itr->first));
                 continue;
             }
 
@@ -692,11 +692,11 @@ void BattlegroundIC::_NodeOccupied(uint8 node,Team team)
         {
             if (itr->second.OfflineRemoveTime)
                 continue;
-            Player *plr = sObjectMgr.GetPlayer(itr->first);
+            Player *plr = sObjectMgr->GetPlayer(itr->first);
 
             if (!plr)
             {
-                sLog.outError("Battleground:CastSpellOnTeam: Player (GUID: %u) not found!", GUID_LOPART(itr->first));
+                sLog->outError("Battleground:CastSpellOnTeam: Player (GUID: %u) not found!", GUID_LOPART(itr->first));
                 continue;
             }
 
@@ -772,7 +772,7 @@ void BattlegroundIC::_NodeDeOccupied(uint8 node)
         WorldSafeLocsEntry const *ClosestGrave = NULL;
         for (std::vector<uint64>::const_iterator itr = ghost_list.begin(); itr != ghost_list.end(); ++itr)
         {
-            Player* plr = sObjectMgr.GetPlayer(*itr);
+            Player* plr = sObjectMgr->GetPlayer(*itr);
             if (!plr)
                 continue;
 

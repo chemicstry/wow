@@ -385,12 +385,12 @@ typedef UNORDERED_MAP<uint32 /*spellid*/, TrainerSpell> TrainerSpellMap;
 struct TrainerSpellData
 {
     TrainerSpellData() : trainerType(0) {}
+    ~TrainerSpellData() { spellList.clear(); }
 
     TrainerSpellMap spellList;
     uint32 trainerType;                                     // trainer type based at trainer spells, can be different from creature_template value.
                                                             // req. for correct show non-prof. trainers like weaponmaster, allowed values 0 and 2.
     TrainerSpell const* Find(uint32 spell_id) const;
-    void Clear() { spellList.clear(); }
 };
 
 typedef std::map<uint32,time_t> CreatureSpellCooldowns;
@@ -471,9 +471,9 @@ class Creature : public Unit, public GridObject<Creature>
             return GetCreatureInfo()->rank == CREATURE_ELITE_WORLDBOSS;
         }
 
-        uint8 getLevelForTarget(Unit const* target) const; // overwrite Unit::getLevelForTarget for boss level support
+        uint8 getLevelForTarget(WorldObject const* target) const; // overwrite Unit::getLevelForTarget for boss level support
 
-        bool IsInEvadeMode() const { return hasUnitState(UNIT_STAT_EVADE); }
+        bool IsInEvadeMode() const { return HasUnitState(UNIT_STAT_EVADE); }
 
         bool AIM_Initialize(CreatureAI* ai = NULL);
         void Motion_Initialize();
@@ -530,17 +530,17 @@ class Creature : public Unit, public GridObject<Creature>
         void Whisper(int32 textId, uint64 receiver, bool IsBossWhisper = false) { MonsterWhisper(textId,receiver,IsBossWhisper); }
         void YellToZone(int32 textId, uint32 language, uint64 TargetGuid) { MonsterYellToZone(textId,language,TargetGuid); }
 
-        // overwrite WorldObject function for proper name localization
+        // override WorldObject function for proper name localization
         const char* GetNameForLocaleIdx(LocaleConstant locale_idx) const;
 
-        void setDeathState(DeathState s);                   // overwrite virtual Unit::setDeathState
+        void setDeathState(DeathState s);                   // override virtual Unit::setDeathState
         bool FallGround();
 
         bool LoadFromDB(uint32 guid, Map *map);
         void SaveToDB();
-                                                            // overwrited in Pet
+                                                            // overriden in Pet
         virtual void SaveToDB(uint32 mapid, uint8 spawnMask, uint32 phaseMask);
-        virtual void DeleteFromDB();                        // overwrited in Pet
+        virtual void DeleteFromDB();                        // overriden in Pet
 
         Loot loot;
         bool lootForPickPocketed;
@@ -608,10 +608,6 @@ class Creature : public Unit, public GridObject<Creature>
 
         float GetRespawnRadius() const { return m_respawnradius; }
         void SetRespawnRadius(float dist) { m_respawnradius = dist; }
-
-        // Linked Creature Respawning System
-        time_t GetLinkedCreatureRespawnTime() const;
-        const CreatureData* GetLinkedRespawnCreatureData() const;
 
         uint32 m_groupLootTimer;                            // (msecs)timer used for group loot
         uint32 lootingGroupLowGUID;                         // used to find group which is looting corpse
@@ -718,7 +714,7 @@ class Creature : public Unit, public GridObject<Creature>
 
         bool DisableReputationGain;
 
-        CreatureInfo const* m_creatureInfo;                 // in difficulty mode > 0 can different from sObjectMgr.::GetCreatureTemplate(GetEntry())
+        CreatureInfo const* m_creatureInfo;                 // in difficulty mode > 0 can different from sObjectMgr->::GetCreatureTemplate(GetEntry())
         CreatureData const* m_creatureData;
 
         uint16 m_LootMode;                                  // bitmask, default LOOT_MODE_DEFAULT, determines what loot will be lootable

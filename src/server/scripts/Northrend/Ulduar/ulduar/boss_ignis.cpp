@@ -182,17 +182,9 @@ public:
             if (!UpdateVictim())
                 return;
 
-            if(me->GetPositionY() < 150 || me->GetPositionX() < 450 || me->getVictim()->GetTypeId() == !TYPEID_PLAYER)
-            {
-                me->RemoveAllAuras();
-                me->DeleteThreatList();
-                me->CombatStop(false);
-                me->GetMotionMaster()->MoveTargetedHome();
-            }
-
             events.Update(diff);
 
-            if (me->hasUnitState(UNIT_STAT_CASTING))
+            if (me->HasUnitState(UNIT_STAT_CASTING))
                 return;
 
             EncounterTime += diff;
@@ -482,8 +474,4 @@ void AddSC_boss_ignis()
     new npc_iron_construct();
     new npc_scorch_ground();
     new spell_ignis_slag_pot();
-
-    // has to be done or else players wil absorb dmg from slag pot vehicle seat 1 slagpot
-    if (VehicleSeatEntry* vehSeat = const_cast<VehicleSeatEntry*>(sVehicleSeatStore.LookupEntry(3206)))
-        vehSeat->m_flags |= 0x400;
 }
