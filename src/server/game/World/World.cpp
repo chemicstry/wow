@@ -1194,15 +1194,8 @@ void World::LoadConfigSettings(bool reload)
     m_bool_configs[CONFIG_CONFIG_OUTDOORPVP_WINTERGRASP_ANTIFARM_ENABLE]  = sConfig->GetBoolDefault("OutdoorPvP.Wintergrasp.Antifarm.Enable", false);
     m_int_configs[CONFIG_CONFIG_OUTDOORPVP_WINTERGRASP_ANTIFARM_ATK]  = sConfig->GetIntDefault("OutdoorPvP.Wintergrasp.Antifarm.Atk", 5);
     m_int_configs[CONFIG_CONFIG_OUTDOORPVP_WINTERGRASP_ANTIFARM_DEF]  = sConfig->GetIntDefault("OutdoorPvP.Wintergrasp.Antifarm.Def", 5);
-	
-    // anticheat configs
-    m_bool_configs[CONFIG_ANTICHEAT_ENABLE] = sConfig->GetBoolDefault("Anticheat.Enable", false);
- 	m_int_configs[CONFIG_ANTICHEAT_MAX_DIFF_TIME] = sConfig->GetIntDefault("Anticheat.MaxDiffTime", 1000); // not used at the moment
- 	m_int_configs[CONFIG_ANTICHEAT_MIN_DIFF_TIME] = sConfig->GetIntDefault("Anticheat.MinDiffTime", 50); // not used at the moment
-    m_int_configs[CONFIG_ANTICHEAT_REPORTS_FOR_GM_WARNING] = sConfig->GetIntDefault("Anticheat.ReportsForGMWarnings",75);
-    m_float_configs[CONFIG_ANTICHEAT_MAX_DISTANCE_DIFF_ALLOWED] = sConfig->GetFloatDefault("Anticheat.MaxMaxAllowedDistance",0.5f);
 
-    sScriptMgr->OnConfigLoad(reload);
+    sScriptMgr.OnConfigLoad(reload);
 }
 
 /// Initialize the World
@@ -2687,10 +2680,6 @@ void World::ResetDailyQuests()
     for (SessionMap::const_iterator itr = m_sessions.begin(); itr != m_sessions.end(); ++itr)
         if (itr->second->GetPlayer())
             itr->second->GetPlayer()->ResetDailyQuestStatus();
-
-    //ANTICHEAT
-    CharacterDatabase.Execute("DELETE FROM cheat_reports;");
-    CharacterDatabase.Execute("DELETE FROM cheat_first_report;");
 
     // change available dailies
     sPoolMgr->ChangeDailyQuests();
