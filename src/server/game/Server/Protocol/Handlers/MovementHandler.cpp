@@ -342,7 +342,7 @@ void WorldSession::HandleMovementOpcodes(WorldPacket & recv_data)
 	/*----------------------*/
 	
 	// ANTICHEAT CHECKS
-	if (sWorld.getBoolConfig(CONFIG_ANTICHEAT_ENABLE))
+	if (sWorld->getBoolConfig(CONFIG_ANTICHEAT_ENABLE))
 	{
 		/*********************/
 		/* Exceptions:

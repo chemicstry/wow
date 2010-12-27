@@ -161,7 +161,7 @@ class boss_halion : public CreatureScript
                         me->SetHealth(1);
                 }
 
-                if (me->hasUnitState(UNIT_STAT_CASTING))
+                if (me->HasUnitState(UNIT_STAT_CASTING))
                     return;
 
                 events.Update(diff);
@@ -394,7 +394,7 @@ class boss_twilight_halion : public CreatureScript
                         me->SetHealth(1);
                 }
 
-                if (me->hasUnitState(UNIT_STAT_CASTING))
+                if (me->HasUnitState(UNIT_STAT_CASTING))
                     return;
 
                 events.Update(diff);

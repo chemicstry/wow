@@ -76,7 +76,7 @@ class boss_ragefire : public CreatureScript
                 if(!UpdateVictim() || !CheckInRoom())
     			    return;
 
-                if (me->hasUnitState(UNIT_STAT_CASTING))
+                if (me->HasUnitState(UNIT_STAT_CASTING))
                     return;
 
                 events.Update(diff);

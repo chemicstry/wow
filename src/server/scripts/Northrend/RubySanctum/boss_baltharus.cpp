@@ -99,7 +99,7 @@ class boss_baltharus : public CreatureScript
     		    if (!UpdateVictim() || !CheckInRoom())
                     return;
 
-                if (me->hasUnitState(UNIT_STAT_CASTING))
+                if (me->HasUnitState(UNIT_STAT_CASTING))
                     return;
 
                 events.Update(diff);
@@ -199,7 +199,7 @@ class boss_baltharus_summon : public CreatureScript
     		    if (!UpdateVictim())
                     return;
 
-                if (me->hasUnitState(UNIT_STAT_CASTING))
+                if (me->HasUnitState(UNIT_STAT_CASTING))
                     return;
 
                 events.Update(diff);

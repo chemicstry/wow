@@ -287,7 +287,7 @@ public:
 
         void DoMeleeAttackIfReady()
 	{
-		if (me->hasUnitState(UNIT_STAT_CASTING))
+		if (me->HasUnitState(UNIT_STAT_CASTING))
 		    return;
 
 		//Make sure our attack is ready and we aren't currently casting before checking distance
@@ -553,8 +553,8 @@ public:
 	        if (pCreature->isQuestGiver())
 		{	
 			Object *pObject = (Object*)pCreature;
-			QuestRelations* pObjectQR = sObjectMgr.GetCreatureQuestRelationMap();
-			QuestRelations* pObjectQIR = sObjectMgr.GetCreatureQuestInvolvedRelation();
+			QuestRelations* pObjectQR = sObjectMgr->GetCreatureQuestRelationMap();
+			QuestRelations* pObjectQIR = sObjectMgr->GetCreatureQuestInvolvedRelation();
 
 			QuestMenu &qm = pPlayer->PlayerTalkClass->GetQuestMenu();
 			qm.ClearMenu();
@@ -577,7 +577,7 @@ public:
 			for (QuestRelations::const_iterator i = pObjectQR->lower_bound(pObject->GetEntry()); i != pObjectQR->upper_bound(pObject->GetEntry()); ++i)
 			{
 				uint32 quest_id = i->second;
-				Quest const* pQuest = sObjectMgr.GetQuestTemplate(quest_id);
+				Quest const* pQuest = sObjectMgr->GetQuestTemplate(quest_id);
 				if (!pQuest) continue;
 
 				switch(quest_id)
@@ -726,7 +726,7 @@ public:
 
 		if (!UpdateVictim())
 		    return;
-		if (!me->hasUnitState(UNIT_STAT_STUNNED))
+		if (!me->HasUnitState(UNIT_STAT_STUNNED))
 		    me->SetControlled(true,UNIT_STAT_STUNNED);//disable rotate
 
 		if (m_Entry != 2674 && m_Entry != 2673)
@@ -795,8 +795,8 @@ public:
 		if (pCreature->isQuestGiver())
 		{	
 			Object *pObject = (Object*)pCreature;
-			QuestRelations* pObjectQR = sObjectMgr.GetCreatureQuestRelationMap();
-			QuestRelations* pObjectQIR = sObjectMgr.GetCreatureQuestInvolvedRelation();
+			QuestRelations* pObjectQR = sObjectMgr->GetCreatureQuestRelationMap();
+			QuestRelations* pObjectQIR = sObjectMgr->GetCreatureQuestInvolvedRelation();
 
 			QuestMenu &qm = pPlayer->PlayerTalkClass->GetQuestMenu();
 			qm.ClearMenu();
@@ -816,7 +816,7 @@ public:
 			for (QuestRelations::const_iterator i = pObjectQR->lower_bound(pObject->GetEntry()); i != pObjectQR->upper_bound(pObject->GetEntry()); ++i)
 			{
 				uint32 quest_id = i->second;
-				Quest const* pQuest = sObjectMgr.GetQuestTemplate(quest_id);
+				Quest const* pQuest = sObjectMgr->GetQuestTemplate(quest_id);
 				if (!pQuest) continue;
 				QuestStatus status;
 				bool allowed=false;
@@ -867,8 +867,8 @@ public:
 		if (pCreature->isQuestGiver())
 		{	
 			Object *pObject = (Object*)pCreature;
-			QuestRelations* pObjectQR = sObjectMgr.GetCreatureQuestRelationMap();
-			QuestRelations* pObjectQIR = sObjectMgr.GetCreatureQuestInvolvedRelation();
+			QuestRelations* pObjectQR = sObjectMgr->GetCreatureQuestRelationMap();
+			QuestRelations* pObjectQIR = sObjectMgr->GetCreatureQuestInvolvedRelation();
 
 			QuestMenu &qm = pPlayer->PlayerTalkClass->GetQuestMenu();
 			qm.ClearMenu();
@@ -888,7 +888,7 @@ public:
 			for (QuestRelations::const_iterator i = pObjectQR->lower_bound(pObject->GetEntry()); i != pObjectQR->upper_bound(pObject->GetEntry()); ++i)
 			{
 				uint32 quest_id = i->second;
-				Quest const* pQuest = sObjectMgr.GetQuestTemplate(quest_id);
+				Quest const* pQuest = sObjectMgr->GetQuestTemplate(quest_id);
 				if (!pQuest) continue;
 				QuestStatus status;
 				bool allowed=false;
@@ -940,8 +940,8 @@ public:
 		if (pCreature->isQuestGiver())
 		{
 			Object *pObject = (Object*)pCreature;
-			QuestRelations* pObjectQR = sObjectMgr.GetCreatureQuestRelationMap();
-			QuestRelations* pObjectQIR = sObjectMgr.GetCreatureQuestInvolvedRelation();
+			QuestRelations* pObjectQR = sObjectMgr->GetCreatureQuestRelationMap();
+			QuestRelations* pObjectQIR = sObjectMgr->GetCreatureQuestInvolvedRelation();
 
 			QuestMenu &qm = pPlayer->PlayerTalkClass->GetQuestMenu();
 			qm.ClearMenu();
@@ -961,7 +961,7 @@ public:
 			for (QuestRelations::const_iterator i = pObjectQR->lower_bound(pObject->GetEntry()); i != pObjectQR->upper_bound(pObject->GetEntry()); ++i)
 			{
 				uint32 quest_id = i->second;
-				Quest const* pQuest = sObjectMgr.GetQuestTemplate(quest_id);
+				Quest const* pQuest = sObjectMgr->GetQuestTemplate(quest_id);
 				if (!pQuest) continue;
 				QuestStatus status;
 				bool allowed=false;
@@ -1012,8 +1012,8 @@ public:
 		if (pCreature->isQuestGiver())
 		{
 			Object *pObject = (Object*)pCreature;
-			QuestRelations* pObjectQR = sObjectMgr.GetCreatureQuestRelationMap();
-			QuestRelations* pObjectQIR = sObjectMgr.GetCreatureQuestInvolvedRelation();
+			QuestRelations* pObjectQR = sObjectMgr->GetCreatureQuestRelationMap();
+			QuestRelations* pObjectQIR = sObjectMgr->GetCreatureQuestInvolvedRelation();
 
 			QuestMenu &qm = pPlayer->PlayerTalkClass->GetQuestMenu();
 			qm.ClearMenu();
@@ -1033,7 +1033,7 @@ public:
 			for (QuestRelations::const_iterator i = pObjectQR->lower_bound(pObject->GetEntry()); i != pObjectQR->upper_bound(pObject->GetEntry()); ++i)
 			{
 				uint32 quest_id = i->second;
-				Quest const* pQuest = sObjectMgr.GetQuestTemplate(quest_id);
+				Quest const* pQuest = sObjectMgr->GetQuestTemplate(quest_id);
 				if (!pQuest) continue;
 				QuestStatus status;
 				bool allowed=false;
@@ -1371,7 +1371,7 @@ public:
 
 	    void DoMeleeAttackIfReady()
 		{
-			if (me->hasUnitState(UNIT_STAT_CASTING))
+			if (me->HasUnitState(UNIT_STAT_CASTING))
 			    return;
 
 			//Make sure our attack is ready and we aren't currently casting before checking distance

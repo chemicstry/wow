@@ -4368,7 +4368,7 @@ void Spell::EffectScriptEffect(SpellEffIndex effIndex)
                 //Teleport to Lake Wintergrasp
                 case 58622:
                    {
-                  if(OutdoorPvPWG *pvpWG = (OutdoorPvPWG*)sOutdoorPvPMgr.GetOutdoorPvPToZoneId(4197))
+                  if(OutdoorPvPWG *pvpWG = (OutdoorPvPWG*)sOutdoorPvPMgr->GetOutdoorPvPToZoneId(4197))
                         if(pvpWG->isWarTime() || pvpWG->m_timer<300000)
                         {
                         if ((pvpWG->getDefenderTeam()==TEAM_ALLIANCE) && (unitTarget->ToPlayer()->GetTeam() == ALLIANCE))
@@ -7084,13 +7084,13 @@ void Spell::EffectPlayerNotification(SpellEffIndex /*effIndex*/)
     if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
         return;
 
-    OutdoorPvPWG *pvpWG = (OutdoorPvPWG*)sOutdoorPvPMgr.GetOutdoorPvPToZoneId(4197);
+    OutdoorPvPWG *pvpWG = (OutdoorPvPWG*)sOutdoorPvPMgr->GetOutdoorPvPToZoneId(4197);
 
     switch(m_spellInfo->Id)
     {
         case 58730: // Restricted Flight Area
            {
-             if (sWorld.getBoolConfig(CONFIG_OUTDOORPVP_WINTERGRASP_ENABLED))
+             if (sWorld->getBoolConfig(CONFIG_OUTDOORPVP_WINTERGRASP_ENABLED))
               {
               if (pvpWG->isWarTime()==true)
                {
