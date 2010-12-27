@@ -231,7 +231,7 @@ bool CharacterDatabaseConnection::Open()
     //          0            1                2      3         4        5      6             7                 8           9           10
         "SELECT creatorGuid, giftCreatorGuid, count, duration, charges, flags, enchantments, randomPropertyId, durability, playedTime, text, "
     //   11       12     13      14         15
-        "guildid, TabId, SlotId, item_guid, item_entry FROM guild_bank_item INNER JOIN item_instance ON item_guid = guid");
+        "guildid, TabId, SlotId, item_guid, itemEntry FROM guild_bank_item gbi INNER JOIN item_instance ii ON gbi.item_guid = ii.guid");
 
     PrepareStatement(CHAR_CLEAN_GUILD_RANKS, "DELETE FROM guild_rank WHERE guildId NOT IN (SELECT guildid FROM guild)", true);
     PrepareStatement(CHAR_CLEAN_GUILD_MEMBERS, "DELETE FROM guild_member WHERE guildId NOT IN (SELECT guildid FROM guild)", true);
