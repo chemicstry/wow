@@ -216,18 +216,18 @@ bool CharacterDatabaseConnection::Open()
     //   19      20       21       22      23         24
         "c.name, c.level, c.class, c.zone, c.account, c.logout_time "
         "FROM guild_member gm LEFT JOIN characters c ON c.guid = gm.guid ORDER BY guildid ASC");
-    PrepareStatement(CHAR_LOAD_GUILD_BANK_RIGHTS, 
+    PrepareStatement(CHAR_LOAD_GUILD_BANK_RIGHTS,
     //          0        1      2    3        4
         "SELECT guildid, TabId, rid, gbright, SlotPerDay FROM guild_bank_right ORDER BY guildid ASC, TabId ASC");
     //                                                  0        1      2        3        4
     PrepareStatement(CHAR_LOAD_GUILD_BANK_TABS, "SELECT guildid, TabId, TabName, TabIcon, TabText FROM guild_bank_tab ORDER BY guildid ASC, TabId ASC");
-    PrepareStatement(CHAR_LOAD_GUILD_EVENTLOGS, 
+    PrepareStatement(CHAR_LOAD_GUILD_EVENTLOGS,
     //          0        1        2          3            4            5        6
         "SELECT guildid, LogGuid, EventType, PlayerGuid1, PlayerGuid2, NewRank, TimeStamp FROM guild_eventlog ORDER BY TimeStamp DESC, LogGuid DESC");
-    PrepareStatement(CHAR_LOAD_GUILD_BANK_EVENTLOGS, 
+    PrepareStatement(CHAR_LOAD_GUILD_BANK_EVENTLOGS,
     //          0        1      2        3          4           5            6               7          8
         "SELECT guildid, TabId, LogGuid, EventType, PlayerGuid, ItemOrMoney, ItemStackCount, DestTabId, TimeStamp FROM guild_bank_eventlog ORDER BY TimeStamp DESC, LogGuid DESC");
-    PrepareStatement(CHAR_LOAD_GUILD_BANK_ITEMS, 
+    PrepareStatement(CHAR_LOAD_GUILD_BANK_ITEMS,
     //          0            1                2      3         4        5      6             7                 8           9           10
         "SELECT creatorGuid, giftCreatorGuid, count, duration, charges, flags, enchantments, randomPropertyId, durability, playedTime, text, "
     //   11       12     13      14         15
@@ -245,6 +245,7 @@ bool CharacterDatabaseConnection::Open()
     PrepareStatement(CHAR_ADD_GO_RESPAWN_TIME, "REPLACE INTO gameobject_respawn VALUES (?, ?, ?)", true);
 
     // Chat channel handling
+    PrepareStatement(CHAR_LOAD_CHANNEL, "SELECT m_announce, m_ownership, m_password, BannedList FROM channels WHERE m_name = ? AND m_team = ?");
     PrepareStatement(CHAR_ADD_CHANNEL, "INSERT INTO channels (m_name, m_team, last_used) VALUES (? , ?, UNIX_TIMESTAMP())", true);
     PrepareStatement(CHAR_SET_CHANNEL, "UPDATE channels SET m_announce = ?, m_ownership = ?, m_password = ?, BannedList = ?, last_used = UNIX_TIMESTAMP() WHERE m_name = ? AND m_team = ?", true);
     PrepareStatement(CHAR_SET_CHANNEL_USAGE, "UPDATE channels SET last_used = UNIX_TIMESTAMP() WHERE m_name = ? AND m_team = ?", true);
@@ -260,21 +261,5 @@ bool CharacterDatabaseConnection::Open()
     PrepareStatement(CHAR_ADD_AURA, "INSERT INTO character_aura (guid,caster_guid,item_guid,spell,effect_mask,recalculate_mask,stackcount,amount0,amount1,amount2,base_amount0,base_amount1,base_amount2,maxduration,remaintime,remaincharges) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", true);
 
-    PrepareStatement(CHAR_ANTICHEAT_SET_CHEATERS, "INSERT INTO cheat_reports (`guid`,`name`,`mapid`,`position_x`,`position_y`,`position_z`,`report`,`time`) VALUES (?,?,?,?,?,?,?,?);", true);
-    PrepareStatement(CHAR_ANTICHEAT_SET_CHEATERS_TEMP, "INSERT INTO cheat_temp_reports (`guid`,`name`,`mapid`,`position_x`,`position_y`,`position_z`,`report`,`time`) VALUES (?,?,?,?,?,?,?,?);", true);
-    PrepareStatement(CHAR_ANTICHEAT_GET_CHEATERS, "SELECT A.`name` , count( * ) AS 'Repeticiones' FROM `characters` AS A, `cheat_reports` AS B WHERE A.`online` =1 AND A.`guid` = B.`guid` GROUP BY B.`guid` ORDER BY Repeticiones DESC LIMIT 0 , 3", true);
-    PrepareStatement(CHAR_ANTICHEAT_SET_CHEAT_FIRST_REPORT, "INSERT INTO cheat_first_report (`guid`,`name`,`time`) VALUES (?,?,?);", true);
-    PrepareStatement(CHAR_ANTICHEAT_GET_CHEATERS_AVERAGE, "SELECT A.`name` , CAST((SUM(B.time ) / count( * ) ) - C.time AS UNSIGNED) AS 'promedio' , CAST(count( * ) AS UNSIGNED) AS 'Repeticiones' FROM `characters` AS A, `cheat_temp_reports` AS B, cheat_first_report AS C WHERE A.`online` =1 AND A.`guid` = B.`guid` AND A.guid = C.guid GROUP BY B.`guid` ORDER BY Repeticiones  DESC LIMIT 0 , 3;", true);
-    PrepareStatement(CHAR_ANTICHEAT_GET_CHEAT_FIRST_REPORT, "SELECT * FROM cheat_first_report WHERE guid=?;", true);
-    PrepareStatement(CHAR_ANTICHEAT_DEL_CHEAT_FIRST_REPORT, "DELETE FROM cheat_first_report WHERE guid=?", true);
-    PrepareStatement(CHAR_ANTICHEAT_DEL_CHEATERS_TEMP, "DELETE FROM cheat_temp_reports WHERE guid=?", true);
-    PrepareStatement(CHAR_ANTICHEAT_DEL_CHEATERS, "DELETE FROM cheat_reports WHERE guid=?", true);
-    PrepareStatement(CHAR_ANTICHEAT_CLEAN_CHEAT_FIRST_REPORT, "DELETE FROM cheat_first_report;", true);
-    PrepareStatement(CHAR_ANTICHEAT_CLEAN_CHEATERS_TEMP, "DELETE FROM cheat_temp_reports", true);
-    PrepareStatement(CHAR_ANTICHEAT_CLEAN_CHEATERS, "DELETE FROM cheat_reports;", true);
-
-    PrepareStatement(CHAR_ANTICHEAT_GET_CHEATERS_AVERAGE_BY_GUID,"SELECT CAST((SUM(B.time ) / count( * ) ) - C.time AS UNSIGNED) AS 'promedio' , CAST(count( * ) AS UNSIGNED) AS 'Repeticiones' FROM `characters` AS A, `cheat_temp_reports` AS B, cheat_first_report AS C WHERE A.`online` =1 AND A.`guid` = B.`guid` AND A.guid = C.guid AND A.`guid`=? GROUP BY B.`guid` ORDER BY Repeticiones  DESC LIMIT 0 , 1;", true);
-    PrepareStatement(CHAR_ANTICHEAT_GET_CHEATERS_BY_GUID,"SELECT count( * ) AS 'Repeticiones' FROM `characters` AS A, `cheat_reports` AS B WHERE A.`online` =1 AND A.`guid` = B.`guid` AND A.`guid`=? GROUP BY B.`guid` ORDER BY Repeticiones DESC LIMIT 0 , 1", true);
-    PrepareStatement(CHAR_ANTICHEAT_GET_REPORTS_TYPE_BY_GUID,"SELECT report FROM cheat_reports WHERE guid=?;", true);
     return true;
 }
