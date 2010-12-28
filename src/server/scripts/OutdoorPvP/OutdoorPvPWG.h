@@ -3,19 +3,18 @@
  *
  * Copyright (C) 2010 Myth Project <http://bitbucket.org/sun/myth-core/>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU General Public License along
+ * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef OUTDOOR_PVP_WG_
@@ -55,8 +54,8 @@ enum OutdoorPvPWGSpell
     SPELL_DAMAGED_BUILDING                       = 59201,
     SPELL_INTACT_BUILDING                        = 59203,
 
-    SPELL_TELEPORT_ALLIENCE_CAMP                 = 58632,
-    SPELL_TELEPORT_HORDE_CAMP                    = 58633,
+	SPELL_TELEPORT_ALLIENCE_CAMP                 = 58632,
+	SPELL_TELEPORT_HORDE_CAMP                    = 58633,
     SPELL_TELEPORT_FORTRESS                      = 59096,
 
     SPELL_TELEPORT_DALARAN                       = 53360,
@@ -75,16 +74,17 @@ enum OutdoorPvP_WG_Sounds
     OutdoorPvP_WG_SOUND_NEAR_VICTORY            = 8456,
     OutdoorPvP_WG_SOUND_HORDE_WINS              = 8454,
     OutdoorPvP_WG_SOUND_ALLIANCE_WINS           = 8455,
-    OutdoorPvP_WG_SOUND_WORKSHOP_Horde          = 6205,
-    OutdoorPvP_WG_SOUND_WORKSHOP_ALLIANCE       = 6298,
+    OutdoorPvP_WG_SOUND_WORKSHOP_Horde          = 6205, // время убивать орда
+    OutdoorPvP_WG_SOUND_WORKSHOP_ALLIANCE       = 6298, // к оружию альянс
     OutdoorPvP_WG_HORDE_CAPTAIN                 = 8333,
     OutdoorPvP_WG_ALLIANCE_CAPTAIN              = 8232,
+//    OutdoorPvP_WG_SOUND_START_BATTLE            = 11803,   //L70ETC Concert
     OutdoorPvP_WG_SOUND_START_BATTLE            = 3439, //Standart BG Start sound
 };
 
 enum DataId
 {
-     DATA_ENGINEER_DIE,
+    DATA_ENGINEER_DIE,
 };
 
 enum OutdoorPvP_WG_KeepStatus
@@ -98,10 +98,11 @@ enum OutdoorPvP_WG_KeepStatus
     OutdoorPvP_WG_KEEP_STATUS_HORDE_OCCUPIED    = 4
 };
 
+
 enum OutdoorPVPWGStatus
 {
-    WORLDSTATE_WINTERGRASP_CONTROLING_FACTION,
-    WORLDSTATE_VALUE_COUNT,
+ WORLDSTATE_WINTERGRASP_CONTROLING_FACTION,
+ WORLDSTATE_VALUE_COUNT,
 };
 
 enum OutdoorPvPWGCreType
@@ -172,10 +173,10 @@ typedef std::list<const AreaPOIEntry *> AreaPOIList;
 struct BuildingState
 {
     explicit BuildingState(uint32 _worldState, TeamId _team, bool asDefault)
-         : worldState(_worldState), health(0)
-         , defaultTeam(asDefault ? _team : OTHER_TEAM(_team)), team(_team), damageState(DAMAGE_INTACT)
-         , building(NULL), type(BUILDING_WALL), graveTeam(NULL)
-    { }
+        : worldState(_worldState), health(0)
+        , defaultTeam(asDefault ? _team : OTHER_TEAM(_team)), team(_team), damageState(DAMAGE_INTACT)
+        , building(NULL), type(BUILDING_WALL), graveTeam(NULL)
+    {}
     uint32 worldState;
     uint32 health;
     TeamId defaultTeam;
@@ -203,11 +204,12 @@ struct BuildingState
                 *graveTeam = newTeam;
     }
 
-    private:
-        TeamId team;
+private:
+    TeamId team;
 };
 
 typedef std::map<uint32, uint32> TeamPairMap;
+
 class OPvPCapturePointWG;
 
 class OutdoorPvPWG : public OutdoorPvP
@@ -218,26 +220,31 @@ class OutdoorPvPWG : public OutdoorPvP
         typedef std::set<GameObject*> GameObjectSet;
         typedef std::map<std::pair<uint32, bool>, Position> QuestGiverPositionMap;
         typedef std::map<uint32, Creature*> QuestGiverMap;
-
     public:
         OutdoorPvPWG();
         bool SetupOutdoorPvP();
         int TeamIDsound;
-        bool MaingateDestroyed;
         uint32 GetCreatureEntry(uint32 guidlow, const CreatureData *data);
+
         void OnCreatureCreate(Creature *creature);
         void OnGameObjectCreate(GameObject *go);
         void OnCreatureRemove(Creature *creature);
         void OnGameObjectRemove(GameObject *go);
+
         void ProcessEvent(GameObject *obj, uint32 eventId);
+
         void HandlePlayerEnterZone(Player *plr, uint32 zone);
         void HandlePlayerLeaveZone(Player *plr, uint32 zone);
         void HandlePlayerResurrects(Player * plr, uint32 zone);
         void HandleKill(Player *killer, Unit *victim);
+
         bool Update(uint32 diff);
+
         void BroadcastStateChange(BuildingState *state) const;
+
         uint32 GetData(uint32 id);
-        void SetData(uint32 id, uint32 value) { };
+        void SetData(uint32 id, uint32 value) {};
+
         void ModifyWorkshopCount(TeamId team, bool add);
         uint32 GetTimer() const { return m_timer / 1000; };
         bool isWarTime() const { return m_wartime; };
@@ -249,6 +256,7 @@ class OutdoorPvPWG : public OutdoorPvP
         void forceChangeTeam();
         void forceStopBattle();
         void forceStartBattle();
+
         // Temporal BG specific till 3.2
         void SendAreaSpiritHealerQueryOpcode(Player *pl, const uint64& guid);
         void AddPlayerToResurrectQueue(uint64 npc_guid, uint64 player_guid);
@@ -258,7 +266,6 @@ class OutdoorPvPWG : public OutdoorPvP
         // BG end
         void SendInitWorldStatesTo(Player *player = NULL) const;
         uint32 m_timer;
-
     protected:
         // Temporal BG specific till 3.2
         std::vector<uint64> m_ResurrectQueue;               // Player GUID
@@ -269,6 +276,7 @@ class OutdoorPvPWG : public OutdoorPvP
         uint32 GetLastResurrectTime() const { return m_LastResurrectTime; }
         uint32 GetReviveQueueSize() const { return m_ReviveQueue.size(); }
         // BG end
+
         TeamId m_defender;
         int32 m_tenacityStack;
 
@@ -278,7 +286,6 @@ class OutdoorPvPWG : public OutdoorPvP
         CreatureSet m_creatures;
         CreatureSet m_vehicles[2];
         GameObjectSet m_gobjects;
-        GameObjectSet m_gobjectsDestroyable;
         QuestGiverMap m_questgivers;
 
         TeamPairMap m_creEntryPair, m_goDisplayPair;
@@ -290,7 +297,7 @@ class OutdoorPvPWG : public OutdoorPvP
         uint32 m_workshopCount[2];
         uint32 m_towerDestroyedCount[2];
         uint32 m_towerDamagedCount[2];
-        uint32 m_WSSaveTimer;
+		uint32 m_WSSaveTimer;
 
         OPvPCapturePointWG *GetWorkshop(uint32 lowguid) const;
         OPvPCapturePointWG *GetWorkshopByEngGuid(uint32 lowguid) const;
@@ -298,6 +305,7 @@ class OutdoorPvPWG : public OutdoorPvP
 
         void StartBattle();
         void EndBattle();
+
         void UpdateClock();
         void UpdateClockDigit(uint32 &timer, uint32 digit, uint32 mod);
         void PromotePlayer(Player *player) const;
@@ -305,10 +313,12 @@ class OutdoorPvPWG : public OutdoorPvP
         void UpdateAllWorldObject();
         bool UpdateCreatureInfo(Creature *creature);
         bool UpdateGameObjectInfo(GameObject *go) const;
+
         bool CanBuildVehicle(OPvPCapturePointWG *workshop) const;
         OutdoorPvPWGCreType GetCreatureType(uint32 entry) const;
 
         void RebuildAllBuildings();
+
         void RemoveOfflinePlayerWGAuras();
         void RewardMarkOfHonor(Player *player, uint32 count);
         void MoveQuestGiver(uint32 guid);
@@ -321,20 +331,22 @@ class OPvPCapturePointWG : public OPvPCapturePoint
     public:
         explicit OPvPCapturePointWG(OutdoorPvPWG *opvp, BuildingState *state);
         void SetTeamByBuildingState();
-        void ChangeState() { }
+        void ChangeState() {}
         void ChangeTeam(TeamId oldteam);
+
         uint32 *m_spiEntry;
         uint32 m_spiGuid;
         Creature *m_spiritguide;
         Creature *m_spiritguide_horde;
         Creature *m_spiritguide_alliance;
+
         uint32 *m_engEntry;
         uint32 m_engGuid;
         Creature *m_engineer;
         uint32 m_workshopGuid;
         BuildingState *m_buildingState;
-
     protected:
         OutdoorPvPWG *m_wintergrasp;
 };
+
 #endif
