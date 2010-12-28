@@ -3,18 +3,19 @@
  *
  * Copyright (C) 2010 Myth Project <http://bitbucket.org/sun/myth-core/>
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program. If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "OutdoorPvPWG.h"
@@ -22,11 +23,11 @@
 #include "Vehicle.h"
 #include "ObjectMgr.h"
 #include "World.h"
+#include "Group.h"
 #include "Chat.h"
 #include "MapManager.h"
 #include "ScriptedCreature.h"
 #include "ScriptPCH.h"
-#include "Group.h"
 
 Creature* FortressSpirit;
 uint32 entry;
@@ -57,7 +58,7 @@ void _RespawnCreatureIfNeeded(Creature *cr, uint32 entry)
 {
     if (cr)
     {
-        cr->SetOriginalEntry(entry);
+        cr->UpdateEntry(entry); // SetOriginalEntry as used before may lead to crash
         if (entry != cr->GetEntry() || !cr->isAlive())
             cr->Respawn(true);
         cr->SetVisible(true);
@@ -74,7 +75,7 @@ bool OutdoorPvPWG::SetupOutdoorPvP()
 
     //load worlstates
     QueryResult result = CharacterDatabase.PQuery("SELECT `entry`, `value` from `worldstates` where `entry` in ('31001','31002','31003') order by `entry`");
-    
+     
     m_WSSaveTimer = sWorld->getIntConfig(CONFIG_OUTDOORPVP_WINTERGRASP_SAVESTATE_PERIOD);
 
     if (result)
@@ -115,9 +116,9 @@ bool OutdoorPvPWG::SetupOutdoorPvP()
 
     // Store Eng, spirit guide guids and questgiver for later use
     result = WorldDatabase.PQuery("SELECT guid, id FROM creature WHERE creature.map=571"
-         " AND creature.id IN (%u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u);",
-         CRE_ENG_A, CRE_ENG_H, CRE_SPI_A, CRE_SPI_H, 31101, 31051, 31102, 31052,
-         31107, 31109, 31151, 31153, 31106, 31108, 31053, 31054, 31091, 31036);
+        " AND creature.id IN (%u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u);",
+        CRE_ENG_A, CRE_ENG_H, CRE_SPI_A, CRE_SPI_H, 31101, 31051, 31102, 31052,
+        31107, 31109, 31151, 31153, 31106, 31108, 31053, 31054, 31091, 31036);
     if (!result)
         sLog->outError("Cannot find siege workshop master or spirit guides in creature!");
     else
@@ -345,9 +346,9 @@ bool OutdoorPvPWG::SetupOutdoorPvP()
                 sLog->outError("Cannot add capture point!");
                 continue;
             }
-              // West fortress Workshop fix
+            // West fortress Workshop fix
             if(goData->id==192028 || goData->id==192029)
-               workshop->m_capturePointGUID = goData->id;
+                workshop->m_capturePointGUID = goData->id;
 
             const CreatureData *creData = sObjectMgr->GetCreatureData(engGuid);
             if (!creData)
@@ -456,10 +457,10 @@ bool OutdoorPvPWG::SetupOutdoorPvP()
 }
 
 void OutdoorPvPWG::ProcessEvent(GameObject *obj, uint32 eventId)
-{	
+{     
     if (obj->GetEntry() == 192829) // Titan Relic
     {
-        if (obj->GetGOInfo()->goober.eventId == eventId && isWarTime() && m_gate && m_gate->damageState == DAMAGE_DESTROYED)
+        if (obj->GetGOInfo()->goober.eventId == eventId && isWarTime() && MaingateDestroyed==true /*&& m_gate &&  m_gate->damageState == DAMAGE_DESTROYED*/)
         {
             m_changeDefender = true;
             m_timer = 0;
@@ -470,7 +471,6 @@ void OutdoorPvPWG::ProcessEvent(GameObject *obj, uint32 eventId)
         BuildingStateMap::const_iterator itr = m_buildingStates.find(obj->GetDBTableGUIDLow());
         if (itr == m_buildingStates.end())
             return;
-
         std::string msgStr;
         switch(eventId)
         { // TODO - Localized msgs of GO names
@@ -520,6 +520,12 @@ void OutdoorPvPWG::ProcessEvent(GameObject *obj, uint32 eventId)
         BuildingState *state = itr->second;
         if (eventId == obj->GetGOInfo()->building.damagedEvent)
         {
+           if (obj->GetEntry()==191810)
+            {
+               obj->TakenDamage(30000);
+               MaingateDestroyed=true;
+            }
+
             state->damageState = DAMAGE_DAMAGED;
             switch(state->type)
             {
@@ -529,47 +535,43 @@ void OutdoorPvPWG::ProcessEvent(GameObject *obj, uint32 eventId)
                     break;
                 case BUILDING_WALL:
                     sWorld->SendZoneText(ZONE_WINTERGRASP, sObjectMgr->GetTrinityStringForDBCLocale(LANG_BG_WG_FORTRESS_UNDER_ATTACK));
-	           for (PlayerSet::iterator itr = m_players[getDefenderTeam()].begin(); itr != m_players[getDefenderTeam()].end(); ++itr)
-                   {
-	                if (getDefenderTeam()==TEAM_ALLIANCE)
-	                  {
-                      TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_ASSAULTED_HORDE; //Allience Worn Sound
-	                  }
-                    else TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_ASSAULTED_ALLIANCE;  //Horde Worn Sound
-	                   (*itr)->PlayDirectSound(TeamIDsound) ; // Wintergrasp Fortress under Siege
+                    for (PlayerSet::iterator itr = m_players[getDefenderTeam()].begin(); itr != m_players[getDefenderTeam()].end(); ++itr)
+                    {
+                        if (getDefenderTeam()==TEAM_ALLIANCE)
+                            TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_ASSAULTED_HORDE; //Allience Worn Sound
+                        else
+                            TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_ASSAULTED_ALLIANCE;  //Horde Worn Sound
+                        (*itr)->PlayDirectSound(TeamIDsound) ; // Wintergrasp Fortress under Siege
                     }
-                for (PlayerSet::iterator itr = m_players[getAttackerTeam()].begin(); itr != m_players[getAttackerTeam()].end(); ++itr)
-                  {
-	               if (getDefenderTeam()==TEAM_ALLIANCE)
-	                 {
-                     TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_ASSAULTED_HORDE; //Allience Worn Sound
-	                 }
-                   else TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_ASSAULTED_ALLIANCE;  //Horde Worn Sound
-	                  (*itr)->PlayDirectSound(TeamIDsound) ; // Wintergrasp Fortress under Siege
-                  }
-		break;
+                    for (PlayerSet::iterator itr = m_players[getAttackerTeam()].begin(); itr != m_players[getAttackerTeam()].end(); ++itr)
+                    {
+                        if (getDefenderTeam()==TEAM_ALLIANCE)
+                            TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_ASSAULTED_HORDE; //Allience Worn Sound
+                        else 
+                            TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_ASSAULTED_ALLIANCE;  //Horde Worn Sound
+                        (*itr)->PlayDirectSound(TeamIDsound) ; // Wintergrasp Fortress under Siege
+                    }
+                    break;
                 case BUILDING_TOWER:
                     ++m_towerDamagedCount[state->GetTeam()];
                     msgStr = fmtstring(sObjectMgr->GetTrinityStringForDBCLocale(LANG_BG_WG_TOWER_DAMAGED), msgStr.c_str());
                     sWorld->SendZoneText(ZONE_WINTERGRASP, msgStr.c_str());
-			   for (PlayerSet::iterator itr = m_players[getDefenderTeam()].begin(); itr != m_players[getDefenderTeam()].end(); ++itr)
-                   {
-	                if (getDefenderTeam()==TEAM_ALLIANCE)
-	                  {
-                      TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_CAPTURED_HORDE; //Allience Worn Sound
-	                  }
-                     else TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_CAPTURED_ALLIANCE;  //Horde Worn Sound
-	                   (*itr)->PlayDirectSound(TeamIDsound) ; // Wintergrasp Fortress under Siege
+                    for (PlayerSet::iterator itr = m_players[getDefenderTeam()].begin(); itr != m_players[getDefenderTeam()].end(); ++itr)
+                    {
+                        if (getDefenderTeam()==TEAM_ALLIANCE)
+                            TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_CAPTURED_HORDE; //Allience Worn Sound
+                        else
+                            TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_CAPTURED_ALLIANCE;  //Horde Worn Sound
+                        (*itr)->PlayDirectSound(TeamIDsound) ; // Wintergrasp Fortress under Siege
                     }
-                for (PlayerSet::iterator itr = m_players[getAttackerTeam()].begin(); itr != m_players[getAttackerTeam()].end(); ++itr)
-                  {
-	               if (getDefenderTeam()==TEAM_ALLIANCE)
-	                 {
-                     TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_CAPTURED_HORDE; //Allience Worn Sound
-	                 }
-                   else TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_CAPTURED_ALLIANCE;  //Horde Worn Sound
-			       (*itr)->PlayDirectSound(TeamIDsound) ; // Wintergrasp Fortress under Siege
-                  }
+                    for (PlayerSet::iterator itr = m_players[getAttackerTeam()].begin(); itr != m_players[getAttackerTeam()].end(); ++itr)
+                    {
+                        if (getDefenderTeam()==TEAM_ALLIANCE)
+                            TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_CAPTURED_HORDE; //Allience Worn Sound
+                        else
+                            TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_CAPTURED_ALLIANCE;  //Horde Worn Sound
+                        (*itr)->PlayDirectSound(TeamIDsound) ; // Wintergrasp Fortress under Siege
+                    }
                     break;
             }
         }
@@ -586,48 +588,41 @@ void OutdoorPvPWG::ProcessEvent(GameObject *obj, uint32 eventId)
                     break;
                 case BUILDING_WALL:
                     sWorld->SendZoneText(ZONE_WINTERGRASP, sObjectMgr->GetTrinityStringForDBCLocale(LANG_BG_WG_FORTRESS_UNDER_ATTACK));
-			    for (PlayerSet::iterator itr = m_players[getDefenderTeam()].begin(); itr != m_players[getDefenderTeam()].end(); ++itr)
-                   {
-	                if (getDefenderTeam()==TEAM_ALLIANCE)
-	                  {
-                      TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_CAPTURED_HORDE; //Allience Worn Sound
-	                  }
-                    else TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_CAPTURED_ALLIANCE;  //Horde Worn Sound
-	                (*itr)->PlayDirectSound(TeamIDsound) ; // Wintergrasp Fortress under Siege
+                    for (PlayerSet::iterator itr = m_players[getDefenderTeam()].begin(); itr != m_players[getDefenderTeam()].end(); ++itr)
+                    {
+                        if (getDefenderTeam()==TEAM_ALLIANCE)
+                            TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_CAPTURED_HORDE; //Allience Worn Sound
+                        else
+                            TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_CAPTURED_ALLIANCE;  //Horde Worn Sound
+                        (*itr)->PlayDirectSound(TeamIDsound) ; // Wintergrasp Fortress under Siege
                     }
-                for (PlayerSet::iterator itr = m_players[getAttackerTeam()].begin(); itr != m_players[getAttackerTeam()].end(); ++itr)
-                  {
-	               if (getDefenderTeam()==TEAM_ALLIANCE)
-	                 {
-                     TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_CAPTURED_HORDE; //Allience Worn Sound
-	                 }
-                   else TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_CAPTURED_ALLIANCE;  //Horde Worn Sound
-		          (*itr)->PlayDirectSound(TeamIDsound) ; // Wintergrasp Fortress under Siege
-                  }
+                    for (PlayerSet::iterator itr = m_players[getAttackerTeam()].begin(); itr != m_players[getAttackerTeam()].end(); ++itr)
+                    {
+                        if (getDefenderTeam()==TEAM_ALLIANCE)
+                            TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_CAPTURED_HORDE; //Allience Worn Sound
+                        else 
+                            TeamIDsound=OutdoorPvP_WG_SOUND_KEEP_CAPTURED_ALLIANCE;  //Horde Worn Sound
+                        (*itr)->PlayDirectSound(TeamIDsound) ; // Wintergrasp Fortress under Siege
+                    }
                     break;
                 case BUILDING_TOWER:
-                    --m_towerDamagedCount[state->GetTeam()];
-                    ++m_towerDestroyedCount[state->GetTeam()];
-                    if (state->GetTeam() == getAttackerTeam())
-                    {
+                     --m_towerDamagedCount[state->GetTeam()];
+                     ++m_towerDestroyedCount[state->GetTeam()];
+                     if (state->GetTeam() == getAttackerTeam())
+                     {
                         TeamCastSpell(getAttackerTeam(), -SPELL_TOWER_CONTROL);
                         TeamCastSpell(getDefenderTeam(), -SPELL_TOWER_CONTROL);
                         uint32 attStack = 3 - m_towerDestroyedCount[getAttackerTeam()];
-
                         if (m_towerDestroyedCount[getAttackerTeam()])
-                        {
                             for (PlayerSet::iterator itr = m_players[getDefenderTeam()].begin(); itr != m_players[getDefenderTeam()].end(); ++itr)
                                 if ((*itr)->getLevel() > 74)
                                     (*itr)->SetAuraStack(SPELL_TOWER_CONTROL, (*itr), m_towerDestroyedCount[getAttackerTeam()]);
-                        }
 
                         if (attStack)
-                        {
                             for (PlayerSet::iterator itr = m_players[getAttackerTeam()].begin(); itr != m_players[getAttackerTeam()].end(); ++itr)
                                 if ((*itr)->getLevel() > 74)
                                     (*itr)->SetAuraStack(SPELL_TOWER_CONTROL, (*itr), attStack);
-                        }
-                        else
+                         else
                         {
                             if (m_timer < 600000)
                                 m_timer = 0;
@@ -637,24 +632,22 @@ void OutdoorPvPWG::ProcessEvent(GameObject *obj, uint32 eventId)
                     }
                     msgStr = fmtstring(sObjectMgr->GetTrinityStringForDBCLocale(LANG_BG_WG_TOWER_DESTROYED), msgStr.c_str());
                     sWorld->SendZoneText(ZONE_WINTERGRASP, msgStr.c_str());
-	    	    for (PlayerSet::iterator itr = m_players[getDefenderTeam()].begin(); itr != m_players[getDefenderTeam()].end(); ++itr)
-                   {
-	                if (getDefenderTeam()==TEAM_ALLIANCE)
-	                  {
-                      TeamIDsound=OutdoorPvP_WG_HORDE_CAPTAIN; //Allience Worn Sound
-	                  }
-                    else TeamIDsound=OutdoorPvP_WG_ALLIANCE_CAPTAIN;  //Horde Worn Sound
-	                (*itr)->PlayDirectSound(TeamIDsound) ; // Wintergrasp Fortress under Siege
+                    for (PlayerSet::iterator itr = m_players[getDefenderTeam()].begin(); itr != m_players[getDefenderTeam()].end(); ++itr)
+                    {
+                        if (getDefenderTeam()==TEAM_ALLIANCE)
+                            TeamIDsound=OutdoorPvP_WG_HORDE_CAPTAIN; //Allience Worn Sound
+                        else
+                            TeamIDsound=OutdoorPvP_WG_ALLIANCE_CAPTAIN;  //Horde Worn Sound
+                        (*itr)->PlayDirectSound(TeamIDsound) ; // Wintergrasp Fortress under Siege
                     }
-                for (PlayerSet::iterator itr = m_players[getAttackerTeam()].begin(); itr != m_players[getAttackerTeam()].end(); ++itr)
-                  {
-	               if (getDefenderTeam()==TEAM_ALLIANCE)
-	                 {
-                     TeamIDsound=OutdoorPvP_WG_HORDE_CAPTAIN; //Allience Worn Sound
-	                 }
-                   else TeamIDsound=OutdoorPvP_WG_ALLIANCE_CAPTAIN;  //Horde Worn Sound
-			       (*itr)->PlayDirectSound(TeamIDsound) ; // Wintergrasp Fortress destroyed Siege
-                  }
+                    for (PlayerSet::iterator itr = m_players[getAttackerTeam()].begin(); itr != m_players[getAttackerTeam()].end(); ++itr)
+                    {
+                        if (getDefenderTeam()==TEAM_ALLIANCE)
+                            TeamIDsound=OutdoorPvP_WG_HORDE_CAPTAIN; //Allience Worn Sound
+                        else
+                            TeamIDsound=OutdoorPvP_WG_ALLIANCE_CAPTAIN;  //Horde Worn Sound
+                        (*itr)->PlayDirectSound(TeamIDsound) ; // Wintergrasp Fortress destroyed Siege
+                    }
                     break;
             }
             BroadcastStateChange(state);
@@ -666,7 +659,7 @@ void OutdoorPvPWG::RemoveOfflinePlayerWGAuras()
 {
     // if server crashed while in battle there could be players with rank or tenacity
     CharacterDatabase.PExecute("DELETE FROM character_aura WHERE spell IN (%u, %u, %u, %u, %u)",
-        SPELL_RECRUIT, SPELL_CORPORAL, SPELL_LIEUTENANT, SPELL_TENACITY, SPELL_TOWER_CONTROL);
+         SPELL_RECRUIT, SPELL_CORPORAL, SPELL_LIEUTENANT, SPELL_TENACITY, SPELL_TOWER_CONTROL);
 }
 
 void OutdoorPvPWG::ModifyWorkshopCount(TeamId team, bool add)
@@ -768,10 +761,7 @@ void OutdoorPvPWG::OnCreatureCreate(Creature *creature)
                 if (OPvPCapturePointWG *workshop = GetWorkshopByEngGuid(engLowguid))
                 {
                     if (CanBuildVehicle(workshop))
-                    {
                         m_vehicles[team].insert(creature);
-                        //workshop->m_vehicles.insert(creature);
-                    }
                     else
                     {
                         creature->setDeathState(DEAD);
@@ -849,6 +839,30 @@ void OutdoorPvPWG::OnCreatureRemove(Creature *creature)
         case CREATURE_QUESTGIVER:
             m_questgivers.erase(creature->GetDBTableGUIDLow());
             break;
+        case CREATURE_ENGINEER:
+            for (OutdoorPvP::OPvPCapturePointMap::iterator itr = m_capturePoints.begin(); itr != m_capturePoints.end(); ++itr)
+            {
+                if (OPvPCapturePointWG *workshop = dynamic_cast<OPvPCapturePointWG*>(itr->second))
+                    if (workshop->m_engGuid == creature->GetDBTableGUIDLow())
+                    {
+                        workshop->m_engineer = NULL;
+                        break;
+                    }
+            }
+            m_creatures.erase(creature); // prevents crash, but i think it's wrong
+            break;
+        case CREATURE_SPIRIT_GUIDE:
+            for (OutdoorPvP::OPvPCapturePointMap::iterator itr = m_capturePoints.begin(); itr != m_capturePoints.end(); ++itr)
+            {
+                if (OPvPCapturePointWG *workshop = dynamic_cast<OPvPCapturePointWG*>(itr->second))
+                    if (workshop->m_spiGuid == creature->GetDBTableGUIDLow())
+                    {
+                        workshop->m_spiritguide = NULL;
+                        break;
+                    }
+            }
+            m_creatures.erase(creature); // prevents crash, but i think it's wrong
+            break;
         default:
             m_creatures.erase(creature);
             break;
@@ -862,7 +876,6 @@ void OutdoorPvPWG::OnGameObjectCreate(GameObject *go)
     if (UpdateGameObjectInfo(go))
         m_gobjects.insert(go);
 
-    //do we need to store building?
     else if (go->GetGoType() == GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING)
     {
         BuildingStateMap::const_iterator itr = m_buildingStates.find(go->GetDBTableGUIDLow());
@@ -893,19 +906,13 @@ void OutdoorPvPWG::OnGameObjectRemove(GameObject *go)
     OutdoorPvP::OnGameObjectRemove(go);
 
     if (UpdateGameObjectInfo(go))
-    {
         m_gobjects.erase(go);
-    }
-    //do we need to store building?
+
     else if (go->GetGoType() == GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING)
     {
         BuildingStateMap::const_iterator itr = m_buildingStates.find(go->GetDBTableGUIDLow());
         if (itr != m_buildingStates.end())
-        {
-            itr->second->building = go;
-            itr->second->health = go->GetGOValue()->building.health;
-            go->RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_DESTROYED);
-        }
+            itr->second->building = NULL;
     }
 }
 
@@ -932,22 +939,15 @@ void OutdoorPvPWG::RebuildAllBuildings()
 {
     for (BuildingStateMap::const_iterator itr = m_buildingStates.begin(); itr != m_buildingStates.end(); ++itr)
     {
-        if (itr->second->building)
+        if (itr->second->building && itr->second->building->GetGoType() == GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING)
         {
             UpdateGameObjectInfo(itr->second->building);
             itr->second->building->Rebuild();
             itr->second->health = itr->second->building->GetGOValue()->building.health;
+            itr->second->damageState = DAMAGE_INTACT;
         }
         else
             itr->second->health = 0;
-
-        if (itr->second->damageState == DAMAGE_DESTROYED)
-        {
-            if (itr->second->type == BUILDING_WORKSHOP)
-                ModifyWorkshopCount(itr->second->GetTeam(), true);
-        }
-
-        itr->second->damageState = DAMAGE_INTACT;
         itr->second->SetTeam(getDefenderTeam() == TEAM_ALLIANCE ? OTHER_TEAM(itr->second->defaultTeam) : itr->second->defaultTeam);
     }
     m_towerDamagedCount[TEAM_ALLIANCE] = 0;
@@ -1032,37 +1032,35 @@ bool OutdoorPvPWG::UpdateCreatureInfo(Creature *creature)
             return false;
         case CREATURE_SPIRIT_GUIDE:
             /*Vehicle teleport system*/
-            pMap = creature->GetMap(); 
+            pMap = creature->GetMap();
             if (isWarTime())
             {
-               if (creature->GetAreaId() == 4575) // Select Fortress Spirit
-               {
-                 FortressSpirit = creature;
-                 if (getDefenderTeam() == TEAM_ALLIANCE) // Fortress Spirit Alliance
-                 {
-                    FortressSpirit->UpdateEntry(CRE_SPI_A);
-                 }
-                 if (getDefenderTeam() == TEAM_HORDE) // Fortress Spirit Horde
-                 {
-                    FortressSpirit->UpdateEntry(CRE_SPI_H);
-                 }
-               }
+                if (creature->GetAreaId() == 4575) // Select Fortress Spirit
+                {
+                    FortressSpirit = creature;
+                    if (getDefenderTeam() == TEAM_ALLIANCE) // Fortress Spirit Alliance
+                            FortressSpirit->UpdateEntry(CRE_SPI_A);
+                    if (getDefenderTeam() == TEAM_HORDE) // Fortress Spirit Horde
+                        FortressSpirit->UpdateEntry(CRE_SPI_H);
+                }
                 creature->SetVisible(true);
-                //creature->setDeathState(ALIVE);
             }
             else
-            {
                 creature->SetVisible(false);
-                //creature->setDeathState(DEAD);
-            }
+
             return false;
         case CREATURE_SPIRIT_HEALER:
             creature->SetVisible(isWarTime() ? false : true);
             return false;
         case CREATURE_ENGINEER:
-            return false;
+           return false;
         case CREATURE_SIEGE_VEHICLE:
-            //creature->DisappearAndDie();
+            if (!isWarTime())
+            {
+                if (creature->IsVehicle() && creature->GetVehicleKit())
+                    creature->GetVehicleKit()->RemoveAllPassengers();
+                creature->DisappearAndDie();
+            }
             return false;
         case CREATURE_GUARD:
         case CREATURE_SPECIAL:
@@ -1169,26 +1167,23 @@ void OutdoorPvPWG::HandlePlayerEnterZone(Player * plr, uint32 zone)
 
     if (isWarTime())
     {
-		if (plr->getLevel() < 75) 
-		{
-		plr->CastSpell(plr, SPELL_TELEPORT_DALARAN, true);
-		return;
-		}
+        if (plr->getLevel() < 75)
+        {
+            plr->CastSpell(plr, SPELL_TELEPORT_DALARAN, true);
+            return;
+        }
         if (plr->getLevel() > 74)
         {
             if (!plr->HasAura(SPELL_RECRUIT) && !plr->HasAura(SPELL_CORPORAL)
                 && !plr->HasAura(SPELL_LIEUTENANT))
                 plr->CastSpell(plr, SPELL_RECRUIT, true);
+
             if (plr->GetTeamId() == getAttackerTeam())
-            {
                 if (m_towerDestroyedCount[getAttackerTeam()] < 3)
                     plr->SetAuraStack(SPELL_TOWER_CONTROL, plr, 3 - m_towerDestroyedCount[getAttackerTeam()]);
-            }
             else
-            {
                 if (m_towerDestroyedCount[getAttackerTeam()])
                     plr->SetAuraStack(SPELL_TOWER_CONTROL, plr, m_towerDestroyedCount[getAttackerTeam()]);
-            }
         }
     }
 
@@ -1222,15 +1217,11 @@ void OutdoorPvPWG::HandlePlayerResurrects(Player * plr, uint32 zone)
 
             // Tower Control
             if (plr->GetTeamId() == getAttackerTeam())
-            {
                 if (m_towerDestroyedCount[getAttackerTeam()] < 3)
                     plr->SetAuraStack(SPELL_TOWER_CONTROL, plr, 3 - m_towerDestroyedCount[getAttackerTeam()]);
-            }
             else
-            {
                 if (m_towerDestroyedCount[getAttackerTeam()])
                     plr->SetAuraStack(SPELL_TOWER_CONTROL, plr, m_towerDestroyedCount[getAttackerTeam()]);
-            }
         }
     }
     OutdoorPvP::HandlePlayerResurrects(plr, zone);
@@ -1316,11 +1307,9 @@ void OutdoorPvPWG::HandleKill(Player *killer, Unit *victim)
     if (ok)
     {
         if (Group *pGroup = killer->GetGroup())
-        {
             for (GroupReference *itr = pGroup->GetFirstMember(); itr != NULL; itr = itr->next())
                 if (itr->getSource()->IsAtGroupRewardDistance(killer) && itr->getSource()->getLevel() > 74)
                     PromotePlayer(itr->getSource());
-        }
         else if (killer->getLevel() > 74)
             PromotePlayer(killer);
     }
@@ -1346,13 +1335,11 @@ void OutdoorPvPWG::UpdateTenacityStack()
             ++hordeNum;
 
     if (allianceNum && hordeNum)
-    {
         if (allianceNum < hordeNum)
             newStack = int32((float(hordeNum) / float(allianceNum) - 1)*4); // positive, should cast on alliance
         else if (allianceNum > hordeNum)
             newStack = int32((1 - float(allianceNum) / float(hordeNum))*4); // negative, should cast on horde
-    }
-
+ 
     if (newStack == m_tenacityStack)
         return;
 
@@ -1411,17 +1398,14 @@ void OutdoorPvPWG::UpdateClock()
     else
         UpdateClockDigit(timer, 0, 10);
 
-//Announce in all world, comment it if you don't like/need it
-	 // Announce 30 minutes left
- 	 if ((m_timer>1800000) && (m_timer<1802000) && (m_wartime==false)) 
- 	 {
+    //Announce in all world, comment it if you don't like/need it
+    // Announce 30 minutes left
+    if ((m_timer>1800000) && (m_timer<1802000) && (m_wartime==false))
         sWorld->SendWorldText(LANG_BG_WG_WORLD_ANNOUNCE_30);
- 	    UpdateAllWorldObject();
- 	 }
- 
- 	 // Announce 10 minutes left
-	 if ((m_timer>600000) && (m_timer<602000) && (m_wartime==false)) 
-       sWorld->SendWorldText(LANG_BG_WG_WORLD_ANNOUNCE_10);
+
+    // Announce 10 minutes left
+    if ((m_timer>600000) && (m_timer<602000) && (m_wartime==false))
+        sWorld->SendWorldText(LANG_BG_WG_WORLD_ANNOUNCE_10);
 }
 
 bool OutdoorPvPWG::Update(uint32 diff)
@@ -1440,7 +1424,6 @@ bool OutdoorPvPWG::Update(uint32 diff)
             /*********************************************************/
             /***      BATTLEGROUND VEHICLE TELEPORTER SYSTEM       ***/
             /*********************************************************/
-            /*Vehicle teleport system*/
             if (pMap)
             {
                 Map::PlayerList const &PlayerList = pMap->GetPlayers();
@@ -1482,20 +1465,11 @@ bool OutdoorPvPWG::Update(uint32 diff)
                                         Driver->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
                                         Driver->EnterVehicle(vehicle, 0);
                                         if (Passenger1 && Passenger1->isAlive())
-                                        {
                                             Passenger1->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-                                            //Passenger1->EnterVehicle(vehicle, 1); Seatid doesn't work :S
-                                        }
                                         if (Passenger2 && Passenger2->isAlive())
-                                        {
                                             Passenger2->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-                                            //Passenger2->EnterVehicle(vehicle, 2); Seatid doesn't work :S
-                                        }
                                         if (Passenger3 && Passenger3->isAlive())
-                                        {
                                             Passenger3->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-                                            //Passenger3->EnterVehicle(vehicle, 3); Seatid doesn't work :S
-                                        }
                                     }
                                 }
                             }
@@ -1516,7 +1490,7 @@ bool OutdoorPvPWG::Update(uint32 diff)
                                     Unit* Passenger2 = Old->GetVehicleKit()->GetPassenger(2);
                                     Unit* Passenger3 = Old->GetVehicleKit()->GetPassenger(3);
                                     if (Driver && Driver->isAlive())
-							        {
+                                    {
                                         Creature* New = i->getSource()->SummonCreature(Old->GetEntry(), 5141.191406f, 2841.045410f, 408.703217f, 3.163321f, TEMPSUMMON_MANUAL_DESPAWN);
                                         New->SetPower(POWER_MANA, Old->GetPower(POWER_MANA));
                                         New->SetPower(POWER_RAGE, Old->GetPower(POWER_RAGE));
@@ -1531,20 +1505,11 @@ bool OutdoorPvPWG::Update(uint32 diff)
                                         Driver->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
                                         Driver->EnterVehicle(vehicle, 0);
                                         if (Passenger1 && Passenger1->isAlive())
-                                        {
                                             Passenger1->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-                                            //Passenger1->EnterVehicle(vehicle, 1); Seatid doesn't work :S
-                                        }
                                         if (Passenger2 && Passenger2->isAlive())
-                                        {
                                             Passenger2->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-                                            //Passenger2->EnterVehicle(vehicle, 2); Seatid doesn't work :S
-                                        }
                                         if (Passenger3 && Passenger3->isAlive())
-                                        {
                                             Passenger3->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-                                            //Passenger3->EnterVehicle(vehicle, 3); Seatid doesn't work :S
-                                        }
                                     }
                                 }
                             }
@@ -1586,20 +1551,11 @@ bool OutdoorPvPWG::Update(uint32 diff)
                                         Driver->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
                                         Driver->EnterVehicle(vehicle, 0);
                                         if (Passenger1 && Passenger1->isAlive())
-                                        {
                                             Passenger1->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-                                            //Passenger1->EnterVehicle(vehicle, 1); Seatid doesn't work :S
-                                        }
                                         if (Passenger2 && Passenger2->isAlive())
-                                        {
                                             Passenger2->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-                                            //Passenger2->EnterVehicle(vehicle, 2); Seatid doesn't work :S
-                                        }
                                         if (Passenger3 && Passenger3->isAlive())
-                                        {
                                             Passenger3->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-                                            //Passenger3->EnterVehicle(vehicle, 3); Seatid doesn't work :S
-                                        }
                                     }
                                 }
                             }
@@ -1635,20 +1591,11 @@ bool OutdoorPvPWG::Update(uint32 diff)
                                         Driver->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
                                         Driver->EnterVehicle(vehicle, 0);
                                         if (Passenger1 && Passenger1->isAlive())
-                                        {
                                             Passenger1->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-                                            //Passenger1->EnterVehicle(vehicle, 1); Seatid doesn't work :S
-                                        }
                                         if (Passenger2 && Passenger2->isAlive())
-                                        {
                                             Passenger2->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-                                            //Passenger2->EnterVehicle(vehicle, 2); Seatid doesn't work :S
-                                        }
                                         if (Passenger3 && Passenger3->isAlive())
-                                        {
                                             Passenger3->NearTeleportTo(5141.191406f, 2841.045410f, 408.703217f, 3.163321f, true); // Out of the Fortress Gate
-                                            //Passenger3->EnterVehicle(vehicle, 3); Seatid doesn't work :S
-                                        }
                                     }
                                 }
                             }
@@ -1675,7 +1622,6 @@ bool OutdoorPvPWG::Update(uint32 diff)
                             Player *plr = sObjectMgr->GetPlayer(*itr2);
                             if (!plr)
                                 continue;
-
                             if (!sh && plr->IsInWorld())
                             {
                                 sh = plr->GetMap()->GetCreature(itr->first);
@@ -1686,13 +1632,10 @@ bool OutdoorPvPWG::Update(uint32 diff)
                             }
 
                             // Resurrection visual
-                            if (sh)
+                            if (sh && plr->GetDistance2d(sh) <= 18.0f)
                             {
-                                if (plr->GetDistance2d(sh) <= 18.0f)
-                                {
-                                    plr->CastSpell(plr, SPELL_RESURRECTION_VISUAL, true);
-                                    m_ResurrectQueue.push_back(*itr2);
-                                }
+                                plr->CastSpell(plr, SPELL_RESURRECTION_VISUAL, true);
+                                m_ResurrectQueue.push_back(*itr2);
                             }
                         }
                         (itr->second).clear();
@@ -1733,7 +1676,6 @@ bool OutdoorPvPWG::Update(uint32 diff)
             m_defender = getAttackerTeam();
             entry = LANG_BG_WG_CAPTURED;
         }
-
         if (isWarTime())
         {
             if (m_timer != 1) // 1 = forceStopBattle
@@ -1747,9 +1689,8 @@ bool OutdoorPvPWG::Update(uint32 diff)
             StartBattle();
         }
 
-        //UpdateAllWorldObject();
+        UpdateAllWorldObject();
         UpdateClock();
-
         SendInitWorldStatesTo();
         m_sendUpdate = true;
     }
@@ -1760,14 +1701,15 @@ bool OutdoorPvPWG::Update(uint32 diff)
         CharacterDatabase.PExecute("replace  `worldstates` set `entry`='31002', `value`='%d', `comment`='wg m_timer'",m_timer);
         CharacterDatabase.PExecute("replace  `worldstates` set `entry`='31003', `value`='%d', `comment`='wg m_defender'",m_defender);
         m_WSSaveTimer = sWorld->getIntConfig(CONFIG_OUTDOORPVP_WINTERGRASP_SAVESTATE_PERIOD);
-    } else m_WSSaveTimer -= diff;
+    }
+    else
+        m_WSSaveTimer -= diff;
 
-
-    return false;
+   return false;
 }
 
 void OutdoorPvPWG::forceStartBattle()
-{ // Uptime will do all the work
+{// Uptime will do all the work
     m_wartime = false;
 
     if (m_timer != 1)
@@ -1775,21 +1717,20 @@ void OutdoorPvPWG::forceStartBattle()
         m_timer = 1;
         sWorld->SendZoneText(ZONE_WINTERGRASP, sObjectMgr->GetTrinityStringForDBCLocale(LANG_BG_WG_BATTLE_FORCE_START));
     }
-		sWorld->SendWintergraspState();
+    sWorld->SendWintergraspState();
 }
 
 void OutdoorPvPWG::forceStopBattle()
-{ // Uptime will do all the work.
+{// Uptime will do all the work.
 
     if (!isWarTime())
         m_wartime = true;
-
     if (m_timer != 1)
     {
         m_timer = 1;
         sWorld->SendZoneText(ZONE_WINTERGRASP, sObjectMgr->GetTrinityStringForDBCLocale(LANG_BG_WG_BATTLE_FORCE_STOP));
     }
-	sWorld->SendWintergraspState();
+       sWorld->SendWintergraspState();
 }
 
 void OutdoorPvPWG::forceChangeTeam()
@@ -1806,18 +1747,16 @@ void OutdoorPvPWG::forceChangeTeam()
 // Can be forced by gm's while in battle so have to reset in case it was wartime
 void OutdoorPvPWG::StartBattle()
 {
-	uint32 CountDef=0;
-	uint32 CountAtk=0;
+    uint32 CountDef=0;
+    uint32 CountAtk=0;
     m_wartime = true;
-    UpdateAllWorldObject();
+    MaingateDestroyed = false;
     m_timer = sWorld->getIntConfig(CONFIG_OUTDOORPVP_WINTERGRASP_BATTLE_TIME) * MINUTE * IN_MILLISECONDS;
 
     for (PlayerSet::iterator itr = m_players[getDefenderTeam()].begin(); itr != m_players[getDefenderTeam()].end(); ++itr)
     {
         if ((*itr)->getLevel() < 75)
-        {
             (*itr)->CastSpell((*itr), SPELL_TELEPORT_DALARAN, true);
-        }
         else
         {
             CountDef++;
@@ -1831,9 +1770,7 @@ void OutdoorPvPWG::StartBattle()
     for (PlayerSet::iterator itr = m_players[getAttackerTeam()].begin(); itr != m_players[getAttackerTeam()].end(); ++itr)
     {
         if ((*itr)->getLevel() < 75)
-        {
             (*itr)->CastSpell((*itr), SPELL_TELEPORT_DALARAN, true);
-        }
         else
         {
             CountAtk++;
@@ -1856,26 +1793,14 @@ void OutdoorPvPWG::StartBattle()
                 m_changeDefender=true;
             }
             forceStopBattle();
-        return;
+            return;
         }
     }
 
-//    TeamCastSpell(getDefenderTeam(), SPELL_TELEPORT_FORTRESS);
-
-    // Remove Essence of Wintergrasp to all players
+    //TeamCastSpell(getDefenderTeam(), SPELL_TELEPORT_FORTRESS);
+    //Remove Essence of Wintergrasp to all players
     sWorld->setWorldState(WORLDSTATE_WINTERGRASP_CONTROLING_FACTION, TEAM_NEUTRAL);
     sWorld->UpdateAreaDependentAuras();
-
-    // destroyed all vehicles
-    for (uint32 team = 0; team < 2; ++team)
-    {
-        while(!m_vehicles[team].empty())
-        {
-            Creature *veh = *m_vehicles[team].begin();
-            m_vehicles[team].erase(m_vehicles[team].begin());
-            veh->setDeathState(JUST_DIED);
-        }
-    }
 
     // Remove All Wintergrasp auras. Add Recruit rank and Tower Control
     for (PlayerSet::iterator itr = m_players[getAttackerTeam()].begin(); itr != m_players[getAttackerTeam()].end(); ++itr)
@@ -1904,7 +1829,7 @@ void OutdoorPvPWG::StartBattle()
             (*itr)->CastSpell(*itr, SPELL_RECRUIT, true);
     }
     UpdateTenacityStack();
-	// Update timer in players battlegrounds tab
+    // Update timer in players battlegrounds tab
     sWorld->SendWintergraspState();
 }
 
@@ -1918,15 +1843,12 @@ void OutdoorPvPWG::EndBattle()
     {
         if (getDefenderTeam()==TEAM_ALLIANCE)
             TeamIDsound=OutdoorPvP_WG_SOUND_ALLIANCE_WINS; //Allience Win
-
-        else TeamIDsound=OutdoorPvP_WG_SOUND_HORDE_WINS;  //Horde Win
-           (*itr)->PlayDirectSound(TeamIDsound) ; // SoundOnEndWin
+        else
+            TeamIDsound=OutdoorPvP_WG_SOUND_HORDE_WINS;  //Horde Win
+        (*itr)->PlayDirectSound(TeamIDsound) ; // SoundOnEndWin
     }
     for (PlayerSet::iterator itr = m_players[getAttackerTeam()].begin(); itr != m_players[getAttackerTeam()].end(); ++itr)
-    {
-       (*itr)->PlayDirectSound(OutdoorPvP_WG_SOUND_NEAR_VICTORY) ; // SoundOnEndLoose
-    }
-
+        (*itr)->PlayDirectSound(OutdoorPvP_WG_SOUND_NEAR_VICTORY) ; // SoundOnEndLoose
     for (uint32 team = 0; team < 2; ++team)
     {
         // destroyed all vehicles
@@ -1946,8 +1868,7 @@ void OutdoorPvPWG::EndBattle()
             if ((*itr)->isDead())
             {
                 (*itr)->ResurrectPlayer(1.0f);
-				sObjectAccessor->ConvertCorpseForPlayer((*itr)->GetGUID());
-                //ObjectAccessor::Instance().ConvertCorpseForPlayer((*itr)->GetGUID());
+                sObjectAccessor->ConvertCorpseForPlayer((*itr)->GetGUID());
             }
             (*itr)->RemoveAurasDueToSpell(SPELL_TENACITY);
             (*itr)->CombatStop(true);
@@ -1990,7 +1911,6 @@ void OutdoorPvPWG::EndBattle()
             for (PlayerSet::iterator itr = m_players[team].begin(); itr != m_players[team].end(); ++itr)
                 if ((*itr)->getLevel() > 74 && ((*itr)->HasAura(SPELL_LIEUTENANT) || (*itr)->HasAura(SPELL_CORPORAL)))
                     ++playersWithRankNum;
-
             baseHonor = team == getDefenderTeam() ? sWorld->getIntConfig(CONFIG_OUTDOORPVP_WINTERGRASP_WIN_BATTLE) : sWorld->getIntConfig(CONFIG_OUTDOORPVP_WINTERGRASP_LOSE_BATTLE);
             baseHonor += (sWorld->getIntConfig(CONFIG_OUTDOORPVP_WINTERGRASP_DAMAGED_TOWER) * m_towerDamagedCount[OTHER_TEAM(team)]);
             baseHonor += (sWorld->getIntConfig(CONFIG_OUTDOORPVP_WINTERGRASP_DESTROYED_TOWER) * m_towerDestroyedCount[OTHER_TEAM(team)]);
@@ -2002,7 +1922,6 @@ void OutdoorPvPWG::EndBattle()
 
         for (PlayerSet::iterator itr = m_players[team].begin(); itr != m_players[team].end(); ++itr)
         {
-
             if ((*itr)->getLevel() < 75)
                 continue; // No rewards for level <75
 
@@ -2229,17 +2148,16 @@ void OutdoorPvPWG::RelocateAllianceDeadPlayers(Creature *cr)
         for (std::vector<uint64>::const_iterator itr = ghost_list.begin(); itr != ghost_list.end(); ++itr)
         {
             Player* plr = sObjectMgr->GetPlayer(*itr);
-			if (!plr)
+            if (!plr)
                 continue;
 
-			if (plr->getFaction() == ALLIANCE)
-			{
-            if (!ClosestGrave)
-                ClosestGrave = sObjectMgr->GetClosestGraveYard(plr->GetPositionX(), plr->GetPositionY(), plr->GetPositionZ(), plr->GetMapId(), plr->GetTeam());
-
-            if (ClosestGrave)
-                plr->TeleportTo(plr->GetMapId(), ClosestGrave->x, ClosestGrave->y, ClosestGrave->z, plr->GetOrientation());
-			}
+            if (plr->getFaction() == ALLIANCE)
+            {
+                if (ClosestGrave)
+                    plr->TeleportTo(plr->GetMapId(), ClosestGrave->x, ClosestGrave->y, ClosestGrave->z, plr->GetOrientation());
+                else
+                    ClosestGrave = sObjectMgr->GetClosestGraveYard(plr->GetPositionX(), plr->GetPositionY(), plr->GetPositionZ(), plr->GetMapId(), plr->GetTeam());
+            }
         }
     }
 }
@@ -2257,29 +2175,20 @@ void OutdoorPvPWG::RelocateHordeDeadPlayers(Creature *cr)
         for (std::vector<uint64>::const_iterator itr = ghost_list.begin(); itr != ghost_list.end(); ++itr)
         {
             Player* plr = sObjectMgr->GetPlayer(*itr);
-			if (!plr)
+            if (!plr)
                 continue;
-
-			if (plr->getFaction() == HORDE)
-			{
-            if (!ClosestGrave)
-                ClosestGrave = sObjectMgr->GetClosestGraveYard(plr->GetPositionX(), plr->GetPositionY(), plr->GetPositionZ(), plr->GetMapId(), plr->GetTeam());
-
-            if (ClosestGrave)
-                plr->TeleportTo(plr->GetMapId(), ClosestGrave->x, ClosestGrave->y, ClosestGrave->z, plr->GetOrientation());
-			}
+            if (plr->getFaction() == HORDE)
+            {
+                if (ClosestGrave)
+                    plr->TeleportTo(plr->GetMapId(), ClosestGrave->x, ClosestGrave->y, ClosestGrave->z, plr->GetOrientation());
+                else
+                    ClosestGrave = sObjectMgr->GetClosestGraveYard(plr->GetPositionX(), plr->GetPositionY(), plr->GetPositionZ(), plr->GetMapId(), plr->GetTeam());
+            }
         }
     }
 }
 
-/*######
-##OPvPCapturePointWG
-######*/
-
-OPvPCapturePointWG::OPvPCapturePointWG(OutdoorPvPWG *opvp, BuildingState *state)
-: OPvPCapturePoint(opvp), m_buildingState(state), m_wintergrasp(opvp)
-, m_engineer(NULL), m_engGuid(0), m_spiritguide(NULL)
-, m_spiritguide_horde(NULL), m_spiritguide_alliance(NULL), m_spiGuid(0){}
+OPvPCapturePointWG::OPvPCapturePointWG(OutdoorPvPWG *opvp, BuildingState *state) : OPvPCapturePoint(opvp), m_buildingState(state), m_wintergrasp(opvp), m_engineer(NULL), m_engGuid(0), m_spiritguide(NULL), m_spiritguide_horde(NULL), m_spiritguide_alliance(NULL), m_spiGuid(0) { }
 
 void OPvPCapturePointWG::SetTeamByBuildingState()
 {
@@ -2311,10 +2220,10 @@ void OPvPCapturePointWG::SetTeamByBuildingState()
 
 void OPvPCapturePointWG::ChangeTeam(TeamId oldTeam)
 {
-   entry = 0;
-   guide_entry = 0;
-   guide_entry_fortress_horde = 0;
-   guide_entry_fortress_alliance = 0;
+    entry = 0;
+    guide_entry = 0;
+    guide_entry_fortress_horde = 0;
+    guide_entry_fortress_alliance = 0;
 
     if (oldTeam != TEAM_NEUTRAL)
         m_wintergrasp->ModifyWorkshopCount(oldTeam, false);
@@ -2334,7 +2243,7 @@ void OPvPCapturePointWG::ChangeTeam(TeamId oldTeam)
     m_buildingState->SetTeam(m_team);
     // TODO: this may be sent twice
     m_wintergrasp->BroadcastStateChange(m_buildingState);
-
+    
     if (m_buildingState->building)
         m_buildingState->building->SetUInt32Value(GAMEOBJECT_FACTION, WintergraspFaction[m_team]);
 
@@ -2374,11 +2283,8 @@ void OPvPCapturePointWG::ChangeTeam(TeamId oldTeam)
 class OutdoorPvP_wintergrasp : public OutdoorPvPScript
 {
     public:
-        OutdoorPvP_wintergrasp()
-            : OutdoorPvPScript("outdoorpvp_wg")
-        {
-        }
-
+        OutdoorPvP_wintergrasp() : OutdoorPvPScript("outdoorpvp_wg") { }
+        
         OutdoorPvP* GetOutdoorPvP() const
         {
             return new OutdoorPvPWG();
