@@ -111,3 +111,7 @@ REPLACE INTO `spell_area` VALUES (57940, 4493, 0, 0, 0, 0, 0, 2, 1);
 REPLACE INTO `spell_area` VALUES (57940, 4494, 0, 0, 0, 0, 0, 2, 1);
 REPLACE INTO `spell_area` VALUES (57940, 4603, 0, 0, 0, 0, 0, 2, 1);
 REPLACE INTO `spell_area` VALUES (58045, 4197, 0, 0, 0, 0, 0, 2, 1);
+
+
+/* For main gate Huck Fix */
+UPDATE `gameobject_template` SET `data0` = 28000, `data5` = 28000 WHERE `entry` = 191810;
